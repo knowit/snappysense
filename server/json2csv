@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+// Modification of https://gist.github.com/kristopherjohnson/5065599
+
+// This assumes that the input file has one JSON object on each line without any other
+// syntax.  It parses the objects and converts each line to a CSV.  At the moment it does
+// not check that the keys are the same in every line, but it should.
+
+process.stdin.resume()
+process.stdin.setEncoding('utf8')
+
+let inputChunks = []
+
+process.stdin.on('data', function (chunk) {
+  inputChunks.push(chunk)
+});
+
+process.stdin.on('end', function () {
+  let data = inputChunks.join("").replace(/\n/g, ",").replace(/,$/,"")
+  let parsedData = JSON.parse("[" + data + "]")
+  if (parsedData.length == 0) {
+    return
+  }
+  let keys = []
+  for (let k in parsedData[0]) {
+    keys.push(k)
+  }
+  for (let r of parsedData) {
+    segs = []
+    for (let k of keys) {
+      if (!(k in r)) {
+        // error - missing key
+      }
+      segs.push(String(r[k])) // TODO: Quote properly
+      delete r[k]
+    }
+    for (let k2 in r) {
+      // error - new key
+    }
+    process.stdout.write(segs.join(",") + "\n")
+  }
+});
