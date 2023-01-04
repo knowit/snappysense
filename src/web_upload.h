@@ -1,7 +1,7 @@
 // Code for uploading data to a remote HTTP server.
 //
 // The remote server must know how to handle POST to /data with a JSON object payload.
-// For a simple server that can do this, see `github.com/lars-t-hansen/sandbox/http`.
+// For a simple server that can do this, see `../server`.
 
 #ifndef web_upload_h_included
 #define web_upload_h_included
