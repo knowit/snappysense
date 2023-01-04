@@ -2,61 +2,12 @@
 
 #include "config.h"
 
-// TODO: Most of these values should be factored into a config read from EEPROM or flash.
-// One problem with that is that there's going to be quite a lot of data.
-
-// --------- Access Point Credentials --------------------------------------------------
+// Configuration parameters.
 //
-// Parameters for the WiFi network we're connecting to.
-//
-// The file ap_credentials.h is not in the repo.  DO NOT ADD IT.  This is a template:
-/*
-static const char *const WIFI_SSID = "........";
-static const char *const WIFI_PASSWORD = ".............";
-*/
+// The file client_config.h is not in the repo.  DO NOT ADD IT.  A template for the
+// file is in client_config_template.txt.  In that file, search for FIXME.
 
-#include "ap_credentials.h"
-
-// --------- AWS Credentials -----------------------------------------------------------
-//
-// These are the AWS credentials we'll use to connect to the AWS MQTT broker.
-//
-// The file aws_credentials.h is not in the repo.  DO NOT ADD IT.  This is a template:
-/*
-static const char* AWS_IOT_ENDPOINT="...";
-static const int AWS_MQTT_PORT=...;
-static const char* AWS_CLIENT_IDENTIFIER="...";
-
-// Amazon Root CA 1 (AmazonRootCA1.pem)
-static const char AWS_CERT_CA[] = R"ROOTCA(
------BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----
-)ROOTCA";
-
-// Device Certificate (XXXXXXXXXX-certificate.pem.crt)
-static const char AWS_CERT_CRT[] PROGMEM = R"DEVICECERT(
------BEGIN CERTIFICATE-----
-...
------END CERTIFICATE-----
-)DEVICECERT";
-
-// Device Private Key (XXXXXXXXXX-private.pem.key)
-static const char AWS_CERT_PRIVATE[] PROGMEM = R"PRIVATEKEY(
------BEGIN RSA PRIVATE KEY-----
-...
------END RSA PRIVATE KEY-----
-)PRIVATEKEY";
-*/
-
-#ifdef MQTT_UPLOAD
-#include "aws_credentials.h"
-#endif
-
-#if defined(WEB_UPLOAD) || defined(TIMESTAMP)
-static const char* const SERVER_HOST = "raspberrypi.local";
-static const int SERVER_PORT = 8086;
-#endif
+#include "client_config.h"
 
 static const char* const LOCATION_NAME = "lth";
 
@@ -84,17 +35,25 @@ const char* access_point_password() {
     return WIFI_PASSWORD;
 }
 
-#if defined(WEB_UPLOAD) || defined(TIMESTAMP)
-const char* server_host() {
-  return SERVER_HOST;
+#ifdef TIMESTAMP
+const char* time_server_host() {
+  return TIME_SERVER_HOST;
 }
 
-int server_port() {
-  return SERVER_PORT;
+int time_server_port() {
+  return TIME_SERVER_PORT;
 }
 #endif
 
 #ifdef WEB_UPLOAD
+const char* web_upload_host() {
+  return WEB_UPLOAD_HOST;
+}
+
+int web_upload_port() {
+  return WEB_UPLOAD_PORT;
+}
+
 int web_upload_frequency_seconds() {
   return WEB_UPLOAD_WAIT_TIME_S;
 }

@@ -30,7 +30,7 @@ void upload_results_to_http_server(const SnappySenseData& data) {
   connect_to_wifi();
   WiFiClient wifiClient;
   HTTPClient httpClient;
-  httpClient.begin(wifiClient, server_host(), server_port(), "/data");
+  httpClient.begin(wifiClient, web_upload_host(), web_upload_port(), "/data");
   httpClient.addHeader(String("Content-Type"), String("application/json"));
   httpClient.sendRequest("POST", payload);
   httpClient.end();

@@ -1,0 +1,61 @@
+// DO NOT COMMIT THIS FILE.
+// Include this file only once from config.cpp.
+
+#include "main.h"
+
+// -------------------------------------------------------------------------------
+//
+// WiFi access point
+
+static const char *const WIFI_SSID = "...";          // FIXME
+static const char *const WIFI_PASSWORD = "......";   // FIXME
+
+#ifdef WEB_UPLOAD
+// -------------------------------------------------------------------------------
+//
+// Web upload server address
+
+static const char* const WEB_UPLOAD_HOST = "...";    // FIXME
+static const int WEB_UPLOAD_PORT = ...;              // FIXME
+#endif // WEB_UPLOAD
+
+#ifdef TIMESTAMP
+// -------------------------------------------------------------------------------
+//
+// Time server address
+
+static const char* TIME_SERVER_HOST = "...";         // FIXME
+static int TIME_SERVER_PORT = ...;                   // FIXME
+#endif
+
+#ifdef MQTT_UPLOAD
+// -------------------------------------------------------------------------------
+//
+// AWS MQTT credentials
+
+static const char* AWS_IOT_ENDPOINT="...";           // FIXME
+static const int AWS_MQTT_PORT=...;                  // FIXME
+static const char* AWS_CLIENT_IDENTIFIER="...";      // FIXME
+
+// Amazon Root CA 1 (AmazonRootCA1.pem)
+static const char AWS_CERT_CA[] = R"ROOTCA(
+-----BEGIN CERTIFICATE-----
+...                                                  // FIXME
+-----END CERTIFICATE-----
+)ROOTCA";
+
+// Device Certificate (XXXXXXXXXX-certificate.pem.crt)
+static const char AWS_CERT_CRT[] = R"DEVICECERT(
+-----BEGIN CERTIFICATE-----
+...                                                  // FIXME
+-----END CERTIFICATE-----
+)DEVICECERT";
+
+// Device Private Key (XXXXXXXXXX-private.pem.key)
+static const char AWS_CERT_PRIVATE[] = R"PRIVATEKEY(
+-----BEGIN RSA PRIVATE KEY-----
+...                                                  // FIXME
+-----END RSA PRIVATE KEY-----
+)PRIVATEKEY";
+
+#endif

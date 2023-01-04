@@ -12,15 +12,21 @@ const char* access_point_ssid();
 // WiFi access point password, this may be nullptr.
 const char* access_point_password();
 
-#if defined(WEB_UPLOAD) || defined(TIMESTAMP)
+#ifdef TIMESTAMP
 // Host name of remote web server used for web upload and time service.
-const char* server_host();
+const char* time_server_host();
 
 // Port of remote web server used for web upload and time service.
-int server_port();
+int time_server_port();
 #endif
 
 #ifdef WEB_UPLOAD
+// Host name of remote web server used for web upload and time service.
+const char* web_upload_host();
+
+// Port of remote web server used for web upload and time service.
+int web_upload_port();
+
 // How often to upload results to a server
 int web_upload_frequency_seconds();
 #endif

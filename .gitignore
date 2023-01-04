@@ -3,6 +3,5 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-src/ap_credentials.h
-src/aws_credentials.h
+src/client_config.h
 

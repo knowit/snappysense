@@ -27,7 +27,7 @@ void configure_time() {
   HTTPClient httpClient;
   // GET /time returns a number, representing the number of seconds UTC since the start
   // of the Posix epoch.
-  httpClient.begin(wifiClient, server_host(), server_port(), "/time");
+  httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time");
   httpClient.GET();
   // TODO: Probably want some integrity checking here; for example, the format of the
   // returned value could be "<...>" so that we could check that we've gotten a complete
