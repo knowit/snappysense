@@ -10,6 +10,12 @@
 static const char *const WIFI_SSID = "...";          // FIXME
 static const char *const WIFI_PASSWORD = "......";   // FIXME
 
+// -------------------------------------------------------------------------------
+//
+// Sensor location identification
+
+static const char* const LOCATION_NAME = "...";      // FIXME
+
 #ifdef WEB_UPLOAD
 // -------------------------------------------------------------------------------
 //

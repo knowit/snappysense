@@ -9,8 +9,6 @@
 
 #include "client_config.h"
 
-static const char* const LOCATION_NAME = "lth";
-
 #ifdef WEBSERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
 #endif
