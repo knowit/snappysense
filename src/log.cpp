@@ -2,8 +2,6 @@
 //
 // This is a little more complicated than we'd like it to be, in order to support
 // printing characters as ASCII codes when not printable.
-//
-// larhan@knowit.no
 
 #include "log.h"
 

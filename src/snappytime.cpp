@@ -2,8 +2,6 @@
 //
 // TODO: This is hacky, it can be integrated with Posix time code by using settimeofday() after
 // obtaining the time base.
-//
-// larhan@knowit.no
 
 #include "snappytime.h"
 #include "config.h"

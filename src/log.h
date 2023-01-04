@@ -1,6 +1,4 @@
 // Logging functionality
-//
-// larhan@knowit.no
 
 #ifndef log_h_included
 #define log_h_included

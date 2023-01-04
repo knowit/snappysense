@@ -1,6 +1,4 @@
 // Interface to actual hardware device
-//
-// gunnar.larsen@knowit.no / larhan@knowit.no
 
 #ifndef device_h_included
 #define device_h_included

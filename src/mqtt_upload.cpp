@@ -1,6 +1,4 @@
 // Code for uploading data to a remote MQTT broker.
-//
-// larhan@knowit.no
 
 #include "mqtt_upload.h"
 #include "config.h"

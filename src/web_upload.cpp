@@ -1,6 +1,4 @@
 // Code for uploading JSON data to a remote HTTP server.
-//
-// larhan@knowit.no
 
 #include "web_upload.h"
 #include "config.h"

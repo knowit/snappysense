@@ -1,6 +1,4 @@
 // Connectivity management
-//
-// larhan@knowit.no
 
 #ifndef network_h_included
 #define network_h_included

@@ -1,6 +1,4 @@
 // Icons for the device display
-//
-// gunnar.larsen@knowit.no
 
 #ifndef icons_h_included
 #define icons_h_included

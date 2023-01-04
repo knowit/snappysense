@@ -1,6 +1,4 @@
 // SnappySense configuration manager
-//
-// larhan@knowit.no
 
 #include "config.h"
 

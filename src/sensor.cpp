@@ -1,6 +1,4 @@
 // Sensor model.
-//
-// gunnar.larsen@knowit.no / larhan@knowit.no
 
 #include "sensor.h"
 #include "config.h"

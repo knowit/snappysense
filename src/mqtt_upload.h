@@ -1,6 +1,4 @@
 // Code for uploading data to a remote MQTT broker.
-//
-// larhan@knowit.no
 
 #ifndef mqtt_upload_h_included
 #define mqtt_upload_h_included

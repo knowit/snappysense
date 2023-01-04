@@ -1,6 +1,4 @@
 // Support for the device acting as a simple web server, for querying data across HTTP
-//
-// larhan@knowit.no
 
 #include "web_server.h"
 #include "config.h"

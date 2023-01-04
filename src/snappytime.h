@@ -4,8 +4,6 @@
 // the decimal encoding of the number of seconds elapsed since the Posix epoch (ie, what time()
 // would return on a properly configured Posix system).  For a simple server that can do this, see
 // `github.com/lars-t-hansen/sandbox/http`.
-//
-// larhan@knowit.no
 
 #ifndef snappytime_h_included
 #define snappytime_h_included

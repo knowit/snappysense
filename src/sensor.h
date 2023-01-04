@@ -1,6 +1,4 @@
 // Sensor model.
-//
-// gunnar.larsen@knowit.no / larhan@knowit.no
 
 #ifndef sensor_h_included
 #define sensor_h_included

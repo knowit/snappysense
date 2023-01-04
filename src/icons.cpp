@@ -1,6 +1,4 @@
 // Icons for the device display
-//
-// gunnar.larsen@knowit.no
 
 // Icon data can be created by using the tool at:
 // http://en.radzio.dxp.pl/bitmap_converter/

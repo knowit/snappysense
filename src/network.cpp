@@ -1,6 +1,4 @@
 // Connectivity management
-//
-// larhan@knowit.no
 
 #include "network.h"
 #include "config.h"

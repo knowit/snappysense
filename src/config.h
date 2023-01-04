@@ -1,7 +1,5 @@
 // SnappySense configuration manager.  Anything that's a parameter that could sensibly
 // be customized at runtime or stored in a configuration file is handled here.
-//
-// larhan@knowit.no
 
 #ifndef config_h_included
 #define config_h_included

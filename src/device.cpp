@@ -1,6 +1,4 @@
 // Interface to actual hardware device
-//
-// gunnar.larsen@knowit.no / larhan@knowit.no
 
 #include "device.h"
 #include "icons.h"
