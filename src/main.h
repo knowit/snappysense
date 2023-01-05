@@ -44,7 +44,7 @@
 
 // With WEB_SERVER, the device creates a server on port 8088 and listens for 
 // commands, just ask for / or /help to see a directory of the possible requests.
-//#define WEB_SERVER
+#define WEB_SERVER
 
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
@@ -61,13 +61,6 @@
 
 #if !defined(WEB_UPLOAD) && !defined(WEB_SERVER)
 #  define READ_NOISE
-#endif
-
-// The code is not set up to be both a web server and a web client (yet)
-// FIXME: Not sure this is a problem any longer
-
-#if defined(WEB_SERVER) && defined(WEB_UPLOAD)
-#  error "Config conflict"
 #endif
 
 #endif // !main_h_included

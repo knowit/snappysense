@@ -7,9 +7,14 @@
 #include "sensor.h"
 
 #ifdef WEB_SERVER
+// This brings up WiFi and starts listening.  It will keep the device alive.
 void start_web_server();
+
+// Accept a connect request if there is one and read from it.  THIS WILL BLOCK UNTIL
+// THE ENTIRE REQUEST HAS BEEN READ!  Once the complete request has been read,
+// it is processed by the command processor, which will produce some output that
+// is sent back to the client.  The connection is then closed.
 void maybe_handle_web_request(const SnappySenseData& data);
-static const unsigned long WEB_SERVER_WAIT_TIME_MS = 100;
 #endif
 
 #endif // web_server_h_included

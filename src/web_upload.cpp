@@ -27,7 +27,7 @@ void upload_results_to_http_server(const SnappySenseData& data) {
   //
   // In practice this is not going to be good enough.  It is probably indicative of the quality
   // of the Arduino libraries - "maker" quality, not "production".
-  connect_to_wifi();
+  auto holder(connect_to_wifi());
   WiFiClient wifiClient;
   HTTPClient httpClient;
   httpClient.begin(wifiClient, web_upload_host(), web_upload_port(), "/data");
@@ -35,7 +35,6 @@ void upload_results_to_http_server(const SnappySenseData& data) {
   httpClient.sendRequest("POST", payload);
   httpClient.end();
   wifiClient.stop();
-  disconnect_from_wifi();
 }
 
 #endif // WEB_UPLOAD

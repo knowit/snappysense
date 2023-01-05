@@ -76,7 +76,7 @@ void loop() {
 #ifdef WEB_SERVER
   if (now >= next_web_server_action) {
     maybe_handle_web_request(snappy);
-    next_web_server_action = now + WEB_SERVER_WAIT_TIME_MS;  // FIXME: Scheduler function
+    next_web_server_action = now + web_command_poll_seconds() * 1000;
     next_deadline = min(next_deadline, next_web_server_action);
   }
 #endif

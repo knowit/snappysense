@@ -1,5 +1,6 @@
 #include "command.h"
 #include "device.h"
+#include "network.h"
 #include "sensor.h"
 
 #if defined(SERIAL_SERVER) || defined(WEB_SERVER)
@@ -59,8 +60,13 @@ static void cmd_hello(const String& cmd, Stream* out) {
 }
 
 static void cmd_help(const String& cmd, Stream* out) {
+  out->println("Commands:");
   for (Command* c = commands; c->command != nullptr; c++ ) {
-    out->printf("%s - %s\n", c->command, c->help);
+    out->printf(" %s - %s\n", c->command, c->help);
+  }
+  out->println("Sensor names for `get` are:");
+  for (SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++) {
+    out->printf(" %s - %s\n", m->json_key, m->explanatory_text);
   }
 }
 
@@ -102,6 +108,35 @@ static void cmd_view(const String& cmd, Stream* out) {
   }
 }
 
+static void cmd_get(const String& cmd, Stream* out) {
+  String arg = get_word(cmd, 1);
+  if (arg.isEmpty()) {
+    out->printf("Sensor name needed, try `help`");
+    return;
+  }
+  for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
+    if (strcmp(m->json_key, arg.c_str()) == 0) {
+      char buf[32];
+      m->format(snappy, buf, buf+sizeof(buf));
+      out->printf("%s: %s\n", m->json_key, buf);
+      return;
+    }
+  }
+  out->printf("Invalid sensor name, try `help`");
+}
+
+static void cmd_inet(const String& cmd, Stream* out) {
+#ifdef WEB_UPLOAD
+  out->println("Web upload is enabled");
+#endif
+#ifdef MQTT_UPLOAD
+  out->println("MQTT upload is enabled");
+#endif
+#ifdef WEB_SERVER
+  out->printf("Web server is enabled, inet address %s\n", local_ip_address());
+#endif
+}
+
 Command commands[] = {
   {"hello",    "Echo the argument",                                  cmd_hello},
   {"help",     "Print help text",                                    cmd_help},
@@ -109,7 +144,9 @@ Command commands[] = {
   {"poweron",  "Turn on peripheral power, required for I2C",         cmd_poweron},
   {"poweroff", "Turn off peripheral power, required for I2C",        cmd_poweroff},
   {"read",     "Read the sensors",                                   cmd_read},
-  {"view",     "View the current sensor readings",                   cmd_view},
+  {"get",      "Get the sensor reading for a specific sensor",       cmd_get},
+  {"view",     "View all the current sensor readings",               cmd_view},
+  {"inet",     "Internet connectivity details",                      cmd_inet},
   {nullptr,    nullptr,                                              nullptr}
 };
 

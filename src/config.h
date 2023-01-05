@@ -59,12 +59,18 @@ unsigned long display_update_frequency_seconds();
 #endif
 
 #ifdef SERIAL_SERVER
+// How long to wait between looking for input on the serial channel.
+// This is typically a pretty low value.
 unsigned long serial_command_poll_seconds();
 #endif
 
 #ifdef WEB_SERVER
 // The port the device's server is listening on.
 int web_server_listen_port();
+
+// How long to wait between looking for input on the web channel.
+// This is typically a pretty low value.
+unsigned long web_command_poll_seconds();
 #endif
 
 #endif // !config_h_included

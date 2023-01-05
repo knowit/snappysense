@@ -5,7 +5,16 @@
 
 #include "main.h"
 
-void connect_to_wifi();
-void disconnect_from_wifi();
+class WiFiHolder {
+  bool valid;
+public:
+  WiFiHolder(bool did_create = false);
+  WiFiHolder& operator=(const WiFiHolder& other);
+  WiFiHolder(const WiFiHolder& other);
+  ~WiFiHolder();
+};
+
+WiFiHolder connect_to_wifi();
+String local_ip_address();
 
 #endif // !network_h_included

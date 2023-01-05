@@ -1,6 +1,7 @@
 // Support for the device acting as a simple web server, for querying data across HTTP
 
 #include "web_server.h"
+#include "command.h"
 #include "config.h"
 #include "log.h"
 #include "network.h"
@@ -26,43 +27,36 @@
 // I suppose it would be possible to use the Arduino WEB_SERVER framework, but it insists on
 // handling its own WiFiClient and I don't like it.
 
-WiFiServer server(web_server_listen_port());
+static WiFiServer server(web_server_listen_port());
+static WiFiHolder server_holder;
 
 void start_web_server() {
-  connect_to_wifi();
+  server_holder = connect_to_wifi();
 
   server.begin();
   log("Web server is listening on port %d\n", web_server_listen_port());
 }
 
 static void handle_web_request(const SnappySenseData& data, WiFiClient& client, const String& request) {
-  if (request.startsWith("GET / ")) {
+  if (request.startsWith("GET /")) {
+    String r = request.substring(5);
+    int idx = r.indexOf(' ');
+    if (idx != -1) {
+      r = r.substring(0, idx);
+      // TODO: technically this is url-encoded and needs to be decoded
+    }
+    if (r.isEmpty()) {
+      r = String("help");
+    }
     client.println("HTTP/1.1 200 OK");
     client.println("Content-type:text/html");
     client.println();
-    client.println("<div>");
-    client.println(" <div>Valid requests:</div>");
-    for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr ; r++ ) {
-        client.printf(" <div><a href=\"%s\">%s</a></div>\n", r->json_key, r->explanatory_text);
-    }
-    client.println("</div>");
+    client.println("<pre>");
+    process_command(r, &client);
+    client.println("</pre>");
     return;
   }
-  char buf[256];
-  for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr ; r++ ) {
-    sprintf(buf, "GET /%s ", r->json_key);
-    if (request.startsWith(buf)) {
-        r->format(data, buf, buf+sizeof(buf));
-        client.println("HTTP/1.1 200 OK");
-        client.println("Content-type:text/html");
-        client.println();
-        client.printf("<div>%s: %s</div>\n", r->explanatory_text, buf);
-        return;
-    }
-  }
-  client.println("HTTP/1.1 404 Bad request");
-  client.println("Content-type:text/html");
-  client.println();
+  client.println("HTTP/1.1 403 Forbidden");
 }
 
 void maybe_handle_web_request(const SnappySenseData& data) {
@@ -148,4 +142,3 @@ void maybe_handle_web_request(const SnappySenseData& data) {
 }
 
 #endif // WEB_SERVER
-

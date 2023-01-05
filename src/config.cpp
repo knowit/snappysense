@@ -13,6 +13,7 @@ static const unsigned long SENSOR_POLL_FREQUENCY_S = 60;
 
 #ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
+static const unsigned long WEB_SERVER_WAIT_TIME_S = 1;
 #endif
 
 #ifdef WEB_UPLOAD
@@ -116,6 +117,10 @@ unsigned long display_update_frequency_seconds() {
 #ifdef WEB_SERVER
 int web_server_listen_port() {
   return WEB_SERVER_LISTEN_PORT;
+}
+
+unsigned long web_command_poll_seconds() {
+  return WEB_SERVER_WAIT_TIME_S;
 }
 #endif
 

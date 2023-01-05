@@ -22,7 +22,7 @@ void configure_time() {
     return;
   }
   time_configured = true;
-  connect_to_wifi();
+  auto holder = connect_to_wifi();
   WiFiClient wifiClient;
   HTTPClient httpClient;
   // GET /time returns a number, representing the number of seconds UTC since the start
@@ -35,7 +35,6 @@ void configure_time() {
   sscanf(httpClient.getString().c_str(), "%lu", &timebase);
   httpClient.end();
   wifiClient.stop();
-  disconnect_from_wifi();
 }
 
 time_t get_time() {

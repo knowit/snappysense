@@ -16,7 +16,7 @@ void upload_results_to_mqtt_server(const SnappySenseData& data) {
 #if 0
   // This is not great: we probably want a more flexible idea of whether the
   // wifi connection stays up or not.
-  connect_to_wifi();
+  auto holder(connect_to_wifi());
 
   WiFiClientSecure client;
   const char* secret;
