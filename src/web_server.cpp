@@ -8,7 +8,7 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 
-#ifdef WEBSERVER
+#ifdef WEB_SERVER
 /* Server/Client wifi state machine is basically similar to the Unix stack:
  *  WiFi.begin() connects the system to a local access point.
  *  Then, create a WiFiServer `server` to handle incoming connections on a port.
@@ -23,7 +23,7 @@
  *  server.close() closes the server socket and stops listening
  */
 
-// I suppose it would be possible to use the Arduino WebServer framework, but it insists on
+// I suppose it would be possible to use the Arduino WEB_SERVER framework, but it insists on
 // handling its own WiFiClient and I don't like it.
 
 WiFiServer server(web_server_listen_port());
@@ -147,5 +147,5 @@ void maybe_handle_web_request(const SnappySenseData& data) {
   client.stop();
 }
 
-#endif // WEBSERVER
+#endif // WEB_SERVER
 

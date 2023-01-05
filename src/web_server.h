@@ -6,10 +6,10 @@
 #include "main.h"
 #include "sensor.h"
 
-#ifdef WEBSERVER
+#ifdef WEB_SERVER
 void start_web_server();
 void maybe_handle_web_request(const SnappySenseData& data);
-static const unsigned long WEBSERVER_WAIT_TIME_MS = 100;
+static const unsigned long WEB_SERVER_WAIT_TIME_MS = 100;
 #endif
 
 #endif // web_server_h_included

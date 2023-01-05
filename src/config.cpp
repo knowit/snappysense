@@ -9,21 +9,41 @@
 
 #include "client_config.h"
 
-#ifdef WEBSERVER
+static const unsigned long SENSOR_POLL_FREQUENCY_S = 60;
+
+#ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
 #endif
 
 #ifdef WEB_UPLOAD
+// TODO: The upload frequency should ideally be a multiple of the sensor
+// poll frequency; and/or there should be no upload if the sensor
+// has not been read since the last time. 
 static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*5; // 5 minutes - OK for testing, gets us some volume
 #endif
 
 #ifdef MQTT_UPLOAD
+// TODO: The upload frequency should ideally be a multiple of the sensor
+// poll frequency; and/or there should be no upload if the sensor
+// has not been read since the last time. 
 static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*5; // 5 minutes - OK for testing, gets us some volume
 #endif
 
 #ifdef STANDALONE
 static const unsigned long SCREEN_WAIT_TIME_S = 4;
 #endif
+
+#ifdef SERIAL_SERVER
+static const unsigned long SERIAL_SERVER_WAIT_TIME_S = 1;
+#endif
+
+unsigned long sensor_poll_frequency_seconds() {
+  return SENSOR_POLL_FREQUENCY_S;
+}
+
+const char* location_name() {
+  return LOCATION_NAME;
+}
 
 const char* access_point_ssid() {
     return WIFI_SSID;
@@ -52,13 +72,13 @@ int web_upload_port() {
   return WEB_UPLOAD_PORT;
 }
 
-int web_upload_frequency_seconds() {
+unsigned long web_upload_frequency_seconds() {
   return WEB_UPLOAD_WAIT_TIME_S;
 }
 #endif
 
 #ifdef MQTT_UPLOAD
-int mqtt_upload_frequency_seconds() {
+unsigned long mqtt_upload_frequency_seconds() {
   return MQTT_UPLOAD_WAIT_TIME_S;
 }
 
@@ -88,17 +108,20 @@ const char* mqtt_device_private_key() {
 #endif
 
 #ifdef STANDALONE
-int display_update_frequency_seconds() {
+unsigned long display_update_frequency_seconds() {
   return SCREEN_WAIT_TIME_S;
 }
 #endif
 
-const char* location_name() {
-  return LOCATION_NAME;
-}
-
-#ifdef WEBSERVER
+#ifdef WEB_SERVER
 int web_server_listen_port() {
   return WEB_SERVER_LISTEN_PORT;
 }
 #endif
+
+#ifdef SERIAL_SERVER
+unsigned long serial_command_poll_seconds() {
+  return SERIAL_SERVER_WAIT_TIME_S;
+}
+#endif
+

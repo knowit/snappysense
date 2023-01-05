@@ -6,6 +6,12 @@
 
 #include "main.h"
 
+// Frequency of sensor readings.  This is independent of upload frequency.
+unsigned long sensor_poll_frequency_seconds();
+
+// The name of the location at which this device is placed.
+const char* location_name();
+
 // WiFi access point SSID
 const char* access_point_ssid();
 
@@ -28,12 +34,12 @@ const char* web_upload_host();
 int web_upload_port();
 
 // How often to upload results to a server
-int web_upload_frequency_seconds();
+unsigned long web_upload_frequency_seconds();
 #endif
 
 #ifdef MQTT_UPLOAD
 // How often to upload results to a server
-int mqtt_upload_frequency_seconds();
+unsigned long mqtt_upload_frequency_seconds();
 
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();
@@ -49,13 +55,14 @@ const char* mqtt_device_private_key(size_t *size);
 #endif
 
 #ifdef STANDALONE
-int display_update_frequency_seconds();
+unsigned long display_update_frequency_seconds();
 #endif
 
-// The name of the location at which this device is placed.
-const char* location_name();
+#ifdef SERIAL_SERVER
+unsigned long serial_command_poll_seconds();
+#endif
 
-#ifdef WEBSERVER
+#ifdef WEB_SERVER
 // The port the device's server is listening on.
 int web_server_listen_port();
 #endif

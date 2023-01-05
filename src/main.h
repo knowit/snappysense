@@ -1,3 +1,5 @@
+// Snappysense program configuration and base include file.
+
 #ifndef main_h_included
 #define main_h_included
 
@@ -5,8 +7,11 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// CODING STANDARDS FOR THE PROTOTYPE
+// CODING STANDARDS
 //
+// - All <filename>.cpp files shall have a corresponding <filename>.h and the
+//   <filename>.cpp file shall include <filename>.h first.
+// - All <filename>.h shall include main.h first.
 // - Do not worry about out-of-memory conditions (OOM) except perhaps for large
 //   allocations (several KB at least).  The Arduino libraries are not reliable
 //   enough to handle OOM reliably anyway.  Basically, just ignore the problem.
@@ -21,8 +26,8 @@
 // FUNCTIONAL CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  When
-// not in this mode, the display mostly sleeps, waking up to perform readings
-// and report them.
+// not in this mode, the display sleeps, and the device wakes up to perform readings,
+// report them, and (if configured), process interactive commands.
 #define STANDALONE
 
 // Stamp uploaded records with the current time.  For this to work, the time has to
@@ -37,10 +42,13 @@
 // every so often.  See mqtt_upload.h.
 #define MQTT_UPLOAD
 
-// With WEBSERVER, the device creates a server on port 8088 and listens for 
-// requests to report readings, just ask for / to see a directory of the
-// possible requests.
-//#define WEBSERVER
+// With WEB_SERVER, the device creates a server on port 8088 and listens for 
+// commands, just ask for / or /help to see a directory of the possible requests.
+//#define WEB_SERVER
+
+// With SERIAL_SERVER, the device listens for commands on the serial line, the
+// command "help" will provide a list of possible commands.
+#define SERIAL_SERVER
 
 // Include the log(stream, fmt, ...) functions, see log.h
 #define LOGGING
@@ -51,13 +59,14 @@
 
 // In V1.0.0, there's a hardware resource conflict between WiFi and the noise sensor.
 
-#if !defined(WEB_UPLOAD) && !defined(WEBSERVER)
+#if !defined(WEB_UPLOAD) && !defined(WEB_SERVER)
 #  define READ_NOISE
 #endif
 
 // The code is not set up to be both a web server and a web client (yet)
+// FIXME: Not sure this is a problem any longer
 
-#if defined(WEBSERVER) && defined(WEB_UPLOAD)
+#if defined(WEB_SERVER) && defined(WEB_UPLOAD)
 #  error "Config conflict"
 #endif
 

@@ -41,6 +41,8 @@ void device_setup() {
   Serial.begin(115200);
 #ifdef LOGGING
   // This could be something else, and it could be configurable.
+  // FIXME: If the serial port is not connected, this should do nothing.
+  // FIXME: Logging could also be to a buffer and the log could be requested interactively.
   set_log_stream(&Serial);
 #endif
 
