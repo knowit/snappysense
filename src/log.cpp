@@ -15,8 +15,8 @@ void set_log_stream(Stream* s) {
 void log(const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
-    va_log(fmt, args);
-    va_end(args);
+  va_log(fmt, args);
+  va_end(args);
 }
 
 void va_log(const char* fmt, va_list args) {
@@ -50,7 +50,6 @@ void va_log(const char* fmt, va_list args) {
       }
     } else {
       log_stream_->printf("%c", *fmt++);
-      break;
     }
   }
 }
