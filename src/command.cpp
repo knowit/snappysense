@@ -1,3 +1,5 @@
+// Interactive commands for serial port and web server
+
 #include "command.h"
 #include "device.h"
 #include "network.h"
