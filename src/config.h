@@ -49,9 +49,9 @@ int mqtt_endpoint_port();
 const char* mqtt_device_id();
 
 // Keys and certificates
-const char* mqtt_root_ca_cert(size_t *size);
-const char* mqtt_device_cert(size_t *size);
-const char* mqtt_device_private_key(size_t *size);
+const char* mqtt_root_ca_cert();
+const char* mqtt_device_cert();
+const char* mqtt_device_private_key();
 #endif
 
 #ifdef STANDALONE

@@ -4,6 +4,7 @@
 #include "device.h"
 #include "icons.h"
 #include "log.h"
+#include "mqtt_upload.h"
 #include "sensor.h"
 #include "serial_server.h"
 #include "snappytime.h"
@@ -44,6 +45,7 @@ void loop() {
   static unsigned long next_serial_server_action = 0;
   static unsigned long next_screen_update = 0;
   static unsigned long next_web_upload_action = 0;
+  static unsigned long next_mqtt_upload_action = 0;
 
   // A simple deadline-driven scheduler.  All this waiting is pretty bogus.
   // We want timers to trigger actions, and incoming data to trigger server
@@ -94,10 +96,17 @@ void loop() {
     next_deadline = min(next_deadline, next_web_upload_action);
   }
 #endif
-  // TODO: Also MQTT.  MQTT is a little tougher - it polls for incoming messages
+#ifdef MQTT_UPLOAD
+  // TODO: MQTT is a little tougher than this - it polls for incoming messages
   // and pushes outgoing messages that have failed to send earlier.  If there are
   // outgoing messages in the queue it should try fairly frequently; but it should
   // only rarely listen for incoming messages.
+  if (now >= next_mqtt_upload_action) {
+    upload_results_to_mqtt_server(snappy);
+    next_mqtt_upload_action = now + mqtt_upload_frequency_seconds() * 1000;
+    next_deadline = min(next_deadline, next_mqtt_upload_action);
+  }
+#endif
 
   if (next_deadline != ULONG_MAX) {
     delay(next_deadline - now);
