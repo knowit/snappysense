@@ -57,7 +57,7 @@ static void cmd_hello(const String& cmd, SnappySenseData* data, Stream* out) {
   if (!arg.isEmpty()) {
     out->printf("Hello %s\n", arg.c_str());
   } else {
-    out->println("Hello, whoever you are");
+    out->println("Hello, whoever you are\n");
   }
 }
 
@@ -113,7 +113,7 @@ static void cmd_view(const String& cmd, SnappySenseData* data, Stream* out) {
 static void cmd_get(const String& cmd, SnappySenseData* data, Stream* out) {
   String arg = get_word(cmd, 1);
   if (arg.isEmpty()) {
-    out->printf("Sensor name needed, try `help`");
+    out->println("Sensor name needed, try `help`");
     return;
   }
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
@@ -124,7 +124,7 @@ static void cmd_get(const String& cmd, SnappySenseData* data, Stream* out) {
       return;
     }
   }
-  out->printf("Invalid sensor name, try `help`");
+  out->println("Invalid sensor name, try `help`");
 }
 
 static void cmd_inet(const String& cmd, SnappySenseData* data, Stream* out) {
@@ -146,7 +146,7 @@ Command commands[] = {
   {"poweron",  "Turn on peripheral power, required for I2C",         cmd_poweron},
   {"poweroff", "Turn off peripheral power, required for I2C",        cmd_poweroff},
   {"read",     "Read the sensors",                                   cmd_read},
-  {"get",      "Get the sensor reading for a specific sensor",       cmd_get},
+  {"get",      "Get the sensor reading for a specific sensor name",  cmd_get},
   {"view",     "View all the current sensor readings",               cmd_view},
   {"inet",     "Internet connectivity details",                      cmd_inet},
   {nullptr,    nullptr,                                              nullptr}
