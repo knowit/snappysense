@@ -33,7 +33,7 @@
 #define LOGO_HEIGHT   29
 #define LOGO_WIDTH    128
 
-static Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
+static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
 
@@ -63,6 +63,9 @@ void device_setup() {
   // init oled display
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
+
+  environment.begin();
+  ENS160.begin();
 
   log("Device initialized\n");
 }
@@ -106,7 +109,6 @@ static unsigned sequence_number;
 void get_sensor_values(SnappySenseData* data) {
   data->sequence_number = sequence_number++;
 
-  environment.begin();
   data->temperature = environment.getTemperature(TEMP_C);
   data->humidity = environment.getHumidity();
   data->uv = environment.getUltravioletIntensity();
@@ -114,17 +116,30 @@ void get_sensor_values(SnappySenseData* data) {
   data->hpa = environment.getAtmospherePressure(HPA);
   data->elevation = environment.getElevation();
 
-  ENS160.begin();
-  ENS160.setPWRMode(ENS160_STANDARD_MODE);
-  ENS160.setTempAndHum(/*temperature=*/data->temperature, /*humidity=*/data->humidity);
-  data->air_sensor_status = ENS160.getENS160Status();
-  data->aqi = ENS160.getAQI();
-  data->tvoc = ENS160.getTVOC();
-  data->eco2 = ENS160.getECO2();
+  // The gas sensor does not appear to like repeated initialization, so do it only
+  // once.  Do it only when the environment values have stabilized (the first reading
+  // is usually bogus).
+  data->air_sensor_status = 2;  // startup
+  if (sequence_number > 1) {
+    static bool set = false;
+    if (!set) {
+      // Despite the documentation, it appears the humidity value should be in
+      // the range 0..1, not 0..100.
+      ENS160.setTempAndHum(data->temperature, data->humidity / 100);
+      set = true;
+    }
+    // It takes a while for the sensor to settle down so don't read immediately
+    // after initializing.
+    if (sequence_number > 2) {
+      data->air_sensor_status = ENS160.getENS160Status();
+      data->aqi = ENS160.getAQI();
+      data->tvoc = ENS160.getTVOC();
+      data->eco2 = ENS160.getECO2();
+    }
+  }
 
-  // There's a conflict between the WiFi and the ADC.
   data->pir = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
-#if defined(READ_NOISE)
+#ifdef READ_NOISE
   data->noise = analogRead(MIC_PIN);
 #endif
 }

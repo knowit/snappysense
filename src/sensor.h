@@ -31,7 +31,7 @@ typedef struct SnappySenseData {
   // Ultraviolet radiation, in mW / cm^2
   float uv;
 
-  // True or false.  TODO: So why not boolean
+  // Status code from the device: 0=normal, 1=warmup, 2=startup, 3=invalid
   uint8_t air_sensor_status;
 
   // AQI: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy
@@ -45,8 +45,10 @@ typedef struct SnappySenseData {
   //              Poor(1000 - 1500), Unhealthy(> 1500)
   uint16_t eco2;
 
+#ifdef READ_NOISE
   // TODO: Unit?
   uint16_t noise;
+#endif
 
   // Passive motion sensor
   // TODO: Unit?

@@ -45,18 +45,23 @@ WiFiHolder::~WiFiHolder() {
 }
 
 WiFiHolder connect_to_wifi() {
-  if (refcount == 0) {
-    // Connect to local WiFi network
-    // FIXME: Failure conditions need to be checked and reported
-    WiFi.begin(access_point_ssid(), access_point_password());
-    log("WiFi: Connecting to network ");
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      log(".");
-    }
-    log(" Connected. Device IP address: %s\n", local_ip_address().c_str());
+  if (refcount > 0) {
+    return WiFiHolder(true);
   }
-  return WiFiHolder(true);
+
+  // Connect to local WiFi network
+  // FIXME: Failure conditions need to be checked and reported
+  WiFi.begin(access_point_ssid(), access_point_password());
+  log("WiFi: Connecting to network ");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    log(".");
+  }
+  log("\n");
+  // Create the holder first: otherwise local_ip_address() will return an empty string.
+  WiFiHolder holder(true);
+  log("Connected. Device IP address: %s\n", local_ip_address().c_str());
+  return holder;
 }
 
 String local_ip_address() {

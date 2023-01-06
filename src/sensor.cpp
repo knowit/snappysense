@@ -56,9 +56,11 @@ static void format_pir(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.pir);
 }
 
+#ifdef READ_NOISE
 static void format_noise(const SnappySenseData& data, char* buf, char* buflim) { 
   snprintf(buf, buflim - buf, "%d", data.noise);
 }
+#endif
 
 // The "displayers" format the data so that they can be shown on the unit's
 // display.  There may be some information loss.  Where there's a formatter
@@ -102,7 +104,9 @@ SnappyMetaDatum snappy_metadata[] = {
   {"co2",         "Carbon dioxide equivalent concentration",
                                            "ppm", "ppm",     ICON(co2_icon),         format_co2,          format_co2},
   { "pir",        "PIR value",             "",    "",        ICON(pir_icon),         format_pir,          format_pir},
+#ifdef READ_NOISE
   {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       format_noise,        format_noise},
+#endif
   {nullptr,       nullptr,                 "",    "",        nullptr,                nullptr,             nullptr}
 };
 
