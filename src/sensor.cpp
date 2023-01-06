@@ -89,21 +89,21 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
 #endif
 
 SnappyMetaDatum snappy_metadata[] = {
-  {"temperature", "Temperature",           "C",   "C",      ICON(temperature_icon), display_temp,        format_temp},
-  {"humidity",    "Humidity",              "%",   "%",      ICON(humidity_icon),    display_humidity,    format_humidity},
-  {"uv",          "Ultraviolet intensity", "",    "mw/cm2", ICON(uv_icon),          format_uv,           format_uv},
-  {"light",       "Luminous intensity",    "lx",  "lx",     ICON(lux_icon),         display_light,       format_light},
-  {"pressure",    "Atmospheric pressure",  "hpa", "hpa",    ICON(hpa_icon),         format_pressure,     format_pressure},
-  {"altitude",    "Altitude",              "m",   "m",      ICON(elevation_icon),   display_altitude,    format_altitude},
-  {"airsensor",   "Air sensor status",     "",    "",       nullptr,                nullptr,             format_air_sensor_status},
-  {"airquality",  "Air quality index",     "",    "",       ICON(aqi_icon),         format_air_quality,  format_air_quality},
+  {"temperature", "Temperature",           "C",   "C",       ICON(temperature_icon), display_temp,        format_temp},
+  {"humidity",    "Humidity",              "%",   "%",       ICON(humidity_icon),    display_humidity,    format_humidity},
+  {"uv",          "Ultraviolet intensity", "",    "mW/cm^2", ICON(uv_icon),          format_uv,           format_uv},
+  {"light",       "Luminous intensity",    "lx",  "lx",      ICON(lux_icon),         display_light,       format_light},
+  {"pressure",    "Atmospheric pressure",  "hpa", "hpa",     ICON(hpa_icon),         format_pressure,     format_pressure},
+  {"altitude",    "Altitude",              "m",   "m",       ICON(elevation_icon),   display_altitude,    format_altitude},
+  {"airsensor",   "Air sensor status",     "",    "",        nullptr,                nullptr,             format_air_sensor_status},
+  {"airquality",  "Air quality index",     "",    "",        ICON(aqi_icon),         format_air_quality,  format_air_quality},
   {"tvoc",        "Concentration of total volatile organic compounds",
-                                           "ppb", "ppb",    ICON(aqi_icon),         format_tvoc,         format_tvoc},
+                                           "ppb", "ppb",     ICON(aqi_icon),         format_tvoc,         format_tvoc},
   {"co2",         "Carbon dioxide equivalent concentration",
-                                           "ppm", "ppm",    ICON(co2_icon),         format_co2,          format_co2},
-  { "pir",        "PIR value",             "",    "",       ICON(pir_icon),         format_pir,          format_pir},
-  {"noise",       "Noise value",           "",    "",       ICON(noise_icon),       format_noise,        format_noise},
-  {nullptr,       nullptr,                 "",    "",       nullptr,                nullptr,             nullptr}
+                                           "ppm", "ppm",     ICON(co2_icon),         format_co2,          format_co2},
+  { "pir",        "PIR value",             "",    "",        ICON(pir_icon),         format_pir,          format_pir},
+  {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       format_noise,        format_noise},
+  {nullptr,       nullptr,                 "",    "",        nullptr,                nullptr,             nullptr}
 };
 
 String format_readings_as_json(const SnappySenseData& data) {

@@ -9,13 +9,19 @@
 
 static unsigned refcount = 0;
 
-WiFiHolder::WiFiHolder(bool did_create) : valid(did_create) {}
+WiFiHolder::WiFiHolder(bool did_create) : valid(did_create) {
+  if (valid) {
+    refcount++;
+  }
+  log("WiFi: refcount = %d\n", refcount);
+}
 
 WiFiHolder::WiFiHolder(const WiFiHolder& other) {
   if (other.valid) {
     refcount++;
   }
   valid = other.valid;
+  log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
@@ -23,29 +29,34 @@ WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
     refcount++;
   }
   valid = other.valid;
+  log("WiFi: refcount = %d\n", refcount);
   return *this;
 }
 
 WiFiHolder::~WiFiHolder() {
   if (valid) {
-    if (--refcount) {
+    --refcount;
+    if (refcount == 0) {
+      log("WiFi: Bringing down network\n");
       WiFi.disconnect();
     }
   }
+  log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder connect_to_wifi() {
-  // Connect to local WiFi network
-  // FIXME: Failure conditions need to be checked and reported
-  WiFi.begin(access_point_ssid(), access_point_password());
-  log("Connecting to local network ");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    log(".");
+  if (refcount == 0) {
+    // Connect to local WiFi network
+    // FIXME: Failure conditions need to be checked and reported
+    WiFi.begin(access_point_ssid(), access_point_password());
+    log("WiFi: Connecting to network ");
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      log(".");
+    }
+    log(" Connected. Device IP address: %s\n", local_ip_address().c_str());
   }
-  WiFiHolder holder(true);
-  log(" Connected. Device IP address: %s\n", local_ip_address().c_str());
-  return holder;
+  return WiFiHolder(true);
 }
 
 String local_ip_address() {

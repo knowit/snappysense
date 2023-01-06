@@ -33,7 +33,7 @@ void setup() {
   show_splash();
 #endif
 
-  log("SnappySense ready!");  
+  log("SnappySense ready!\n");
 
 #ifdef TIMESTAMP
   configure_time();

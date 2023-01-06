@@ -24,8 +24,7 @@
  *  server.close() closes the server socket and stops listening
  */
 
-// I suppose it would be possible to use the Arduino WEB_SERVER framework, but it insists on
-// handling its own WiFiClient and I don't like it.
+// I suppose it would be possible to use the Arduino WEB_SERVER framework?
 
 static WiFiServer server(web_server_listen_port());
 static WiFiHolder server_holder;
@@ -34,11 +33,12 @@ void start_web_server() {
   server_holder = connect_to_wifi();
 
   server.begin();
-  log("Web server is listening on port %d\n", web_server_listen_port());
+  log("Web server: listening on port %d\n", web_server_listen_port());
 }
 
 static void handle_web_request(SnappySenseData* data, WiFiClient& client, const String& request) {
   if (request.startsWith("GET /")) {
+    log("Web server: handling GET\n");
     String r = request.substring(5);
     int idx = r.indexOf(' ');
     if (idx != -1) {
@@ -56,6 +56,7 @@ static void handle_web_request(SnappySenseData* data, WiFiClient& client, const 
     client.println("</pre>");
     return;
   }
+  log("Web server: invalid method\n");
   client.println("HTTP/1.1 403 Forbidden");
 }
 
@@ -64,9 +65,7 @@ void maybe_handle_web_request(SnappySenseData* data) {
   if (!client) {
     return;
   }
-#if 0
-  log("Got a client");
-#endif
+  log("Web server: Incoming request\n");
   // The request is a number of CRLF-terminated lines followed by a blank CRLF-terminated line.
   // This state machine attempts to implement that precisely.  It may be that a looser 
   // interpretation would be more resilient.
@@ -83,9 +82,7 @@ void maybe_handle_web_request(SnappySenseData* data) {
     // Bytes arrive now and then
     if (client.available()) {
       char c = client.read();
-#if 0
-      log("Received %c\n", c);
-#endif
+      //log("Web: received %c\n", c);
       switch (state) {
       case TEXT:
         if (c == '\r') {
@@ -135,7 +132,7 @@ void maybe_handle_web_request(SnappySenseData* data) {
   if (state == CRLFCRLF) {
     handle_web_request(data, client, request);
   } else {
-    log("Incomplete request");
+    log("Web server: Incomplete request [%s]\n", request.c_str());
   }
   client.flush();
   client.stop();

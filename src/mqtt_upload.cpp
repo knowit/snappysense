@@ -21,7 +21,7 @@ void upload_results_to_mqtt_server(const SnappySenseData& data) {
   // base the buffer size on the message length?  That would be neat.
   String msg = format_readings_as_json(data);
   if (msg.length() > MQTT_BUFFER_SIZE) {
-    log("Message too long!\n");
+    log("Mqtt: Message too long!\n");
     return;
   }
 
@@ -39,7 +39,7 @@ void upload_results_to_mqtt_server(const SnappySenseData& data) {
   clientMQTT.setTxPayloadSize(MQTT_BUFFER_SIZE);
 
   // Connect to the MQTT broker on the AWS endpoint
-  log("Connecting to AWS IOT ");
+  log("Mqtt: Connecting to AWS IOT ");
   while (!clientMQTT.connect(mqtt_endpoint_host(), mqtt_endpoint_port())) {
     log(".");
     delay(100);
@@ -59,12 +59,12 @@ void upload_results_to_mqtt_server(const SnappySenseData& data) {
     // I think this shouldn't happen since we checked above, but
     // it's not totally clear that it won't.  It's possible the
     // topic is also in the buffer, and there may be metadata too.
-    log("Message was chopped!\n");
+    log("Mqtt: Message was chopped!\n");
   }
   clientMQTT.endMessage();
 
 #ifdef MQTT_VERBOSE
-  log("MQTT message sent!\n");
+  log("Mqtt: Message sent!\n");
 #endif
 
   delay(100);

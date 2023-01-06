@@ -66,9 +66,9 @@ static void cmd_help(const String& cmd, SnappySenseData* data, Stream* out) {
   for (Command* c = commands; c->command != nullptr; c++ ) {
     out->printf(" %s - %s\n", c->command, c->help);
   }
-  out->println("Sensor names for `get` are:");
+  out->println("\nSensor names for `get` are:");
   for (SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++) {
-    out->printf(" %s - %s\n", m->json_key, m->explanatory_text);
+    out->printf(" %s - %s (%s)\n", m->json_key, m->explanatory_text, m->unit_text);
   }
 }
 

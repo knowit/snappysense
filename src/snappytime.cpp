@@ -5,6 +5,7 @@
 
 #include "snappytime.h"
 #include "config.h"
+#include "log.h"
 #include "network.h"
 
 #include <WiFi.h>
@@ -21,6 +22,7 @@ void configure_time() {
   if (time_configured) {
     return;
   }
+  log("Time: obtaining current time from server\n");
   time_configured = true;
   auto holder = connect_to_wifi();
   WiFiClient wifiClient;

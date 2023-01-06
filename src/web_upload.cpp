@@ -2,6 +2,7 @@
 
 #include "web_upload.h"
 #include "config.h"
+#include "log.h"
 #include "network.h"
 
 #include <WiFi.h>
@@ -11,6 +12,8 @@
 #ifdef WEB_UPLOAD
 
 void upload_results_to_http_server(const SnappySenseData& data) {
+  log("Web: uploading data\n");
+
   String payload = format_readings_as_json(data);
 
   // FIXME: There are lots of failure conditions here, and they all need to be checked somehow.
