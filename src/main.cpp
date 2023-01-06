@@ -15,7 +15,14 @@
 void show_next_view();
 #endif
 
-static int next_view = -1; // start with splash screen
+// Currently only one copy of sensor data globally but the code's properly parameterized and
+// there could be several of these, useful in a threaded world perhaps.
+static SnappySenseData snappy;
+
+#ifdef STANDALONE
+// start with splash screen
+static int next_view = -1;
+#endif
 
 void setup() {
   device_setup();
@@ -64,20 +71,20 @@ void loop() {
   unsigned long next_deadline = ULONG_MAX;
 
   if (now >= next_sensor_reading) {
-    get_sensor_values();
+    get_sensor_values(&snappy);
     next_sensor_reading = now + sensor_poll_frequency_seconds() * 1000;
     next_deadline = min(next_deadline, next_sensor_reading);
   }
 #ifdef SERIAL_SERVER
   if (now >= next_serial_server_action) {
-    maybe_handle_serial_request();
+    maybe_handle_serial_request(&snappy);
     next_serial_server_action = now + serial_command_poll_seconds() * 1000;
     next_deadline = min(next_deadline, next_serial_server_action);
   }
 #endif
 #ifdef WEB_SERVER
   if (now >= next_web_server_action) {
-    maybe_handle_web_request(snappy);
+    maybe_handle_web_request(&snappy);
     next_web_server_action = now + web_command_poll_seconds() * 1000;
     next_deadline = min(next_deadline, next_web_server_action);
   }

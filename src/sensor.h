@@ -48,8 +48,6 @@ typedef struct SnappySenseData {
   bool pir;
 } SnappySenseData;
 
-extern SnappySenseData snappy;
-
 // Sensor metadata.  There is one row in the metadata table for each field in the model
 // (though not necessarily in the same order).  The metadata can be used to format
 // and describe the fields in various ways.

@@ -14,7 +14,7 @@ void start_web_server();
 // THE ENTIRE REQUEST HAS BEEN READ!  Once the complete request has been read,
 // it is processed by the command processor, which will produce some output that
 // is sent back to the client.  The connection is then closed.
-void maybe_handle_web_request(const SnappySenseData& data);
+void maybe_handle_web_request(SnappySenseData* data);
 #endif
 
 #endif // web_server_h_included

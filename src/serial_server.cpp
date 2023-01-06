@@ -5,7 +5,7 @@
 
 #ifdef SERIAL_SERVER
 
-void maybe_handle_serial_request() {
+void maybe_handle_serial_request(SnappySenseData* data) {
     static String buf;
 	while (Serial.available() > 0) {
 		int ch = Serial.read();
@@ -18,7 +18,7 @@ void maybe_handle_serial_request() {
             if (buf.isEmpty()) {
                 continue;
             }
-            process_command(buf, &Serial);
+            process_command(data, buf, &Serial);
             buf.clear();
             continue;
         }

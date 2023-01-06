@@ -99,27 +99,27 @@ int probe_i2c_devices(Stream* stream) {
   return num;
 }
 
-void get_sensor_values() {
+void get_sensor_values(SnappySenseData* data) {
   environment.begin();
-  snappy.temperature = environment.getTemperature(TEMP_C);
-  snappy.humidity = environment.getHumidity();
-  snappy.uv = environment.getUltravioletIntensity();
-  snappy.lux = environment.getLuminousIntensity();
-  snappy.hpa = environment.getAtmospherePressure(HPA);
-  snappy.elevation = environment.getElevation();
+  data->temperature = environment.getTemperature(TEMP_C);
+  data->humidity = environment.getHumidity();
+  data->uv = environment.getUltravioletIntensity();
+  data->lux = environment.getLuminousIntensity();
+  data->hpa = environment.getAtmospherePressure(HPA);
+  data->elevation = environment.getElevation();
 
   ENS160.begin();
   ENS160.setPWRMode(ENS160_STANDARD_MODE);
-  ENS160.setTempAndHum(/*temperature=*/snappy.temperature, /*humidity=*/snappy.humidity);
-  snappy.air_sensor_status = ENS160.getENS160Status();
-  snappy.aqi = ENS160.getAQI();
-  snappy.tvoc = ENS160.getTVOC();
-  snappy.eco2 = ENS160.getECO2();
+  ENS160.setTempAndHum(/*temperature=*/data->temperature, /*humidity=*/data->humidity);
+  data->air_sensor_status = ENS160.getENS160Status();
+  data->aqi = ENS160.getAQI();
+  data->tvoc = ENS160.getTVOC();
+  data->eco2 = ENS160.getECO2();
 
   // There's a conflict between the WiFi and the ADC.
-  snappy.pir = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
+  data->pir = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
 #if defined(READ_NOISE)
-  snappy.noise = analogRead(MIC_PIN);
+  data->noise = analogRead(MIC_PIN);
 #endif
 }
 

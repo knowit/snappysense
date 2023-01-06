@@ -37,7 +37,7 @@ void start_web_server() {
   log("Web server is listening on port %d\n", web_server_listen_port());
 }
 
-static void handle_web_request(const SnappySenseData& data, WiFiClient& client, const String& request) {
+static void handle_web_request(SnappySenseData* data, WiFiClient& client, const String& request) {
   if (request.startsWith("GET /")) {
     String r = request.substring(5);
     int idx = r.indexOf(' ');
@@ -52,14 +52,14 @@ static void handle_web_request(const SnappySenseData& data, WiFiClient& client, 
     client.println("Content-type:text/html");
     client.println();
     client.println("<pre>");
-    process_command(r, &client);
+    process_command(data, r, &client);
     client.println("</pre>");
     return;
   }
   client.println("HTTP/1.1 403 Forbidden");
 }
 
-void maybe_handle_web_request(const SnappySenseData& data) {
+void maybe_handle_web_request(SnappySenseData* data) {
   WiFiClient client = server.available();   // listen for incoming clients
   if (!client) {
     return;
