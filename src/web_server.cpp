@@ -1,4 +1,8 @@
 // Support for the device acting as a simple web server, for querying data across HTTP
+//
+// Parameters are passed using the usual syntax, so <http://.../get?temperature> to
+// return the temperature reading.  The parameter handling is ad-hoc and works only
+// for these simple cases.
 
 #include "web_server.h"
 #include "command.h"
@@ -47,6 +51,11 @@ static void handle_web_request(SnappySenseData* data, WiFiClient& client, const 
     }
     if (r.isEmpty()) {
       r = String("help");
+    }
+    // Hack
+    idx = r.indexOf('?');
+    if (idx != -1) {
+      r[idx] = ' ';
     }
     client.println("HTTP/1.1 200 OK");
     client.println("Content-type:text/html");

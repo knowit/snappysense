@@ -49,7 +49,7 @@ void process_command(SnappySenseData* data, const String& cmd, Stream* out) {
       }
     }
   }
-  out->printf("Unrecognized command [%s]\n", cmd);
+  out->printf("Unrecognized command [%s]\n", cmd.c_str());
 }
 
 static void cmd_hello(const String& cmd, SnappySenseData* data, Stream* out) {

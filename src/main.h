@@ -44,7 +44,7 @@
 
 // With WEB_SERVER, the device creates a server on port 8088 and listens for 
 // commands, just ask for / or /help to see a directory of the possible requests.
-#define WEB_SERVER
+//#define WEB_SERVER
 
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
