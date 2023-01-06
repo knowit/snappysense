@@ -25,6 +25,10 @@
 //
 // FUNCTIONAL CONFIGURATION
 
+// Hardware version you're compiling for.  Pick one.
+#define HARDWARE_1_0_0
+//#define HARDWARE_1_1_0
+
 // In this mode, the display is updated frequently with readings.  When
 // not in this mode, the display sleeps, and the device wakes up to perform readings,
 // report them, and (if configured), process interactive commands.
@@ -36,7 +40,7 @@
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
-#define WEB_UPLOAD
+//#define WEB_UPLOAD
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
 // every so often.  See mqtt_upload.h.
@@ -57,10 +61,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// In V1.0.0, there's a hardware resource conflict between WiFi and the noise sensor.
-
-#if !defined(WEB_UPLOAD) && !defined(WEB_SERVER)
+#ifdef HARDWARE_1_0_0
+// In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
+# if !defined(WEB_UPLOAD) && !defined(WEB_SERVER) && !defined(MQTT_UPLOAD)
 #  define READ_NOISE
-#endif
+# endif
+#endif // HARDWARE_1_0_0
 
 #endif // !main_h_included

@@ -48,6 +48,9 @@ int mqtt_endpoint_port();
 // The device identifier required by the remote service
 const char* mqtt_device_id();
 
+// The name of the device class to which this device belongs
+const char* mqtt_device_class();
+
 // Keys and certificates
 const char* mqtt_root_ca_cert();
 const char* mqtt_device_cert();

@@ -18,17 +18,7 @@ static void format_sequenceno(const SnappySenseData& data, char* buf, char* bufl
 
 #ifdef TIMESTAMP
 static void format_time(const SnappySenseData& data, char* buf, char* buflim) {
-  static const char* const weekdays[] = {
-    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
-  };
-  struct tm lt = snappy_local_time();
-  snprintf(buf, buflim-buf, "%04d-%02d-%02dT%02d:%02d/%s", 
-           data.time.tm_year + 1900,     // year number
-           data.time.tm_mon + 1,         // month, 1-12
-           data.time.tm_mday,            // day of the month, 1-31
-           data.time.tm_hour,            // hour, 0-23
-           data.time.tm_min,             // minute, 0-59
-           weekdays[data.time.tm_wday]); // day of the week
+  snprintf(buf, buflim-buf, "\"%s\"", format_time(data.time).c_str());
 }
 #endif
 
@@ -142,6 +132,7 @@ String format_readings_as_json(const SnappySenseData& data) {
   buf += '{';
   buf += "\"location\":\"";
   buf += location_name();
+  buf += '"';
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
     buf += ',';
     buf += '"';

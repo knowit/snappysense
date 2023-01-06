@@ -14,6 +14,7 @@
 void configure_time();
 time_t get_time();
 struct tm snappy_local_time();
+String format_time(const struct tm& time);
 #endif
 
 #endif // !snappytime_h_included

@@ -9,7 +9,11 @@
 
 #include "client_config.h"
 
+#ifdef DEVELOPMENT
+static const unsigned long SENSOR_POLL_FREQUENCY_S = 15;
+#else
 static const unsigned long SENSOR_POLL_FREQUENCY_S = 60;
+#endif
 
 #ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
@@ -20,14 +24,22 @@ static const unsigned long WEB_SERVER_WAIT_TIME_S = 1;
 // TODO: The upload frequency should ideally be a multiple of the sensor
 // poll frequency; and/or there should be no upload if the sensor
 // has not been read since the last time. 
-static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*5; // 5 minutes - OK for testing, gets us some volume
+#ifdef DEVELOPMENT
+static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*1;
+#else
+static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
+#endif
 #endif
 
 #ifdef MQTT_UPLOAD
 // TODO: The upload frequency should ideally be a multiple of the sensor
 // poll frequency; and/or there should be no upload if the sensor
 // has not been read since the last time. 
-static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*5; // 5 minutes - OK for testing, gets us some volume
+#ifdef DEVELOPMENT
+static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*1;
+#else
+static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
+#endif
 #endif
 
 #ifdef STANDALONE
@@ -93,6 +105,10 @@ int mqtt_endpoint_port() {
 
 const char* mqtt_device_id() {
   return AWS_CLIENT_IDENTIFIER;
+}
+
+const char* mqtt_device_class() {
+  return "snappysense";
 }
 
 const char* mqtt_root_ca_cert() {
