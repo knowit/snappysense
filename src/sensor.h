@@ -8,6 +8,11 @@
 // This is the model of the sensor unit.
 
 typedef struct SnappySenseData {
+  // The sequence number is useful for calibration, bug fixing, etc.  It is
+  // set from a global variable when a reading is obtained.  It will wrap
+  // around silently.
+  unsigned sequence_number;
+
   // Altitude of device, meters above (below) sea level
   float elevation;
 
@@ -81,6 +86,6 @@ typedef struct {
 // The metadata table is terminated by a row where json_key == nullptr.
 extern SnappyMetaDatum snappy_metadata[];
 
-String format_readings_as_json(const SnappySenseData& data, unsigned sequence_number);
+String format_readings_as_json(const SnappySenseData& data);
 
 #endif // !sensor_h_included

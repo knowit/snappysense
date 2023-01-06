@@ -106,7 +106,7 @@ SnappyMetaDatum snappy_metadata[] = {
   {nullptr,       nullptr,                 "",    "",       nullptr,                nullptr,             nullptr}
 };
 
-String format_readings_as_json(const SnappySenseData& data, unsigned sequence_number) {
+String format_readings_as_json(const SnappySenseData& data) {
   // TODO, maybe use ArduinoJSON here.
   // TODO, for production code we have to handle OOM all the way down, see comments below.
   // String::operator+= does not deal with that.
@@ -115,7 +115,7 @@ String format_readings_as_json(const SnappySenseData& data, unsigned sequence_nu
   buf += "\"location\":\"";
   buf += location_name();
   buf += "\",\"sequenceno\":";
-  buf += sequence_number;
+  buf += data.sequence_number;
 #ifdef TIMESTAMP
   // For the time stamp the information we're interested in is the local time,
   // because we want to correlate time of day and week day with readings.  And we also

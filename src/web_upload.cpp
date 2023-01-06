@@ -11,11 +11,7 @@
 #ifdef WEB_UPLOAD
 
 void upload_results_to_http_server(const SnappySenseData& data) {
-  // The sequence_number is useful because the first couple readings after startup are iffy,
-  // server-side we can discard at least those with sequence_number 0.
-  static unsigned sequence_number = 0;
-
-  String payload = format_readings_as_json(data, sequence_number++);
+  String payload = format_readings_as_json(data);
 
   // FIXME: There are lots of failure conditions here, and they all need to be checked somehow.
   //

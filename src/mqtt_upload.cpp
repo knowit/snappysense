@@ -19,7 +19,7 @@ void upload_results_to_mqtt_server(const SnappySenseData& data) {
   // The message is currently on the large side, it should be shorter.
   // TODO: Is it possible to not have a static buffer size here but to
   // base the buffer size on the message length?  That would be neat.
-  String msg = format_readings_as_json(data, 0);
+  String msg = format_readings_as_json(data);
   if (msg.length() > MQTT_BUFFER_SIZE) {
     log("Message too long!\n");
     return;

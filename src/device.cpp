@@ -99,7 +99,13 @@ int probe_i2c_devices(Stream* stream) {
   return num;
 }
 
+// The sequence_number is useful because the first couple readings after startup are iffy,
+// server-side we can discard at least those with sequence_number 0.
+static unsigned sequence_number;
+
 void get_sensor_values(SnappySenseData* data) {
+  data->sequence_number = sequence_number++;
+
   environment.begin();
   data->temperature = environment.getTemperature(TEMP_C);
   data->humidity = environment.getHumidity();
