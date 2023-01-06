@@ -4,6 +4,7 @@
 #include "icons.h"
 #include "log.h"
 #include "sensor.h"
+#include "snappytime.h"
 #include "Wire.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -108,6 +109,9 @@ static unsigned sequence_number;
 
 void get_sensor_values(SnappySenseData* data) {
   data->sequence_number = sequence_number++;
+#ifdef TIMESTAMP
+  data->time = snappy_local_time();
+#endif
 
   data->temperature = environment.getTemperature(TEMP_C);
   data->humidity = environment.getHumidity();
@@ -138,7 +142,7 @@ void get_sensor_values(SnappySenseData* data) {
     }
   }
 
-  data->pir = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
+  data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
 #ifdef READ_NOISE
   data->noise = analogRead(MIC_PIN);
 #endif

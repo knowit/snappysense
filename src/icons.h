@@ -15,7 +15,7 @@ extern const unsigned char hpa_icon [];
 extern const unsigned char elevation_icon [];
 extern const unsigned char aqi_icon [];
 extern const unsigned char co2_icon [];
-extern const unsigned char pir_icon [];
+extern const unsigned char motion_icon [];
 extern const unsigned char noise_icon [];
 #endif
 

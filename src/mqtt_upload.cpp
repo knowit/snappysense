@@ -16,6 +16,11 @@
 static const size_t MQTT_BUFFER_SIZE = 1024;
 
 void upload_results_to_mqtt_server(const SnappySenseData& data) {
+  if (data.sequence_number == 0) {
+    // Mostly bogus data
+    return;
+  }
+
   // The message is currently on the large side, it should be shorter.
   // TODO: Is it possible to not have a static buffer size here but to
   // base the buffer size on the message length?  That would be neat.

@@ -12,6 +12,11 @@
 #ifdef WEB_UPLOAD
 
 void upload_results_to_http_server(const SnappySenseData& data) {
+  if (data.sequence_number == 0) {
+    // Mostly bogus data
+    return;
+  }
+
   log("Web: uploading data\n");
 
   String payload = format_readings_as_json(data);

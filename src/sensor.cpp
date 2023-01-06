@@ -12,6 +12,26 @@ SnappySenseData snappy;
 // if the buffer is too small, but the operation is guaranteed not to write beyond
 // the end of the buffer.
 
+static void format_sequenceno(const SnappySenseData& data, char* buf, char* buflim) { 
+  snprintf(buf, buflim - buf, "%u", data.sequence_number);
+}
+
+#ifdef TIMESTAMP
+static void format_time(const SnappySenseData& data, char* buf, char* buflim) {
+  static const char* const weekdays[] = {
+    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
+  };
+  struct tm lt = snappy_local_time();
+  snprintf(buf, buflim-buf, "%04d-%02d-%02dT%02d:%02d/%s", 
+           data.time.tm_year + 1900,     // year number
+           data.time.tm_mon + 1,         // month, 1-12
+           data.time.tm_mday,            // day of the month, 1-31
+           data.time.tm_hour,            // hour, 0-23
+           data.time.tm_min,             // minute, 0-59
+           weekdays[data.time.tm_wday]); // day of the week
+}
+#endif
+
 static void format_temp(const SnappySenseData& data, char* buf, char* buflim) { 
   snprintf(buf, buflim - buf, "%f", data.temperature);
 }
@@ -52,8 +72,8 @@ static void format_co2(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.eco2);
 }
 
-static void format_pir(const SnappySenseData& data, char* buf, char* buflim) { 
-  snprintf(buf, buflim - buf, "%d", data.pir);
+static void format_motion(const SnappySenseData& data, char* buf, char* buflim) { 
+  snprintf(buf, buflim - buf, "%d", data.motion_detected);
 }
 
 #ifdef READ_NOISE
@@ -91,6 +111,10 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
 #endif
 
 SnappyMetaDatum snappy_metadata[] = {
+  {"sequenceno",  "Sequence number",       "",    "",        nullptr,                nullptr,             format_sequenceno},
+#ifdef TIMESTAMP
+  {"time",        "Local time of reading", "",    "",        nullptr,                nullptr,             format_time},
+#endif
   {"temperature", "Temperature",           "C",   "C",       ICON(temperature_icon), display_temp,        format_temp},
   {"humidity",    "Humidity",              "%",   "%",       ICON(humidity_icon),    display_humidity,    format_humidity},
   {"uv",          "Ultraviolet intensity", "",    "mW/cm^2", ICON(uv_icon),          format_uv,           format_uv},
@@ -103,7 +127,7 @@ SnappyMetaDatum snappy_metadata[] = {
                                            "ppb", "ppb",     ICON(aqi_icon),         format_tvoc,         format_tvoc},
   {"co2",         "Carbon dioxide equivalent concentration",
                                            "ppm", "ppm",     ICON(co2_icon),         format_co2,          format_co2},
-  { "pir",        "PIR value",             "",    "",        ICON(pir_icon),         format_pir,          format_pir},
+  { "motion",     "Motion detected",       "",    "",        ICON(motion_icon),      format_motion,       format_motion},
 #ifdef READ_NOISE
   {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       format_noise,        format_noise},
 #endif
@@ -118,28 +142,6 @@ String format_readings_as_json(const SnappySenseData& data) {
   buf += '{';
   buf += "\"location\":\"";
   buf += location_name();
-  buf += "\",\"sequenceno\":";
-  buf += data.sequence_number;
-#ifdef TIMESTAMP
-  // For the time stamp the information we're interested in is the local time,
-  // because we want to correlate time of day and week day with readings.  And we also
-  // want statistics over time, in a totally ordered list.
-  // It's easier (if less compact) to extract those fields individually than
-  // to deal with an encoded value.
-  struct tm lt = snappy_local_time();
-  buf += ",\"year\":";
-  buf += lt.tm_year + 1900;  // year number
-  buf += ",\"month\":";
-  buf += lt.tm_mon + 1;      // month, 1-12
-  buf += ",\"day\":";
-  buf += lt.tm_mday;         // day of the month, 1-31
-  buf += ",\"weekday\":";
-  buf += lt.tm_wday + 1;     // day of the week, 1-7, 1 is sunday
-  buf += ",\"hour\":";
-  buf += lt.tm_hour;         // hour, 0-23
-  buf += ",\"minute\":";
-  buf += lt.tm_min;          // minute, 0-59
-#endif
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
     buf += ',';
     buf += '"';

@@ -13,6 +13,11 @@ typedef struct SnappySenseData {
   // around silently.
   unsigned sequence_number;
 
+#ifdef TIMESTAMP
+  // Current local time when the reading was taken
+  struct tm time;
+#endif
+
   // Altitude of device, meters above (below) sea level
   float elevation;
 
@@ -50,9 +55,8 @@ typedef struct SnappySenseData {
   uint16_t noise;
 #endif
 
-  // Passive motion sensor
-  // TODO: Unit?
-  bool pir;
+  // Passive motion sensor.  Unit: no movement / movement.
+  bool motion_detected;
 } SnappySenseData;
 
 // Sensor metadata.  There is one row in the metadata table for each field in the model
