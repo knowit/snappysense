@@ -1,5 +1,31 @@
 // Interface to actual hardware device
 
+// Hardware v1.0.0:
+//  - adafruit feather esp32 "HUZZAH32" (https://www.adafruit.com/product/3406)
+//      esp32-wroom-32 MoC, https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
+//      onboard wifi for communication
+//      onboard usb serial for power and development
+//      onboard reset button
+//      onboard configured i2c for communication with peripherals
+//      onboard connectivity to external rechargeable LiPoly battery, charging from onboard usb
+//  - wake button
+//  - 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
+//      eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
+//  - DFRobot SKU:SEN0514 air/gas sensor @ I2C 0x53 (alternate 0x52, supposedly)
+//      https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
+//  - DFRobot SKU:SEN0500 environmental sensor @ I2C 0x22 (undocumented)
+//      https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
+//  - DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal simply reads high / low
+//      (with small delay) as motion is detected, it's not buffered
+//      https://www.dfrobot.com/product-1140.html
+//      https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
+//  - Unspecified noise level reader, analog signal @ pin A5, unit and range not documented
+//      FIXME
+//
+// HW 1.0.0 has a bug in that the ADC2 configured for the microphone conflicts with its
+// hardwired use for WiFi, as a consequence, they can't be used at the same time.  In
+// practice the Mic functionality is unavailable.
+
 #include "device.h"
 #include "icons.h"
 #include "log.h"
@@ -10,6 +36,10 @@
 #include <Adafruit_SSD1306.h>
 #include <DFRobot_ENS160.h>
 #include <DFRobot_EnvironmentalSensor.h>
+
+#if !defined(HARDWARE_1_0_0)
+#  error "Update your pin definitions below"
+#endif
 
 // SnappySense 1.0.0 device definition
 
@@ -86,7 +116,7 @@ int probe_i2c_devices(Stream* stream) {
   for(address = 1; address < 127; address++ )
   {
     // The i2c_scanner uses the return value of
-    // the Write.endTransmisstion to see if
+    // the Wire.endTransmisstion to see if
     // a device did acknowledge to the address.
     Wire.beginTransmission(address);
     error = Wire.endTransmission();

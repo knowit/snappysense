@@ -25,7 +25,7 @@
 //
 // FUNCTIONAL CONFIGURATION
 
-// Hardware version you're compiling for.  Pick one.
+// Hardware version you're compiling for.  Pick one.  See device.cpp for more.
 #define HARDWARE_1_0_0
 //#define HARDWARE_1_1_0
 
