@@ -7,6 +7,8 @@
 
 class WiFiHolder {
   bool valid;
+  void incRef();
+  void decRef();
 public:
   WiFiHolder(bool did_create = false);
   WiFiHolder& operator=(const WiFiHolder& other);

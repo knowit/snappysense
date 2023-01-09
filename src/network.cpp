@@ -9,16 +9,28 @@
 
 static unsigned refcount = 0;
 
+void WiFiHolder::incRef() {
+  refcount++;
+}
+
+void WiFiHolder::decRef() {
+  --refcount;
+  if (refcount == 0) {
+    log("WiFi: Bringing down network\n");
+    WiFi.disconnect();
+  }
+}
+
 WiFiHolder::WiFiHolder(bool did_create) : valid(did_create) {
   if (valid) {
-    refcount++;
+    incRef();
   }
   log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder::WiFiHolder(const WiFiHolder& other) {
   if (other.valid) {
-    refcount++;
+    incRef();
   }
   valid = other.valid;
   log("WiFi: refcount = %d\n", refcount);
@@ -26,7 +38,9 @@ WiFiHolder::WiFiHolder(const WiFiHolder& other) {
 
 WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
   if (other.valid && !valid) {
-    refcount++;
+    incRef();
+  } else if (!other.valid && valid) {
+    decRef();
   }
   valid = other.valid;
   log("WiFi: refcount = %d\n", refcount);
@@ -35,11 +49,7 @@ WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
 
 WiFiHolder::~WiFiHolder() {
   if (valid) {
-    --refcount;
-    if (refcount == 0) {
-      log("WiFi: Bringing down network\n");
-      WiFi.disconnect();
-    }
+    decRef();
   }
   log("WiFi: refcount = %d\n", refcount);
 }
