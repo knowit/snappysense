@@ -125,7 +125,7 @@ SnappyMetaDatum snappy_metadata[] = {
 };
 
 String format_readings_as_json(const SnappySenseData& data) {
-  // TODO, maybe use ArduinoJSON here.
+  // TODO, maybe use ArduinoJSON here, we're pulling that in for mqtt anyway.
   // TODO, for production code we have to handle OOM all the way down, see comments below.
   // String::operator+= does not deal with that.
   String buf;
