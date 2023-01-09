@@ -30,6 +30,12 @@ void va_log(const char* fmt, va_list args) {
         case 'd':
           log_stream_->printf("%d", va_arg(args, int));
           break;
+        case 'u':
+          log_stream_->printf("%u", va_arg(args, unsigned));
+          break;
+        case 'f':
+          log_stream_->printf("%f", va_arg(args, double));
+          break;
         case 's':
           log_stream_->printf("%s", va_arg(args, char*));
           break;
@@ -46,6 +52,7 @@ void va_log(const char* fmt, va_list args) {
           log_stream_->printf("%%");
           break;
         default:
+          log("Bad format character in log: %c\n", *(fmt-1));
           return;
       }
     } else {

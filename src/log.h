@@ -10,7 +10,7 @@
 #ifdef LOGGING
 void set_log_stream(Stream* output);
 
-// Printf-like formatting but restricted for now to %s, %d and %c.  Don't be fancy!
+// Printf-like formatting but restricted for now to %s, %d, %u, %f and %c.  Don't be fancy!
 // %c prints the character if printable, otherwise the ascii code.
 void log(const char* fmt, ...);
 void va_log(const char* fmt, va_list args);

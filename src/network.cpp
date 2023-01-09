@@ -7,16 +7,27 @@
 #include <WiFi.h>
 #include <WiFiAP.h>
 
+//#define REFCOUNT_LOGGING
+#define WIFI_LOGGING
+
 static unsigned refcount = 0;
 
 void WiFiHolder::incRef() {
   refcount++;
+#ifdef REFCOUNT_LOGGING
+  log("WiFi: refcount = %d\n", refcount);
+#endif
 }
 
 void WiFiHolder::decRef() {
   --refcount;
+#ifdef REFCOUNT_LOGGING
+  log("WiFi: refcount = %d\n", refcount);
+#endif
   if (refcount == 0) {
+#ifdef WIFI_LOGGING
     log("WiFi: Bringing down network\n");
+#endif
     WiFi.disconnect();
   }
 }
@@ -25,7 +36,6 @@ WiFiHolder::WiFiHolder(bool did_create) : valid(did_create) {
   if (valid) {
     incRef();
   }
-  log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder::WiFiHolder(const WiFiHolder& other) {
@@ -33,7 +43,6 @@ WiFiHolder::WiFiHolder(const WiFiHolder& other) {
     incRef();
   }
   valid = other.valid;
-  log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
@@ -43,7 +52,6 @@ WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
     decRef();
   }
   valid = other.valid;
-  log("WiFi: refcount = %d\n", refcount);
   return *this;
 }
 
@@ -51,7 +59,6 @@ WiFiHolder::~WiFiHolder() {
   if (valid) {
     decRef();
   }
-  log("WiFi: refcount = %d\n", refcount);
 }
 
 WiFiHolder connect_to_wifi() {
@@ -62,15 +69,23 @@ WiFiHolder connect_to_wifi() {
   // Connect to local WiFi network
   // FIXME: Failure conditions need to be checked and reported
   WiFi.begin(access_point_ssid(), access_point_password());
+#ifdef WIFI_LOGGING
   log("WiFi: Connecting to network ");
+#endif
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
+#ifdef WIFI_LOGGING
     log(".");
+#endif
   }
+#ifdef WIFI_LOGGING
   log("\n");
+#endif
   // Create the holder first: otherwise local_ip_address() will return an empty string.
   WiFiHolder holder(true);
+#ifdef WIFI_LOGGING
   log("Connected. Device IP address: %s\n", local_ip_address().c_str());
+#endif
   return holder;
 }
 

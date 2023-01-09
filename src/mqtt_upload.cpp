@@ -8,10 +8,14 @@
 // On a reading, we publish to topic snappy/reading/<device-class>/<device-id> with
 // all the fields in the sensor object.
 //
+// TODO: There might also be snappy/distress/<device-class>/<device-id> to report problems, or
+// some ditto log message.  (In contrast, a ping should not be necessary because the mqtt broker
+// ought to know when the device last connected.)
+//
 // We subscribe to two topics:
 //
 // A message published to snappy/control/<device-id> can have two fields, "enable" (0 or 1),
-// and "interval" (reading interval, positive integer seconds).
+// and "interval" (mqtt capture interval, positive integer seconds).
 //
 // A message published to snappy/command/<device-id> has three fields, "actuator" (the environment
 // factor we want to control, string, this should equal one of the json keys for the
@@ -27,6 +31,7 @@
 
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
+#include <Arduino_Json.h>
 
 #ifdef MQTT_UPLOAD
 
@@ -236,7 +241,40 @@ static void mqtt_handle_message(int payload_size) {
     return;
   }
   buf[payload_size] = 0;
-  log("Mqtt: incoming message\n%s\n%s\n", topic.c_str(), buf);
+
+  // Technically we should check that there are no unknown fields here.
+  // Not sure if we care that much.
+  JSONVar json = JSON.parse((const char*)buf);
+  if (topic.startsWith("snappy/control/")) {
+    int fields = 0;
+    if (json.hasOwnProperty("enable")) {
+      unsigned flag = (unsigned)json["enable"];
+      log("Mqtt: enable %u\n", flag);
+      fields++;
+    }
+    if (json.hasOwnProperty("interval")) {
+      unsigned interval = (unsigned)json["interval"];
+      log("Mqtt: set interval %u\n", interval);
+      fields++;
+    }
+    // Don't send empty messages
+    if (fields == 0) {
+      log("Mqtt: invalid control message\n%s\n", buf);
+    }
+  } else if (topic.startsWith("snappy/command/")) {
+    if (json.hasOwnProperty("actuator") &&
+        json.hasOwnProperty("reading") && 
+        json.hasOwnProperty("ideal")) {
+      const char* key = (const char*)json["actuator"];
+      double reading = (double)json["reading"];
+      double ideal = (double)json["ideal"];
+      log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
+    } else {
+      log("Mqtt: invalid command message\n%s\n", buf);      
+    }
+  } else {
+    log("Mqtt: unknown incoming message\n%s\n%s\n", topic.c_str(), buf);
+  }
   mqtt_state->work_done = true;
 }
 
