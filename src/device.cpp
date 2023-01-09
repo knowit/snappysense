@@ -1,29 +1,38 @@
 // Interface to actual hardware device
 
 // Hardware v1.0.0:
-//  - adafruit feather esp32 "HUZZAH32" (https://www.adafruit.com/product/3406)
-//      esp32-wroom-32 MoC, https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
-//      onboard wifi for communication
-//      onboard usb serial for power and development
-//      onboard reset button
-//      onboard configured i2c for communication with peripherals
-//      onboard connectivity to external rechargeable LiPoly battery, charging from onboard usb
-//  - integrated wake button connected to pin A1
-//  - 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
-//      eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
-//  - DFRobot SKU:SEN0514 air/gas sensor @ I2C 0x53 (alternate 0x52, supposedly)
-//      https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
-//  - DFRobot SKU:SEN0500 environmental sensor @ I2C 0x22 (undocumented)
-//      https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
-//  - DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal simply reads analog
-//      high / low (with small delay) as motion is detected, unclear if/how it's buffered,
-//      see issue #9.
-//      https://www.dfrobot.com/product-1140.html
-//      https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
-//  - DFRobot SKU:SEN0487 MEMS microphone, analog signal @ pin A5, unit and range of signal
-//      not documented beyond analogRead() returning an uint16_t.
-//      https://www.dfrobot.com/product-2357.html
-//      https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
+//
+// Adafruit feather esp32 "HUZZAH32" (https://www.adafruit.com/product/3406)
+//   esp32-wroom-32 MoC, https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
+//   onboard wifi for communication
+//   onboard usb serial for power and development
+//   onboard reset button
+//   onboard configured i2c for communication with peripherals
+//   onboard connectivity to external rechargeable LiPoly battery, charging from onboard usb
+//
+// Integrated wake button connected to pin A1 of the esp32
+//
+// 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
+//   eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
+//
+// DFRobot SKU:SEN0514 air/gas sensor @ I2C 0x53 (alternate 0x52, supposedly)
+//   https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
+//
+// DFRobot SKU:SEN0500 environmental sensor @ I2C 0x22 (undocumented)
+//   https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
+//
+// DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal reads analog
+//   high after / while movement is detected, low when no movement is detected, no buffering
+//   of value, see issue #9.
+//   https://www.dfrobot.com/product-1140.html
+//   https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
+//
+// DFRobot SKU:SEN0487 MEMS microphone, analog signal @ pin A5, unit and range of signal
+//   not documented beyond analogRead() returning an uint16_t.  From testing, it looks
+//   like it returns a reading mostly in the range 1500-2500, corresponding to 1.5V-2.5V,
+//   presumably the actual upper limit is around 3V somewhere.
+//   https://www.dfrobot.com/product-2357.html
+//   https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
 //
 // HW 1.0.0 has a bug in that the ADC2 configured for the microphone conflicts with its
 // hardwired use for WiFi, as a consequence, they can't be used at the same time.  In
