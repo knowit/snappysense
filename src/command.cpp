@@ -1,6 +1,7 @@
 // Interactive commands for serial port and web server
 
 #include "command.h"
+#include "control_task.h"
 #include "device.h"
 #include "network.h"
 #include "sensor.h"
@@ -10,7 +11,7 @@
 struct Command {
   const char* command;
   const char* help;
-  void (*handler)(const String& cmd, SnappySenseData*, Stream*);
+  void (*handler)(const String& cmd, const SnappySenseData& data, Stream*);
 };
 
 // The last row of this table has a null `command` field
@@ -39,7 +40,7 @@ static String get_word(const String& cmd, int n) {
   return String();
 }
 
-void process_command(SnappySenseData* data, const String& cmd, Stream* out) {
+void process_command(const SnappySenseData& data, const String& cmd, Stream* out) {
   String w = get_word(cmd, 0);
   if (!w.isEmpty()) {
     for (Command* c = commands; c->command != nullptr; c++ ) {
@@ -52,7 +53,7 @@ void process_command(SnappySenseData* data, const String& cmd, Stream* out) {
   out->printf("Unrecognized command [%s]\n", cmd.c_str());
 }
 
-static void cmd_hello(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_hello(const String& cmd, const SnappySenseData&, Stream* out) {
   String arg = get_word(cmd, 1);
   if (!arg.isEmpty()) {
     out->printf("Hello %s\n", arg.c_str());
@@ -61,7 +62,7 @@ static void cmd_hello(const String& cmd, SnappySenseData* data, Stream* out) {
   }
 }
 
-static void cmd_help(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_help(const String& cmd, const SnappySenseData&, Stream* out) {
   out->println("Commands:");
   for (Command* c = commands; c->command != nullptr; c++ ) {
     out->printf(" %s - %s\n", c->command, c->help);
@@ -72,7 +73,11 @@ static void cmd_help(const String& cmd, SnappySenseData* data, Stream* out) {
   }
 }
 
-static void cmd_scani2c(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) {
+  // TODO: turn this into a control task.  Note this may be difficult,
+  // as the task cannot hold a reference to the stream - the task may
+  // outlive the stream - unless we do something to make sure the stream
+  // lives longer, or is safe-for-deletion.
   out->println("Scanning...");
   int num = probe_i2c_devices(out);
   out->print("Number of I2C devices found: ");
@@ -80,22 +85,24 @@ static void cmd_scani2c(const String& cmd, SnappySenseData* data, Stream* out) {
   return;  
 }
 
-static void cmd_poweron(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_poweron(const String& cmd, const SnappySenseData&, Stream* out) {
+  // TODO: turn this into a control task, message gets printed first however
   power_on();
   out->println("Peripheral power turned on");
 }
 
-static void cmd_poweroff(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_poweroff(const String& cmd, const SnappySenseData&, Stream* out) {
+  // TODO: turn this into a control task, message gets printed first however
   power_off();
   out->println("Peripheral power turned off");
 }
 
-static void cmd_read(const String& cmd, SnappySenseData* data, Stream* out) {
-  get_sensor_values(data);
+static void cmd_read(const String& cmd, const SnappySenseData&, Stream* out) {
+  run_control_task(new ControlReadSensorsTask());
   out->println("Sensor measurements gathered");
 }
 
-static void cmd_view(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_view(const String& cmd, const SnappySenseData& data, Stream* out) {
   out->println("Measurement Data");
   out->println("----------------");
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
@@ -103,14 +110,14 @@ static void cmd_view(const String& cmd, SnappySenseData* data, Stream* out) {
     out->print(m->explanatory_text);
     out->print(": ");
     char buf[32];
-    m->format(*data, buf, buf+sizeof(buf));
+    m->format(data, buf, buf+sizeof(buf));
     out->print(buf);
     out->print(" ");
     out->println(m->unit_text);
   }
 }
 
-static void cmd_get(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_get(const String& cmd, const SnappySenseData& data, Stream* out) {
   String arg = get_word(cmd, 1);
   if (arg.isEmpty()) {
     out->println("Sensor name needed, try `help`");
@@ -119,7 +126,7 @@ static void cmd_get(const String& cmd, SnappySenseData* data, Stream* out) {
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
     if (strcmp(m->json_key, arg.c_str()) == 0) {
       char buf[32];
-      m->format(*data, buf, buf+sizeof(buf));
+      m->format(data, buf, buf+sizeof(buf));
       out->printf("%s: %s\n", m->json_key, buf);
       return;
     }
@@ -127,7 +134,7 @@ static void cmd_get(const String& cmd, SnappySenseData* data, Stream* out) {
   out->println("Invalid sensor name, try `help`");
 }
 
-static void cmd_inet(const String& cmd, SnappySenseData* data, Stream* out) {
+static void cmd_inet(const String& cmd, const SnappySenseData&, Stream* out) {
 #ifdef WEB_UPLOAD
   out->println("Web upload is enabled");
 #endif

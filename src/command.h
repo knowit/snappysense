@@ -11,7 +11,7 @@
 // of space-delimited words.  The first word is the command; see the end of command.cpp
 // for a list of supported commands.  Output from the command processor is written 
 // to `output`.  Even failed commands will produce something here.
-void process_command(SnappySenseData* data, const String& cmd, Stream* output);
+void process_command(const SnappySenseData& data, const String& cmd, Stream* output);
 #endif
 
 #endif
