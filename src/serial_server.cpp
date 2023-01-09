@@ -18,7 +18,7 @@ void maybe_handle_serial_request(SnappySenseData* data) {
             if (buf.isEmpty()) {
                 continue;
             }
-            process_command(data, buf, &Serial);
+            process_command(*data, buf, &Serial);
             buf.clear();
             continue;
         }

@@ -22,6 +22,9 @@ const char* access_point_ssid();
 // WiFi access point password, this may be nullptr.
 const char* access_point_password();
 
+bool device_enabled();
+void set_device_enabled(bool flag);
+
 #ifdef TIMESTAMP
 // Host name of remote web server used for web upload and time service.
 const char* time_server_host();
@@ -50,6 +53,7 @@ unsigned long web_upload_frequency_seconds();
 // Note this is independent of sensor reading frequency; fewer readings
 // may be captured for upload than are performed.
 unsigned long mqtt_capture_frequency_seconds();
+void set_mqtt_capture_frequency_seconds(unsigned long interval);
 
 // How long will an idle connection (no outgoing or incoming messages) be
 // kept alive?

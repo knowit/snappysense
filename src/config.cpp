@@ -9,6 +9,8 @@
 
 #include "client_config.h"
 
+static bool is_device_enabled = true;
+
 #ifdef DEVELOPMENT
 static const unsigned long SENSOR_POLL_FREQUENCY_S = 15;
 #else
@@ -40,6 +42,7 @@ static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
 static const unsigned long MQTT_SLEEP_INTERVAL_S = MQTT_UPLOAD_WAIT_TIME_S 
 #endif
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
+static unsigned long mqtt_upload_wait_time_s = MQTT_UPLOAD_WAIT_TIME_S;
 #endif
 
 #ifdef STANDALONE
@@ -49,6 +52,14 @@ static const unsigned long SCREEN_WAIT_TIME_S = 4;
 #ifdef SERIAL_SERVER
 static const unsigned long SERIAL_SERVER_WAIT_TIME_S = 1;
 #endif
+
+bool device_enabled() {
+  return is_device_enabled;
+}
+
+void set_device_enabled(bool flag) {
+  is_device_enabled = flag;
+}
 
 unsigned long sensor_poll_frequency_seconds() {
   return SENSOR_POLL_FREQUENCY_S;
@@ -92,7 +103,11 @@ unsigned long web_upload_frequency_seconds() {
 
 #ifdef MQTT_UPLOAD
 unsigned long mqtt_capture_frequency_seconds() {
-  return MQTT_UPLOAD_WAIT_TIME_S;
+  return mqtt_upload_wait_time_s;
+}
+
+void set_mqtt_capture_frequency_seconds(unsigned long interval) {
+  mqtt_upload_wait_time_s = interval;
 }
 
 unsigned long mqtt_max_idle_time_seconds() {

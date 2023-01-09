@@ -1,6 +1,7 @@
 // Snappysense setup and main loop
 
 #include "config.h"
+#include "control_task.h"
 #include "device.h"
 #include "icons.h"
 #include "log.h"
@@ -46,6 +47,10 @@ void setup() {
 #endif
 }
 
+// Sorted by increasing deadline
+
+static ControlTask* task_queue;
+
 // This is a busy-wait loop but we don't perform readings, screen updates, and socket
 // listens all the time, only every so often.  So implement a simple scheduler.
 
@@ -71,21 +76,13 @@ void loop() {
   // logic should be centralized here or pushed into the config code or the
   // upload code is uncertain.
 
-  //
-  // TODO: There's a more general idea of "action" that comes into play for mqtt
-  // and the command processing.  If a message is received then the "action"
-  // is to unblock a task that processes that message.  The "delay" returned 
-  // by the mqtt subsystem is
-  // really implicitly creating another perform_mqtt_step task.  In the command
-  // processor, the "read" command really creates or unblocks a sensor reading
-  // task; many other commands also create similar tasks.  It's a little open
-  // whether that level of abstraction is warranted at the moment but it would
-  // ensure that things don't magically happen several levels down, but are exposed
-  // at the top level for proper scheduling.  On the other hand, it creates a
-  // responsibility for each task to enqueue itself again.
-  //
-  // Do not do anything about this until after we've implemented deep-sleep state,
-  // as the architecture will change to accomodate that.
+  // TODO: Most of the special-purpose tasks below can be implemented in terms
+  // of the control task scheduler, especially with some type of requeue
+  // functionality.
+
+  // TODO: Make use of device_enabled() somehow.  This is not straightforward.
+  // It probably means we take no readings and upload no results.  But what
+  // does it mean for MQTT commands, serial commands, and web server commands?
 
   // FIXME: millis() overflows after 49 days.  We could just reboot?  And if
   // we enter deep-sleep state everything may be handled differently in any case.
@@ -96,6 +93,15 @@ void loop() {
     get_sensor_values(&snappy);
     next_sensor_reading = now + sensor_poll_frequency_seconds() * 1000;
     next_deadline = min(next_deadline, next_sensor_reading);
+  }
+  while (task_queue != nullptr && now >= task_queue->deadline()) {
+    auto* it = task_queue;
+    task_queue = task_queue->next;
+    it->execute(&snappy);
+    delete it;
+  }
+  if (task_queue != nullptr) {
+    next_deadline = min(next_deadline, task_queue->deadline());
   }
 #ifdef SERIAL_SERVER
   if (now >= next_serial_server_action) {
@@ -142,6 +148,52 @@ void loop() {
     //log("Sleeping %d\n", (int)(next_deadline - now));
     delay(next_deadline - now);
   }
+}
+
+void run_control_task(ControlTask* task) {
+  ControlTask *prev = nullptr;
+  ControlTask *curr = task_queue;
+  while (curr != nullptr && curr->deadline() <= task->deadline()) {
+    prev = curr;
+    curr = curr->next;
+  }
+  task->next = curr;
+  if (prev == nullptr) {
+    task_queue = task;
+  } else {
+    prev->next = task;
+  }
+}
+
+#ifdef MQTT_UPLOAD
+void ControlEnableTask::execute(SnappySenseData*) {
+  set_device_enabled(flag);
+}
+
+void ControlSetIntervalTask::execute(SnappySenseData*) {
+  set_mqtt_capture_frequency_seconds(interval_s);
+}
+
+void ControlActuatorTask::execute(SnappySenseData*) {
+  // TODO: Display something, if the display is going
+  // TODO: Manipulate an actuator, if we have one (we don't, really)
+  if (actuator.equals("temperature")) {
+    if (reading >= ideal+2) {
+      log("It's HOT in here!\n");
+    } else if (reading <= ideal-2) {
+      log("I'm starting to feel COLD!\n");
+    }
+  } else if (actuator.equals("airquality")) {
+    if (reading > ideal) {
+      log("The air is pretty BAD in here!\n");
+    }
+  }
+  // and so on
+}
+#endif
+
+void ControlReadSensorsTask::execute(SnappySenseData* data) {
+  get_sensor_values(data);
 }
 
 #ifdef STANDALONE

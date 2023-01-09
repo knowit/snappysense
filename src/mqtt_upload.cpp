@@ -25,6 +25,7 @@
 
 #include "mqtt_upload.h"
 #include "config.h"
+#include "control_task.h"
 #include "log.h"
 #include "network.h"
 #include "snappytime.h"
@@ -184,15 +185,16 @@ static void mqtt_connect() {
   }
   log("Connected!\n");
 
-  if (mqtt_first_time) {
-    String control_msg("snappy/control/");
-    control_msg += mqtt_device_id();
-    mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
-    String command_msg("snappy/command/");
-    command_msg += mqtt_device_id();
-    mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
-    mqtt_first_time = false;
-  }
+  // Subscriptions used to be conditional on mqtt_first_time.  However,
+  // at least for AWS and the Arduino MQTT stack, it seems like we have to
+  // resubscribe every time, even if session is not marked as clean.
+  String control_msg("snappy/control/");
+  control_msg += mqtt_device_id();
+  mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
+  String command_msg("snappy/command/");
+  command_msg += mqtt_device_id();
+  mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
+  mqtt_first_time = false;
 }
 
 static void mqtt_disconnect() {
@@ -250,11 +252,13 @@ static void mqtt_handle_message(int payload_size) {
     if (json.hasOwnProperty("enable")) {
       unsigned flag = (unsigned)json["enable"];
       log("Mqtt: enable %u\n", flag);
+      run_control_task(new ControlEnableTask(!!flag));
       fields++;
     }
     if (json.hasOwnProperty("interval")) {
       unsigned interval = (unsigned)json["interval"];
       log("Mqtt: set interval %u\n", interval);
+      run_control_task(new ControlSetIntervalTask(interval));
       fields++;
     }
     // Don't send empty messages
@@ -269,6 +273,7 @@ static void mqtt_handle_message(int payload_size) {
       double reading = (double)json["reading"];
       double ideal = (double)json["ideal"];
       log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
+      run_control_task(new ControlActuatorTask(String(key), reading, ideal));
     } else {
       log("Mqtt: invalid command message\n%s\n", buf);      
     }

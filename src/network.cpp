@@ -70,7 +70,7 @@ WiFiHolder connect_to_wifi() {
   // FIXME: Failure conditions need to be checked and reported
   WiFi.begin(access_point_ssid(), access_point_password());
 #ifdef WIFI_LOGGING
-  log("WiFi: Connecting to network ");
+  log("WiFi: Bringing up network ");
 #endif
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -84,7 +84,7 @@ WiFiHolder connect_to_wifi() {
   // Create the holder first: otherwise local_ip_address() will return an empty string.
   WiFiHolder holder(true);
 #ifdef WIFI_LOGGING
-  log("Connected. Device IP address: %s\n", local_ip_address().c_str());
+  log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
 #endif
   return holder;
 }
