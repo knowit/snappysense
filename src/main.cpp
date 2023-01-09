@@ -54,6 +54,11 @@ static ControlTask* task_queue;
 // This is a busy-wait loop but we don't perform readings, screen updates, and socket
 // listens all the time, only every so often.  So implement a simple scheduler.
 
+#ifdef TEST_MEMS
+void loop() {
+  test_mems();
+}
+#else
 void loop() {
   static unsigned long next_sensor_reading = 0;
   static unsigned long next_web_server_action = 0;
@@ -149,6 +154,7 @@ void loop() {
     delay(next_deadline - now);
   }
 }
+#endif
 
 void run_control_task(ControlTask* task) {
   ControlTask *prev = nullptr;

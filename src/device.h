@@ -15,5 +15,8 @@ void show_splash();
 #ifdef STANDALONE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units);
 #endif
+#ifdef TEST_MEMS
+void test_mems();
+#endif
 
 #endif // !device_h_included

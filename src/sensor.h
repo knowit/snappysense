@@ -51,7 +51,11 @@ typedef struct SnappySenseData {
   uint16_t eco2;
 
 #ifdef READ_NOISE
-  // TODO: Unit?
+  // The value looks like it's the voltage reading times 1000: the lower limit is
+  // about 1500, which is what the data sheet says corresponds to the quiescent
+  // state at 1.5V.  As the environment becomes noisier, the numbers become
+  // higher, reaching into the 2200 range.  Some readings were seen around 900
+  // and 4100, but not clear what these were.
   uint16_t noise;
 #endif
 

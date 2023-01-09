@@ -209,3 +209,10 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
   display.display();
 }
 #endif
+
+#ifdef TEST_MEMS
+void test_mems() {
+  Serial.println(analogRead(MIC_PIN));
+  delay(10);
+}
+#endif

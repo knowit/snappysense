@@ -5,6 +5,9 @@
 // for these simple cases.
 
 #include "web_server.h"
+
+#ifdef WEB_SERVER
+
 #include "command.h"
 #include "config.h"
 #include "log.h"
@@ -13,7 +16,6 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 
-#ifdef WEB_SERVER
 /* Server/Client wifi state machine is basically similar to the Unix stack:
  *  WiFi.begin() connects the system to a local access point.
  *  Then, create a WiFiServer `server` to handle incoming connections on a port.

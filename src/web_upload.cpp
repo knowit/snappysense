@@ -1,6 +1,9 @@
 // Code for uploading JSON data to a remote HTTP server.
 
 #include "web_upload.h"
+
+#ifdef WEB_UPLOAD
+
 #include "config.h"
 #include "log.h"
 #include "network.h"
@@ -8,8 +11,6 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <HTTPClient.h>
-
-#ifdef WEB_UPLOAD
 
 void upload_results_to_http_server(const SnappySenseData& data) {
   if (data.sequence_number == 0) {

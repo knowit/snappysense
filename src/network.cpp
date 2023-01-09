@@ -1,6 +1,9 @@
 // Connectivity management
 
 #include "network.h"
+
+#ifdef HAVE_WIFI
+
 #include "config.h"
 #include "log.h"
 
@@ -95,3 +98,5 @@ String local_ip_address() {
   }
   return WiFi.localIP().toString();
 }
+
+#endif // HAVE_WIFI

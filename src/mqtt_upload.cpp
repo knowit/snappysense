@@ -24,6 +24,9 @@
 // the server thinks the factor should be).
 
 #include "mqtt_upload.h"
+
+#ifdef MQTT_UPLOAD
+
 #include "config.h"
 #include "control_task.h"
 #include "log.h"
@@ -33,8 +36,6 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_Json.h>
-
-#ifdef MQTT_UPLOAD
 
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.

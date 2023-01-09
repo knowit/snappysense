@@ -5,6 +5,8 @@
 
 #include "main.h"
 
+#ifdef HAVE_WIFI
+
 class WiFiHolder {
   bool valid;
   void incRef();
@@ -18,5 +20,7 @@ public:
 
 WiFiHolder connect_to_wifi();
 String local_ip_address();
+
+#endif // HAVE_WIFI
 
 #endif // !network_h_included

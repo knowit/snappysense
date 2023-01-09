@@ -8,11 +8,12 @@
 #include "log.h"
 #include "network.h"
 
+#ifdef TIMESTAMP
+
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 
-#ifdef TIMESTAMP
 // The time at startup.  We get this from a server in configureTime(), and use it to
 // adjust the time read from the device when we report new readings.
 static unsigned long timebase;

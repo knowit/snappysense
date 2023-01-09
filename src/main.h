@@ -57,13 +57,20 @@
 // Include the log(stream, fmt, ...) functions, see log.h
 #define LOGGING
 
+// On Hardware 1.0.0 this requires all wifi functionality to be disabled
+//#define TEST_MEMS
+
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP)
+# define HAVE_WIFI
+#endif
+
 #ifdef HARDWARE_1_0_0
 // In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
-# if !defined(WEB_UPLOAD) && !defined(WEB_SERVER) && !defined(MQTT_UPLOAD)
+# if !defined(HAVE_WIFI)
 #  define READ_NOISE
 # endif
 #endif // HARDWARE_1_0_0
