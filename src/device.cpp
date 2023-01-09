@@ -8,19 +8,22 @@
 //      onboard reset button
 //      onboard configured i2c for communication with peripherals
 //      onboard connectivity to external rechargeable LiPoly battery, charging from onboard usb
-//  - wake button
+//  - integrated wake button connected to pin A1
 //  - 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
 //      eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
 //  - DFRobot SKU:SEN0514 air/gas sensor @ I2C 0x53 (alternate 0x52, supposedly)
 //      https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
 //  - DFRobot SKU:SEN0500 environmental sensor @ I2C 0x22 (undocumented)
 //      https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
-//  - DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal simply reads high / low
-//      (with small delay) as motion is detected, it's not buffered
+//  - DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal simply reads analog
+//      high / low (with small delay) as motion is detected, unclear if/how it's buffered,
+//      see issue #9.
 //      https://www.dfrobot.com/product-1140.html
 //      https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
-//  - Unspecified noise level reader, analog signal @ pin A5, unit and range not documented
-//      FIXME
+//  - DFRobot SKU:SEN0487 MEMS microphone, analog signal @ pin A5, unit and range of signal
+//      not documented beyond analogRead() returning an uint16_t.
+//      https://www.dfrobot.com/product-2357.html
+//      https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
 //
 // HW 1.0.0 has a bug in that the ADC2 configured for the microphone conflicts with its
 // hardwired use for WiFi, as a consequence, they can't be used at the same time.  In
