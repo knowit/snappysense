@@ -6,7 +6,11 @@
 
 #include "main.h"
 
-// Frequency of sensor readings.  This is independent of upload frequency.
+// Frequency of sensor readings.
+//
+// Note reading frequency is independent of both web and mqtt upload frequencies.
+// Sensor readings draw little power and can be frequent, allowing for sampling
+// if necessary.
 unsigned long sensor_poll_frequency_seconds();
 
 // The name of the location at which this device is placed.
@@ -33,13 +37,30 @@ const char* web_upload_host();
 // Port of remote web server used for web upload and time service.
 int web_upload_port();
 
-// How often to upload results to a server
+// How often to upload results to a server.
+//
+// Note this is independent of mqtt upload, which is OK - web upload
+// is for development and experimentation, mqtt upload for production.
 unsigned long web_upload_frequency_seconds();
 #endif
 
 #ifdef MQTT_UPLOAD
-// How often to upload results to a server
-unsigned long mqtt_upload_frequency_seconds();
+// How often readings are captured and enqueued for mqtt upload.
+//
+// Note this is independent of sensor reading frequency; fewer readings
+// may be captured for upload than are performed.
+unsigned long mqtt_capture_frequency_seconds();
+
+// How long will an idle connection (no outgoing or incoming messages) be
+// kept alive?
+unsigned long mqtt_max_idle_time_seconds();
+
+// How long do we sleep between every time we bring up the radio for
+// mqtt upload/download?
+//
+// Note this is independent of web upload, which is OK - web upload
+// is for development and experimentation, mqtt upload for production.
+unsigned long mqtt_sleep_interval_seconds();
 
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();
@@ -58,12 +79,15 @@ const char* mqtt_device_private_key();
 #endif
 
 #ifdef STANDALONE
+// Note, STANDALONE will keep the device continually on.
 unsigned long display_update_frequency_seconds();
 #endif
 
 #ifdef SERIAL_SERVER
 // How long to wait between looking for input on the serial channel.
 // This is typically a pretty low value.
+//
+// Note, SERIAL_SERVER will keep the device continually on.
 unsigned long serial_command_poll_seconds();
 #endif
 
@@ -73,6 +97,8 @@ int web_server_listen_port();
 
 // How long to wait between looking for input on the web channel.
 // This is typically a pretty low value.
+//
+// Note, WEB_SERVER will keep the device continually on.
 unsigned long web_command_poll_seconds();
 #endif
 

@@ -32,14 +32,14 @@ static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
 #endif
 
 #ifdef MQTT_UPLOAD
-// TODO: The upload frequency should ideally be a multiple of the sensor
-// poll frequency; and/or there should be no upload if the sensor
-// has not been read since the last time. 
 #ifdef DEVELOPMENT
 static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*1;
+static const unsigned long MQTT_SLEEP_INTERVAL_S = 60*2;
 #else
 static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
+static const unsigned long MQTT_SLEEP_INTERVAL_S = MQTT_UPLOAD_WAIT_TIME_S 
 #endif
+static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
 #ifdef STANDALONE
@@ -91,8 +91,16 @@ unsigned long web_upload_frequency_seconds() {
 #endif
 
 #ifdef MQTT_UPLOAD
-unsigned long mqtt_upload_frequency_seconds() {
+unsigned long mqtt_capture_frequency_seconds() {
   return MQTT_UPLOAD_WAIT_TIME_S;
+}
+
+unsigned long mqtt_max_idle_time_seconds() {
+  return MQTT_MAX_IDLE_TIME_S;
+}
+
+unsigned long mqtt_sleep_interval_seconds() {
+  return MQTT_SLEEP_INTERVAL_S;
 }
 
 const char* mqtt_endpoint_host() {

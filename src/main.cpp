@@ -41,6 +41,9 @@ void setup() {
 #ifdef WEB_SERVER
   start_web_server();
 #endif
+#ifdef MQTT_UPLOAD
+  start_mqtt();
+#endif
 }
 
 // This is a busy-wait loop but we don't perform readings, screen updates, and socket
@@ -52,7 +55,8 @@ void loop() {
   static unsigned long next_serial_server_action = 0;
   static unsigned long next_screen_update = 0;
   static unsigned long next_web_upload_action = 0;
-  static unsigned long next_mqtt_upload_action = 0;
+  static unsigned long next_mqtt_capture_action = 0;
+  static unsigned long next_mqtt_comm_action = 0;
 
   // A simple deadline-driven scheduler.  All this waiting is pretty bogus.
   // We want timers to trigger actions, and incoming data to trigger server
@@ -67,6 +71,24 @@ void loop() {
   // logic should be centralized here or pushed into the config code or the
   // upload code is uncertain.
 
+  //
+  // TODO: There's a more general idea of "action" that comes into play for mqtt
+  // and the command processing.  If a message is received then the "action"
+  // is to unblock a task that processes that message.  The "delay" returned 
+  // by the mqtt subsystem is
+  // really implicitly creating another perform_mqtt_step task.  In the command
+  // processor, the "read" command really creates or unblocks a sensor reading
+  // task; many other commands also create similar tasks.  It's a little open
+  // whether that level of abstraction is warranted at the moment but it would
+  // ensure that things don't magically happen several levels down, but are exposed
+  // at the top level for proper scheduling.  On the other hand, it creates a
+  // responsibility for each task to enqueue itself again.
+  //
+  // Do not do anything about this until after we've implemented deep-sleep state,
+  // as the architecture will change to accomodate that.
+
+  // FIXME: millis() overflows after 49 days.  We could just reboot?  And if
+  // we enter deep-sleep state everything may be handled differently in any case.
   unsigned long now = millis();
   unsigned long next_deadline = ULONG_MAX;
 
@@ -104,18 +126,20 @@ void loop() {
   }
 #endif
 #ifdef MQTT_UPLOAD
-  // TODO: MQTT is a little tougher than this - it polls for incoming messages
-  // and pushes outgoing messages that have failed to send earlier.  If there are
-  // outgoing messages in the queue it should try fairly frequently; but it should
-  // only rarely listen for incoming messages.
-  if (now >= next_mqtt_upload_action) {
-    upload_results_to_mqtt_server(snappy);
-    next_mqtt_upload_action = now + mqtt_upload_frequency_seconds() * 1000;
-    next_deadline = min(next_deadline, next_mqtt_upload_action);
+  if (now >= next_mqtt_capture_action) {
+    capture_readings_for_mqtt_upload(snappy);
+    next_mqtt_capture_action = now + mqtt_capture_frequency_seconds() * 1000;
+    next_deadline = min(next_deadline, next_mqtt_capture_action);
+  }
+  if (now >= next_mqtt_comm_action) {
+    unsigned long delay_s = perform_mqtt_step();
+    next_mqtt_comm_action = now + delay_s * 1000;
+    next_deadline = min(next_deadline, next_mqtt_comm_action);
   }
 #endif
 
   if (next_deadline != ULONG_MAX) {
+    //log("Sleeping %d\n", (int)(next_deadline - now));
     delay(next_deadline - now);
   }
 }
