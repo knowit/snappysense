@@ -173,3 +173,11 @@ void RunActuatorTask::execute(SnappySenseData*) {
   }
   // and so on
 }
+
+void PowerOnTask::execute(SnappySenseData*) {
+  power_on();
+}
+
+void PowerOffTask::execute(SnappySenseData*) {
+  power_off();
+}

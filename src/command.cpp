@@ -85,19 +85,17 @@ static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) 
 }
 
 static void cmd_poweron(const String& cmd, const SnappySenseData&, Stream* out) {
-  // TODO: turn this into a control task, message gets printed first however
-  power_on();
+  sched_microtask_after(new PowerOnTask, 0);
   out->println("Peripheral power turned on");
 }
 
 static void cmd_poweroff(const String& cmd, const SnappySenseData&, Stream* out) {
-  // TODO: turn this into a control task, message gets printed first however
-  power_off();
+  sched_microtask_after(new PowerOffTask, 0);
   out->println("Peripheral power turned off");
 }
 
 static void cmd_read(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new ReadSensorsTask(), 0);
+  sched_microtask_after(new ReadSensorsTask, 0);
   out->println("Sensor measurements gathered");
 }
 

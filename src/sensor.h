@@ -135,4 +135,19 @@ public:
   void execute(SnappySenseData*) override;
 };
 
+class PowerOnTask final : public MicroTask {
+public:
+  const char* name() override {
+    return "Power on";
+  }
+  void execute(SnappySenseData*) override;
+};
+
+class PowerOffTask final : public MicroTask {
+public:
+  const char* name() override {
+    return "Power off";
+  }
+  void execute(SnappySenseData*) override;
+};
 #endif // !sensor_h_included
