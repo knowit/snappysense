@@ -1,10 +1,10 @@
 // Snappysense setup and main loop
 
 #include "config.h"
-#include "control_task.h"
 #include "device.h"
 #include "icons.h"
 #include "log.h"
+#include "microtask.h"
 #include "mqtt_upload.h"
 #include "sensor.h"
 #include "serial_server.h"
@@ -17,193 +17,49 @@ void show_next_view();
 #endif
 
 // Currently only one copy of sensor data globally but the code's properly parameterized and
-// there could be several of these, useful in a threaded world perhaps.
+// there could be several of these, useful in a threaded world or when snapshots of the data
+// are useful.
 static SnappySenseData snappy;
 
-#ifdef STANDALONE
-// start with splash screen
-static int next_view = -1;
-#endif
+// Defined below all the task types
+static void create_initial_tasks();
 
 void setup() {
   device_setup();
-
-#ifdef STANDALONE
-  show_next_view();
-#else
-  show_splash();
-#endif
-
   log("SnappySense ready!\n");
 
+  show_splash();
 #ifdef TIMESTAMP
   configure_time();
 #endif
-#ifdef WEB_SERVER
-  start_web_server();
-#endif
-#ifdef MQTT_UPLOAD
-  start_mqtt();
-#endif
+  create_initial_tasks();
+  log("SnappySense running!\n");
 }
 
-// Sorted by increasing deadline
+// The system is constructed around a set of microtasks layered on top of the
+// Arduino runloop.  See microtask.h for more documentation.
 
-static ControlTask* task_queue;
-
-// This is a busy-wait loop but we don't perform readings, screen updates, and socket
-// listens all the time, only every so often.  So implement a simple scheduler.
-
+void loop() {
 #ifdef TEST_MEMS
-void loop() {
   test_mems();
-}
 #else
-void loop() {
-  static unsigned long next_sensor_reading = 0;
-  static unsigned long next_web_server_action = 0;
-  static unsigned long next_serial_server_action = 0;
-  static unsigned long next_screen_update = 0;
-  static unsigned long next_web_upload_action = 0;
-  static unsigned long next_mqtt_capture_action = 0;
-  static unsigned long next_mqtt_comm_action = 0;
-
-  // A simple deadline-driven scheduler.  All this waiting is pretty bogus.
-  // We want timers to trigger actions, and incoming data to trigger server
-  // activity.  But it's fine for now.
-
-  // TODO: Some logic is missing here or in lower layers:
-  // - there's no sense in uploading results if the sensor has not been read
-  //   since the last upload
-  // - the reading should be forced in STANDALONE mode since we're going
-  //   to be displaying data
-  // There may be some other considerations along those lines.  Whether that
-  // logic should be centralized here or pushed into the config code or the
-  // upload code is uncertain.
-
-  // TODO: Most of the special-purpose tasks below can be implemented in terms
-  // of the control task scheduler, especially with some type of requeue
-  // functionality.
-
-  // TODO: Make use of device_enabled() somehow.  This is not straightforward.
-  // It probably means we take no readings and upload no results.  But what
-  // does it mean for MQTT commands, serial commands, and web server commands?
-
-  // FIXME: millis() overflows after 49 days.  We could just reboot?  And if
-  // we enter deep-sleep state everything may be handled differently in any case.
-  unsigned long now = millis();
-  unsigned long next_deadline = ULONG_MAX;
-
-  if (now >= next_sensor_reading) {
-    get_sensor_values(&snappy);
-    next_sensor_reading = now + sensor_poll_frequency_seconds() * 1000;
-    next_deadline = min(next_deadline, next_sensor_reading);
-  }
-  while (task_queue != nullptr && now >= task_queue->deadline()) {
-    auto* it = task_queue;
-    task_queue = task_queue->next;
-    it->execute(&snappy);
-    delete it;
-  }
-  if (task_queue != nullptr) {
-    next_deadline = min(next_deadline, task_queue->deadline());
-  }
-#ifdef SERIAL_SERVER
-  if (now >= next_serial_server_action) {
-    maybe_handle_serial_request(&snappy);
-    next_serial_server_action = now + serial_command_poll_seconds() * 1000;
-    next_deadline = min(next_deadline, next_serial_server_action);
-  }
+  delay(run_scheduler(&snappy));
 #endif
-#ifdef WEB_SERVER
-  if (now >= next_web_server_action) {
-    maybe_handle_web_request(&snappy);
-    next_web_server_action = now + web_command_poll_seconds() * 1000;
-    next_deadline = min(next_deadline, next_web_server_action);
-  }
-#endif
-#ifdef STANDALONE
-  if (now >= next_screen_update) {
-    show_next_view();
-    next_screen_update = now + display_update_frequency_seconds() * 1000;
-    next_deadline = min(next_deadline, next_screen_update);
-  }
-#endif // STANDALONE
-#ifdef WEB_UPLOAD
-  if (now >= next_web_upload_action) {
-    upload_results_to_http_server(snappy);
-    next_web_upload_action = now + web_upload_frequency_seconds() * 1000;
-    next_deadline = min(next_deadline, next_web_upload_action);
-  }
-#endif
-#ifdef MQTT_UPLOAD
-  if (now >= next_mqtt_capture_action) {
-    capture_readings_for_mqtt_upload(snappy);
-    next_mqtt_capture_action = now + mqtt_capture_frequency_seconds() * 1000;
-    next_deadline = min(next_deadline, next_mqtt_capture_action);
-  }
-  if (now >= next_mqtt_comm_action) {
-    unsigned long delay_s = perform_mqtt_step();
-    next_mqtt_comm_action = now + delay_s * 1000;
-    next_deadline = min(next_deadline, next_mqtt_comm_action);
-  }
-#endif
-
-  if (next_deadline != ULONG_MAX) {
-    //log("Sleeping %d\n", (int)(next_deadline - now));
-    delay(next_deadline - now);
-  }
-}
-#endif
-
-void run_control_task(ControlTask* task) {
-  ControlTask *prev = nullptr;
-  ControlTask *curr = task_queue;
-  while (curr != nullptr && curr->deadline() <= task->deadline()) {
-    prev = curr;
-    curr = curr->next;
-  }
-  task->next = curr;
-  if (prev == nullptr) {
-    task_queue = task;
-  } else {
-    prev->next = task;
-  }
-}
-
-#ifdef MQTT_UPLOAD
-void ControlEnableTask::execute(SnappySenseData*) {
-  set_device_enabled(flag);
-}
-
-void ControlSetIntervalTask::execute(SnappySenseData*) {
-  set_mqtt_capture_frequency_seconds(interval_s);
-}
-
-void ControlActuatorTask::execute(SnappySenseData*) {
-  // TODO: Display something, if the display is going
-  // TODO: Manipulate an actuator, if we have one (we don't, really)
-  if (actuator.equals("temperature")) {
-    if (reading >= ideal+2) {
-      log("It's HOT in here!\n");
-    } else if (reading <= ideal-2) {
-      log("I'm starting to feel COLD!\n");
-    }
-  } else if (actuator.equals("airquality")) {
-    if (reading > ideal) {
-      log("The air is pretty BAD in here!\n");
-    }
-  }
-  // and so on
-}
-#endif
-
-void ControlReadSensorsTask::execute(SnappySenseData* data) {
-  get_sensor_values(data);
 }
 
 #ifdef STANDALONE
-void show_next_view() {
+class NextViewTask final : public MicroTask {
+  // -1 is the splash screen; values 0..whatever refer to the entries in the 
+  // SnappyMetaData array.
+  int next_view = -1;
+public:
+  const char* name() override {
+    return "Next view";
+  }
+  void execute(SnappySenseData* data) override;
+};
+
+void NextViewTask::execute(SnappySenseData* data) {
   bool done = false;
   while (!done) {
     if (next_view == -1) {
@@ -217,7 +73,7 @@ void show_next_view() {
       next_view++;
     } else {
       char buf[32];
-      snappy_metadata[next_view].display(snappy, buf, buf+sizeof(buf));
+      snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
       render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
       done = true;
     }
@@ -225,3 +81,24 @@ void show_next_view() {
   next_view++;
 }
 #endif // STANDALONE
+
+static void create_initial_tasks() {
+  sched_microtask_periodically(new ReadSensorsTask, sensor_poll_frequency_seconds() * 1000);
+#ifdef SERIAL_SERVER
+  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_seconds() * 1000);
+#endif
+#ifdef MQTT_UPLOAD
+  sched_microtask_after(new StartMqttTask, 0);
+  sched_microtask_after(new MqttCommsTask, 0);
+  sched_microtask_periodically(new CaptureSensorsForMqttTask, mqtt_capture_frequency_seconds() * 1000);
+#endif
+#ifdef WEB_UPLOAD
+  sched_microtask_periodically(new WebUploadTask, web_upload_frequency_seconds() * 1000);
+#endif
+#ifdef WEB_SERVER
+  sched_microtask_periodically(new ReadWebInputTask, web_command_poll_seconds() * 1000);
+#endif
+#ifdef STANDALONE
+  sched_microtask_periodically(new NextViewTask, display_update_frequency_seconds() * 1000);
+#endif // STANDALONE
+}

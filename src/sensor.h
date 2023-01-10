@@ -4,10 +4,11 @@
 #define sensor_h_included
 
 #include "main.h"
+#include "microtask.h"
 
 // This is the model of the sensor unit.
 
-typedef struct SnappySenseData {
+struct SnappySenseData {
   // The sequence number is useful for calibration, bug fixing, etc.  It is
   // set from a global variable when a reading is obtained.  It will wrap
   // around silently.
@@ -61,13 +62,13 @@ typedef struct SnappySenseData {
 
   // Passive motion sensor.  Unit: no movement / movement.
   bool motion_detected;
-} SnappySenseData;
+};
 
 // Sensor metadata.  There is one row in the metadata table for each field in the model
 // (though not necessarily in the same order).  The metadata can be used to format
 // and describe the fields in various ways.
 
-typedef struct {
+struct SnappyMetaDatum {
   // The json key is unique, and must be simple alphanumeric, no punctuation.
   const char* json_key;
 
@@ -91,11 +92,47 @@ typedef struct {
   // `format` is for the view command, JSON data extraction, and so on - all information
   // is preserved.
   void (*format)(const SnappySenseData& data, char* buf, char* buflim);
-} SnappyMetaDatum;
+};
 
 // The metadata table is terminated by a row where json_key == nullptr.
 extern SnappyMetaDatum snappy_metadata[];
 
 String format_readings_as_json(const SnappySenseData& data);
+
+// This task is used both for periodic reading and one-shot reading.
+class ReadSensorsTask final : public MicroTask {
+public:
+  const char* name() override {
+    return "Read sensors";
+  }
+  void execute(SnappySenseData* data) override;
+};
+
+// A one-shot task that enables or disables the device.  When the device is disabled,
+// tasks that respond `true` to only_when_device_enabled() are skipped.
+class EnableDeviceTask final : public MicroTask {
+  bool flag;
+public:
+  EnableDeviceTask(bool flag) : flag(flag) {}
+  const char* name() override {
+    return "Enable/disable device";
+  }
+  void execute(SnappySenseData*) override;
+};
+
+// A one-shot task that interacts with an actuator to change an environmental factor.
+class RunActuatorTask final : public MicroTask {
+  String actuator;
+  double reading;
+  double ideal;
+public:
+  RunActuatorTask(String&& actuator, double reading, double ideal)
+    : actuator(std::move(actuator)), reading(reading), ideal(ideal)
+  {}
+  const char* name() override {
+    return "Run actuator";
+  }
+  void execute(SnappySenseData*) override;
+};
 
 #endif // !sensor_h_included

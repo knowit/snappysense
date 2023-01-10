@@ -4,10 +4,11 @@
 #define log_h_included
 
 #include "main.h"
+
+#ifdef LOGGING
 #include <Stream.h>
 #include <cstdarg>
 
-#ifdef LOGGING
 void set_log_stream(Stream* output);
 
 // Printf-like formatting but restricted for now to %s, %d, %u, %f and %c.  Don't be fancy!
@@ -15,7 +16,7 @@ void set_log_stream(Stream* output);
 void log(const char* fmt, ...);
 void va_log(const char* fmt, va_list args);
 #else
-void set_log_stream(Stream* output) {
+static inline void set_log_stream(Stream* output) {
   /* Nothing */
 }
 static inline void log(const char* fmt, ...) {
@@ -24,6 +25,6 @@ static inline void log(const char* fmt, ...) {
 static inline void va_log(const char* fmt, va_list) {
   /* Nothing */
 }
-#endif
+#endif // LOGGING
 
 #endif // !log_h_included

@@ -7,10 +7,20 @@
 #define web_upload_h_included
 
 #include "main.h"
-#include "sensor.h"
 
 #ifdef WEB_UPLOAD
-void upload_results_to_http_server(const SnappySenseData& data);
+
+#include "microtask.h"
+#include "sensor.h"
+
+class WebUploadTask final : public MicroTask {
+public:
+  const char* name() override {
+    return "Web upload";
+  }
+  void execute(SnappySenseData*) override;
+};
+
 #endif
 
 #endif // !web_upload_h_included

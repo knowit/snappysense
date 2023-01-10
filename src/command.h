@@ -4,14 +4,29 @@
 #define command_h_included
 
 #include "main.h"
-#include "sensor.h"
 
 #if defined(SERIAL_SERVER) || defined(WEB_SERVER)
-// `cmd` is a raw command line coming from serial or web input.  It consists
-// of space-delimited words.  The first word is the command; see the end of command.cpp
-// for a list of supported commands.  Output from the command processor is written 
-// to `output`.  Even failed commands will produce something here.
-void process_command(const SnappySenseData& data, const String& cmd, Stream* output);
+
+#include "microtask.h"
+#include "sensor.h"
+
+// This is not final, because the web server subclasses it to handle garbage
+// collection of the output stream.
+class ProcessCommandTask : public MicroTask {
+  String cmd;
+  Stream* output;
+public:
+  // It is critical that the output stream live at least as long as this task.
+  // But NOTE CAREFULLY that the stream may die when this task dies; if this
+  // task spawns other tasks, it may not pass the stream on to those other
+  // tasks.
+  ProcessCommandTask(String cmd, Stream* output) : cmd(cmd), output(output) {}
+  const char* name() override {
+    return "Process command";
+  }
+  void execute(SnappySenseData*) override;
+};
+
 #endif
 
 #endif

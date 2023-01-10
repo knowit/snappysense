@@ -1,12 +1,11 @@
 // Interactive commands for serial port and web server
 
 #include "command.h"
-#include "control_task.h"
-#include "device.h"
-#include "network.h"
-#include "sensor.h"
 
 #if defined(SERIAL_SERVER) || defined(WEB_SERVER)
+
+#include "device.h"
+#include "network.h"
 
 struct Command {
   const char* command;
@@ -40,17 +39,17 @@ static String get_word(const String& cmd, int n) {
   return String();
 }
 
-void process_command(const SnappySenseData& data, const String& cmd, Stream* out) {
+void ProcessCommandTask::execute(SnappySenseData* data) {
   String w = get_word(cmd, 0);
   if (!w.isEmpty()) {
     for (Command* c = commands; c->command != nullptr; c++ ) {
       if (strcmp(c->command, w.c_str()) == 0) {
-        c->handler(cmd, data, out);
+        c->handler(cmd, *data, output);
         return;
       }
     }
   }
-  out->printf("Unrecognized command [%s]\n", cmd.c_str());
+  output->printf("Unrecognized command [%s]\n", cmd.c_str());
 }
 
 static void cmd_hello(const String& cmd, const SnappySenseData&, Stream* out) {
@@ -98,7 +97,7 @@ static void cmd_poweroff(const String& cmd, const SnappySenseData&, Stream* out)
 }
 
 static void cmd_read(const String& cmd, const SnappySenseData&, Stream* out) {
-  run_control_task(new ControlReadSensorsTask());
+  sched_microtask_after(new ReadSensorsTask(), 0);
   out->println("Sensor measurements gathered");
 }
 

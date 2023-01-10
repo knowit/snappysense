@@ -12,15 +12,15 @@
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 
-void upload_results_to_http_server(const SnappySenseData& data) {
-  if (data.sequence_number == 0) {
+void WebUploadTask::execute(SnappySenseData* data) {
+  if (data->sequence_number == 0) {
     // Mostly bogus data
     return;
   }
 
   log("Web: uploading data\n");
 
-  String payload = format_readings_as_json(data);
+  String payload = format_readings_as_json(*data);
 
   // FIXME: There are lots of failure conditions here, and they all need to be checked somehow.
   //
@@ -32,6 +32,7 @@ void upload_results_to_http_server(const SnappySenseData& data) {
   //
   // In practice this is not going to be good enough.  It is probably indicative of the quality
   // of the Arduino libraries - "maker" quality, not "production".
+  
   auto holder(connect_to_wifi());
   WiFiClient wifiClient;
   HTTPClient httpClient;

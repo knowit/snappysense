@@ -28,8 +28,8 @@
 #ifdef MQTT_UPLOAD
 
 #include "config.h"
-#include "control_task.h"
 #include "log.h"
+#include "microtask.h"
 #include "network.h"
 #include "snappytime.h"
 
@@ -45,15 +45,6 @@
 // Also, I'm not sure yet how the length of the topic may fit into the buffer size
 // calculation.
 static const size_t MQTT_BUFFER_SIZE = 1024;
-
-static bool mqtt_first_time = true;
-static unsigned long mqtt_next_work;  // millisecond timestamp
-static unsigned long mqtt_last_work;  // millisecond timestamp
-
-static void mqtt_connect();
-static void mqtt_disconnect();
-static void mqtt_send();
-static bool mqtt_poll();
 
 static struct MqttMessage {
   MqttMessage(String&& topic, String&& message)
@@ -82,7 +73,7 @@ static void mqtt_enqueue(String&& topic, String&& body) {
   }
 }
 
-void start_mqtt() {
+void StartMqttTask::execute(SnappySenseData*) {
   String topic;
   String body;
 
@@ -102,9 +93,9 @@ void start_mqtt() {
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-void capture_readings_for_mqtt_upload(const SnappySenseData& data) {
+void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
   // Number 0 is mostly bogus data so skip it
-  if (data.sequence_number == 0) {
+  if (data->sequence_number == 0) {
     return;
   }
 
@@ -116,53 +107,55 @@ void capture_readings_for_mqtt_upload(const SnappySenseData& data) {
   topic += "/";
   topic += mqtt_device_id();
 
-  body = format_readings_as_json(data);
+  body = format_readings_as_json(*data);
 
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-// This returns a delay in seconds until the next time it's interesting to
-// call it again.  TODO: See comments in main.cpp about the return value.
+// The MqttCommsTask will re-enqueue itself with the new deadline.
+// FIXME: millis() is not a reliable API in the long term (beyond 49 days).
 
-unsigned long perform_mqtt_step() {
+void MqttCommsTask::execute(SnappySenseData*) {
   unsigned long now = millis();
   // Note we don't connect just because there's something in the outgoing queue,
   // we wait until the upload is scheduled.  There could be a notion of high
   // priority messages that override this, but currently we don't need those.
-  if (now < mqtt_next_work) {
-    return (mqtt_next_work - now)/1000;
+  if (now < next_work) {
+    sched_microtask_after(this, next_work - now);
+    return;
   }
+
   // However, we do connect whether there is outgoing data or not, because we
   // want to poll for incoming messages.
   if (mqtt_state == nullptr) {
     mqtt_state = new MqttState();
-    mqtt_connect();
+    connect();
   }
   if (mqtt_queue != nullptr) {
-    mqtt_send();
+    send();
     delay(100);
-    mqtt_last_work = millis();
+    last_work = millis();
   }
   // The normal case is that there's very little incoming traffic.  There will be
   // few actuators and the server should definitely limit the update frequency
   // for those.  There will be few instances of wishing to disable/enable devices
   // and changing their report frequencies.
-  bool got_something = mqtt_poll();
+  bool got_something = poll();
   if (got_something) {
-    mqtt_last_work = millis();
+    last_work = millis();
   }
-  if (millis() - mqtt_last_work >= mqtt_max_idle_time_seconds()*1000 || !mqtt_state->mqtt.connected()) {
-    mqtt_disconnect();
+  if (millis() - last_work >= mqtt_max_idle_time_seconds()*1000 || !mqtt_state->mqtt.connected()) {
+    disconnect();
     delete mqtt_state;
     mqtt_state = nullptr;
-    mqtt_next_work = millis() + mqtt_sleep_interval_seconds() * 1000;
+    next_work = millis() + mqtt_sleep_interval_seconds() * 1000;
   } else {
-    mqtt_next_work = millis() + 1000;
+    next_work = millis() + 1000;
   }
-  return max((mqtt_next_work - millis())/1000, 1LU);
+  sched_microtask_after(this, max(next_work - millis(), 1000LU));
 }
 
-static void mqtt_connect() {
+void MqttCommsTask::connect() {
   mqtt_state->holder = connect_to_wifi();
   mqtt_state->wifi.setCACert(mqtt_root_ca_cert());
   mqtt_state->wifi.setCertificate(mqtt_device_cert());
@@ -172,7 +165,7 @@ static void mqtt_connect() {
   mqtt_state->mqtt.setId(mqtt_device_id());
   mqtt_state->mqtt.setTxPayloadSize(MQTT_BUFFER_SIZE);
 
-  mqtt_state->mqtt.setCleanSession(mqtt_first_time);
+  mqtt_state->mqtt.setCleanSession(first_time);
 
   // Connect to the MQTT broker on the AWS endpoint
   log("Mqtt: Connecting to AWS IOT ");
@@ -195,15 +188,15 @@ static void mqtt_connect() {
   String command_msg("snappy/command/");
   command_msg += mqtt_device_id();
   mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
-  mqtt_first_time = false;
+  first_time = false;
 }
 
-static void mqtt_disconnect() {
+void MqttCommsTask::disconnect() {
   mqtt_state->mqtt.stop();
   mqtt_state->holder = WiFiHolder(false);
 }
 
-static void mqtt_send() {
+void MqttCommsTask::send() {
   while (mqtt_queue != nullptr) {
     size_t msg_len = mqtt_queue->message.length();
     if (msg_len > MQTT_BUFFER_SIZE) {
@@ -253,13 +246,13 @@ static void mqtt_handle_message(int payload_size) {
     if (json.hasOwnProperty("enable")) {
       unsigned flag = (unsigned)json["enable"];
       log("Mqtt: enable %u\n", flag);
-      run_control_task(new ControlEnableTask(!!flag));
+      sched_microtask_after(new EnableDeviceTask(!!flag), 0);
       fields++;
     }
     if (json.hasOwnProperty("interval")) {
       unsigned interval = (unsigned)json["interval"];
       log("Mqtt: set interval %u\n", interval);
-      run_control_task(new ControlSetIntervalTask(interval));
+      sched_microtask_after(new SetMqttIntervalTask(interval), 0);
       fields++;
     }
     // Don't send empty messages
@@ -274,7 +267,7 @@ static void mqtt_handle_message(int payload_size) {
       double reading = (double)json["reading"];
       double ideal = (double)json["ideal"];
       log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
-      run_control_task(new ControlActuatorTask(String(key), reading, ideal));
+      sched_microtask_after(new RunActuatorTask(String(key), reading, ideal), 0);
     } else {
       log("Mqtt: invalid command message\n%s\n", buf);      
     }
@@ -284,7 +277,7 @@ static void mqtt_handle_message(int payload_size) {
   mqtt_state->work_done = true;
 }
 
-static bool mqtt_poll() {
+bool MqttCommsTask::poll() {
   mqtt_state->work_done = false;
   mqtt_state->mqtt.onMessage(mqtt_handle_message);
   mqtt_state->mqtt.poll();
@@ -292,4 +285,7 @@ static bool mqtt_poll() {
   return mqtt_state->work_done;
 }
 
+void SetMqttIntervalTask::execute(SnappySenseData*) {
+  set_mqtt_capture_frequency_seconds(interval_s);
+}
 #endif

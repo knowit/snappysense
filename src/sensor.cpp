@@ -2,7 +2,9 @@
 
 #include "sensor.h"
 #include "config.h"
+#include "device.h"
 #include "icons.h"
+#include "log.h"
 #include "snappytime.h"
 
 SnappySenseData snappy;
@@ -145,4 +147,29 @@ String format_readings_as_json(const SnappySenseData& data) {
   }
   buf += '}';  
   return buf;
+}
+
+void ReadSensorsTask::execute(SnappySenseData* data) {
+  get_sensor_values(data);
+}
+
+void EnableDeviceTask::execute(SnappySenseData*) {
+  set_device_enabled(flag);
+}
+
+void RunActuatorTask::execute(SnappySenseData*) {
+  // TODO: Display something, if the display is going
+  // TODO: Manipulate an actuator, if we have one (we don't, really)
+  if (actuator.equals("temperature")) {
+    if (reading >= ideal+2) {
+      log("It's HOT in here!\n");
+    } else if (reading <= ideal-2) {
+      log("I'm starting to feel COLD!\n");
+    }
+  } else if (actuator.equals("airquality")) {
+    if (reading > ideal) {
+      log("The air is pretty BAD in here!\n");
+    }
+  }
+  // and so on
 }

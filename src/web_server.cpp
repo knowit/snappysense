@@ -32,17 +32,159 @@
 
 // I suppose it would be possible to use the Arduino WEB_SERVER framework?
 
-static WiFiServer server(web_server_listen_port());
-static WiFiHolder server_holder;
+enum ClientState {
+  TEXT,
+  CR,
+  CRLF,
+  CRLFCR,
+  CRLFCRLF,
+};
 
-void start_web_server() {
-  server_holder = connect_to_wifi();
+struct WebClientState {
+  WebClientState* next = nullptr;
+  ClientState state = TEXT;
+  String request;
+  bool dead = false;
+  WiFiClient client;
+  WebClientState(WiFiClient&& client) : client(std::move(client)) {}
+  void process_request();
+};
 
-  server.begin();
+struct WebServerState {
+  WebClientState* clients = nullptr;
+  WiFiServer server;
+  WiFiHolder server_holder;
+  WebServerState() : server(web_server_listen_port()) {}
+};
+
+void ReadWebInputTask::start() {
+  state = new WebServerState();
+  state->server_holder = connect_to_wifi();
+  state->server.begin();
   log("Web server: listening on port %d\n", web_server_listen_port());
 }
 
-static void handle_web_request(SnappySenseData* data, WiFiClient& client, const String& request) {
+void ReadWebInputTask::execute(SnappySenseData*) {
+  if (state == nullptr) {
+    start();
+  }
+
+  // Listen for incoming clients
+  for (;;) {
+    WiFiClient client = state->server.available();
+    if (!client) {
+      break;
+    }
+    log("Web server: Incoming request\n");
+    WebClientState* webclient = new WebClientState(std::move(client));
+    webclient->next = state->clients;
+    state->clients = webclient;
+  }
+
+  // Obtain traffic and respond to requests.  I guess in principle this should
+  // be two loops, where the outer loop runs as long as some work has been
+  // performed, but it doesn't seem important.
+  for ( WebClientState* cl = state->clients; cl != nullptr; cl = cl->next ) {
+    poll(cl);
+  }
+
+  // Garbage collect the clients
+  WebClientState* curr = state->clients;
+  WebClientState* prev = nullptr;
+  while (curr != nullptr) {
+    if (curr->dead) {
+      curr->client.flush();
+      curr->client.stop();
+      WebClientState* next = curr->next;
+      if (prev == nullptr) {
+        state->clients = next;
+      } else {
+        prev->next = next;
+      }
+      delete curr;
+      curr = next;
+    }
+  }
+}
+
+void ReadWebInputTask::poll(WebClientState* cl) {
+  // Client can disconnect at any time
+  while (cl->client.connected()) {
+    // Bytes arrive now and then.
+    // The request is a number of CRLF-terminated lines followed by a blank CRLF-terminated line.
+    // This state machine attempts to implement that precisely.  It may be that a looser 
+    // interpretation would be more resilient.
+    while (cl->client.available()) {
+      char c = cl->client.read();
+      //log("Web: received %c\n", c);
+      switch (cl->state) {
+      case TEXT:
+        if (c == '\r') {
+          cl->state = CR;
+        }
+        break;
+      case CR:
+        if (c == '\n') {
+          cl->state = CRLF;
+        } else if (c == '\r') {
+          cl->state = CR;
+        } else {
+          cl->state = TEXT;
+        }
+        break;
+      case CRLF:
+        if (c == '\r') {
+          cl->state = CRLFCR;
+        } else {
+          cl->state = TEXT;
+        }
+        break;
+      case CRLFCR:
+        if (c == '\n') {
+          cl->state = CRLFCRLF;
+        } else if (c == '\r') {
+          cl->state = CR;
+        } else {
+          cl->state = TEXT;
+        }
+        break;
+      case CRLFCRLF:
+        // Shouldn't happen.
+        cl->state = TEXT;
+        goto exit;
+        break;
+      }
+      cl->request += c;
+      if (cl->state == CRLFCRLF) {
+        break;
+      }
+    }
+
+    // Connected but input not available, come back later
+    return;
+  }
+
+  exit:
+  if (cl->state == CRLFCRLF) {
+    cl->process_request();
+  } else {
+    log("Web server: Incomplete request [%s]\n", cl->request.c_str());
+    cl->dead = true;
+  }
+}
+
+// This keeps the client alive until the command task has provided
+// output.
+class ProcessCommandTaskFromWeb : public ProcessCommandTask {
+  WebClientState* cl;
+public:
+  ProcessCommandTaskFromWeb(WebClientState* cl) : ProcessCommandTask(cl->request, &cl->client), cl(cl) {}
+  ~ProcessCommandTaskFromWeb() {
+    cl->dead = true;
+  }
+};
+
+void WebClientState::process_request() {
   if (request.startsWith("GET /")) {
     log("Web server: handling GET\n");
     String r = request.substring(5);
@@ -63,90 +205,12 @@ static void handle_web_request(SnappySenseData* data, WiFiClient& client, const 
     client.println("Content-type:text/html");
     client.println();
     client.println("<pre>");
-    process_command(data, r, &client);
+    sched_microtask_after(new ProcessCommandTaskFromWeb(this), 0);
     client.println("</pre>");
     return;
   }
   log("Web server: invalid method\n");
   client.println("HTTP/1.1 403 Forbidden");
-}
-
-void maybe_handle_web_request(SnappySenseData* data) {
-  WiFiClient client = server.available();   // listen for incoming clients
-  if (!client) {
-    return;
-  }
-  log("Web server: Incoming request\n");
-  // The request is a number of CRLF-terminated lines followed by a blank CRLF-terminated line.
-  // This state machine attempts to implement that precisely.  It may be that a looser 
-  // interpretation would be more resilient.
-  enum {
-    TEXT,
-    CR,
-    CRLF,
-    CRLFCR,
-    CRLFCRLF,
-  } state = TEXT;
-  String request = "";
-  // Client can disconnect at any time
-  while (client.connected()) {
-    // Bytes arrive now and then
-    if (client.available()) {
-      char c = client.read();
-      //log("Web: received %c\n", c);
-      switch (state) {
-      case TEXT:
-        if (c == '\r') {
-          state = CR;
-        }
-        break;
-      case CR:
-        if (c == '\n') {
-          state = CRLF;
-        } else if (c == '\r') {
-          state = CR;
-        } else {
-          state = TEXT;
-        }
-        break;
-      case CRLF:
-        if (c == '\r') {
-          state = CRLFCR;
-        } else {
-          state = TEXT;
-        }
-        break;
-      case CRLFCR:
-        if (c == '\n') {
-          state = CRLFCRLF;
-        } else if (c == '\r') {
-          state = CR;
-        } else {
-          state = TEXT;
-        }
-        break;
-      case CRLFCRLF:
-        // Shouldn't happen.
-        state = TEXT;
-        goto bad;
-        break;
-      }
-      request += c;
-      if (state == CRLFCRLF) {
-        break;
-      }
-    } else {
-      delay(1);
-    }
-  }
-  bad:
-  if (state == CRLFCRLF) {
-    handle_web_request(data, client, request);
-  } else {
-    log("Web server: Incomplete request [%s]\n", request.c_str());
-  }
-  client.flush();
-  client.stop();
 }
 
 #endif // WEB_SERVER
