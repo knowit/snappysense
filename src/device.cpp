@@ -39,6 +39,8 @@
 // practice the Mic functionality is unavailable.
 
 #include "device.h"
+
+#include "config.h"
 #include "icons.h"
 #include "log.h"
 #include "sensor.h"
@@ -93,6 +95,7 @@ void device_setup() {
   pinMode(POWER_ENABLE_PIN, OUTPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
   pinMode(MIC_PIN, INPUT);
+  pinMode(WAKEUP_PIN, INPUT);
 
   // turn on peripheral power, must be on for i2c to work!
   digitalWrite(POWER_ENABLE_PIN, HIGH);
@@ -111,6 +114,25 @@ void device_setup() {
   ENS160.begin();
 
   log("Device initialized\n");
+
+  // To enter configuration mode, press and hold the wake pin and then press and release
+  // the reset button.
+  //
+  // TODO here:
+  //  - if serial was not configured above (for whatever reason) then do so here
+  //  - in config mode, enter a little menu system where values can be read and stored
+  //  - there should definitely be a "factory reset" function
+  //  - ideally we want to reboot the device after?  not obvious - but if we needed to
+  //    enable serial here then rebooting is fine to clear that type of thing
+  //  - if there's a display, then print CONFIG in it
+#ifdef INTERACTIVE_CONFIGURATION
+  if (digitalRead(WAKEUP_PIN)) {
+    delay(2000);
+    if (digitalRead(WAKEUP_PIN)) {
+      interactive_configuration(&Serial);
+    }
+  }
+#endif
 }
 
 void power_on() {

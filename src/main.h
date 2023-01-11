@@ -57,8 +57,20 @@
 // Include the log(stream, fmt, ...) functions, see log.h
 #define LOGGING
 
+// To enter interactive configuration mode:
+//  - connect the device to USB and open a serial console
+//  - press and hold the wake pin and then press and release the reset button
+//  - there will be a message INTERACTIVE CONFIGURATION MODE in the console
+//    and if there's a display there will be a message CONFIGURATION
+//    on it
+//  - there will be a menu system for configuring the device
+#define INTERACTIVE_CONFIGURATION
+
 // On Hardware 1.0.0 this requires all wifi functionality to be disabled
 //#define TEST_MEMS
+
+// Set this to make config.cpp include client_config.h with compiled-in values.
+#define DEVELOPMENT
 
 // END FUNCTIONAL CONFIGURATION
 //

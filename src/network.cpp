@@ -71,7 +71,8 @@ WiFiHolder connect_to_wifi() {
 
   // Connect to local WiFi network
   // FIXME: Failure conditions need to be checked and reported
-  WiFi.begin(access_point_ssid(), access_point_password());
+  // FIXME: There can be multiple accss points
+  WiFi.begin(access_point_ssid(1), access_point_password(1));
 #ifdef WIFI_LOGGING
   log("WiFi: Bringing up network ");
 #endif
