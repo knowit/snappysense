@@ -27,6 +27,8 @@
 // All the str_values in a Configuration point to individual malloc'd NUL-terminated strings.
 // By and large none will have leading or trailing whitespace unless they were defined by
 // quoted strings that include such whitespace.
+//
+// TODO: Things would be easier if str_value were a String and not a char*.
 
 struct Pref {
   enum Ty {
@@ -72,44 +74,25 @@ struct Pref {
 // Each table of prefs has a last element whose long_key is nullptr.
 
 static Pref factory_prefs[] = {
-  {"enabled",               "en",    Pref::Int, false, 1, nullptr,
-   "Device recording is enabled"},
-  {"location",              "loc",   Pref::Str, false, 0, IF_DEVEL(LOCATION_NAME),
-   "Name of device location"},
-  {"ssid1",                 "s1",    Pref::Str, false, 0, IF_DEVEL(WIFI_SSID),
-   "SSID name for the first WiFi network"},
-  {"ssid2",                 "s1",    Pref::Str, false, 0, strdup(""),
-   "SSID name for the second WiFi network"},
-  {"ssid3",                 "s3",    Pref::Str, false, 0, strdup(""),
-   "SSID name for the third WiFi network"},
-  {"password1",             "p1",    Pref::Str, false, 0, IF_DEVEL(WIFI_PASSWORD),
-   "Password for the first WiFi network"},
-  {"password2",             "p2",    Pref::Str, false, 0, strdup(""),
-   "Password for the second WiFi network"},
-  {"password3",             "p3",    Pref::Str, false, 0, strdup(""),
-   "Password for the third WiFi network"},
-  {"time-server-host",      "tsh",   Pref::Str, false, 0, IF_TIMESTAMP_S(TIME_SERVER_HOST),
-   "Host name of ad-hoc time server"},
-  {"time-server-port",      "tsp",   Pref::Int, false, IF_TIMESTAMP_I(TIME_SERVER_PORT, 8086), nullptr,
-   "Port name on the ad-hoc time server"},
-  {"http-upload-host",      "huh",   Pref::Str, false, 0, IF_HTTP_UP_S(WEB_UPLOAD_HOST),
-   "Host name of ad-hoc http sensor-reading upload server"},
-  {"http-upload-port",      "hup",   Pref::Int, false, IF_HTTP_UP_I(WEB_UPLOAD_PORT, 8086), nullptr,
-   "Port number on the ad-hoc http sensor-reading upload server"},
-  {"aws-iot-id",            "aid",   Pref::Str, false, 0, IF_MQTT_UP_S(AWS_CLIENT_IDENTIFIER),
-   "IoT device ID"},
-  {"aws-iot-class",         "acls",  Pref::Str, false, 0, IF_MQTT_UP_S("snappysense"),
-   "IoT device class"},
-  {"aws-iot-endpoint-host", "ahost", Pref::Str, false, 0, IF_MQTT_UP_S(AWS_IOT_ENDPOINT),
-   "IoT endpoint host name"},
-  {"aws-iot-endpoint-port", "aport", Pref::Int, false, IF_MQTT_UP_I(AWS_MQTT_PORT, 8883), nullptr,
-   "IoT port number"},
-  {"aws-iot-root-ca",       "aroot", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CA),
-   "Root CA certificate (AmazonRootCA1.pem)"},
-  {"aws-iot-device-cert",   "acert", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CRT),
-   "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
-  {"aws-iot-private-key",   "akey",  Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_PRIVATE),
-   "Private key (XXXXXXXXXX-private.pem.key"},
+  {"enabled",               "en",    Pref::Int, false, 1, nullptr,                                      "Device recording is enabled"},
+  {"location",              "loc",   Pref::Str, false, 0, IF_DEVEL(LOCATION_NAME),                      "Name of device location"},
+  {"ssid1",                 "s1",    Pref::Str, false, 0, IF_DEVEL(WIFI_SSID),                          "SSID name for the first WiFi network"},
+  {"ssid2",                 "s2",    Pref::Str, false, 0, strdup(""),                                   "SSID name for the second WiFi network"},
+  {"ssid3",                 "s3",    Pref::Str, false, 0, strdup(""),                                   "SSID name for the third WiFi network"},
+  {"password1",             "p1",    Pref::Str, false, 0, IF_DEVEL(WIFI_PASSWORD),                      "Password for the first WiFi network"},
+  {"password2",             "p2",    Pref::Str, false, 0, strdup(""),                                   "Password for the second WiFi network"},
+  {"password3",             "p3",    Pref::Str, false, 0, strdup(""),                                   "Password for the third WiFi network"},
+  {"time-server-host",      "tsh",   Pref::Str, false, 0, IF_TIMESTAMP_S(TIME_SERVER_HOST),             "Host name of ad-hoc time server"},
+  {"time-server-port",      "tsp",   Pref::Int, false, IF_TIMESTAMP_I(TIME_SERVER_PORT, 8086), nullptr, "Port name on the ad-hoc time server"},
+  {"http-upload-host",      "huh",   Pref::Str, false, 0, IF_HTTP_UP_S(WEB_UPLOAD_HOST),                "Host name of ad-hoc http sensor-reading upload server"},
+  {"http-upload-port",      "hup",   Pref::Int, false, IF_HTTP_UP_I(WEB_UPLOAD_PORT, 8086), nullptr,    "Port number on the ad-hoc http sensor-reading upload server"},
+  {"aws-iot-id",            "aid",   Pref::Str, false, 0, IF_MQTT_UP_S(AWS_CLIENT_IDENTIFIER),          "IoT device ID"},
+  {"aws-iot-class",         "acls",  Pref::Str, false, 0, IF_MQTT_UP_S("snappysense"),                  "IoT device class"},
+  {"aws-iot-endpoint-host", "ahost", Pref::Str, false, 0, IF_MQTT_UP_S(AWS_IOT_ENDPOINT),               "IoT endpoint host name"},
+  {"aws-iot-endpoint-port", "aport", Pref::Int, false, IF_MQTT_UP_I(AWS_MQTT_PORT, 8883), nullptr,      "IoT port number"},
+  {"aws-iot-root-ca",       "aroot", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CA),                    "Root CA certificate (AmazonRootCA1.pem)"},
+  {"aws-iot-device-cert",   "acert", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CRT),                   "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
+  {"aws-iot-private-key",   "akey",  Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_PRIVATE),                "Private key (XXXXXXXXXX-private.pem.key"},
   { nullptr }
 };
 
@@ -377,12 +360,7 @@ config
       -- payload line must end with with the usual "-----END ...".  No blank lines or
       -- comments may appear after the "cert" line until after the last payload line.)EOF";
 
-// "Variables" are those prefs whose "cert" property is false
-static const char VARIABLES_INTRO[] = "  Variables for 'set' are:";
-
-// "Certs" are those prefs whose "cert" property is true
-static const char CERTS_INTRO[] = "  Cert-names for 'cert' are:";
-
+// "Part 2" is the list of variable names for `set` and `cert`; see later.
 #endif
 
 // evaluate_config() evaluates a configuration program, using the `read_line` parameter
@@ -559,14 +537,14 @@ see src/config.cpp.)EOF");
 static void print_help_config(Stream* io) {
   io->println(CONFIG_MANUAL_PART1);
   io->println();
-  io->println(VARIABLES_INTRO);
+  io->println("  Variables for 'set' are:");
   for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
     if (!p->cert) {
       io->printf("    %-22s - %s\n", p->long_key, p->help);
     }
   }
   io->println();
-  io->println(CERTS_INTRO);
+  io->println("  Cert-names for 'cert' are:");
   for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
     if (p->cert) {
       io->printf("    %-20s - %s\n", p->long_key, p->help);
