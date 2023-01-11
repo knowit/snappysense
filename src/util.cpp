@@ -11,8 +11,10 @@ String get_word(const String& cmd, int n) {
     int quoted = 0;
     if (i < lim && cmd[i] == '"') {
         quoted = '"';
+        i++;
     } else if (i < lim && cmd[i] == '\'') {
         quoted = '\'';
+        i++;
     }
   again:
     for (;;) {
