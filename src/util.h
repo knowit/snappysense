@@ -17,4 +17,14 @@ String get_word(const String& line, int n);
 
 String blocking_read_nonempty_line(Stream* io);
 
+class StringReader {
+  String s;
+  int i = 0;
+public:
+  StringReader(String s) : s(s) {}
+  int read();
+};
+
+String blocking_read_nonempty_line(StringReader* io);
+
 #endif // !util_h_included

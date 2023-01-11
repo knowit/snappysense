@@ -112,4 +112,8 @@ unsigned long web_command_poll_seconds();
 void interactive_configuration(Stream* io);
 #endif
 
+// Read configuration from some nonvolatile source, or revert to
+// a default.
+void read_configuration(Stream* io);
+
 #endif // !config_h_included

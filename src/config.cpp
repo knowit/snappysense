@@ -1,7 +1,14 @@
 // SnappySense configuration manager
 
+// TODO: It would be nice to make this a little more table-driven, as it is, many places
+// must be updated when a config variable is added.
+
 #include "config.h"
+#include "log.h"
 #include "util.h"
+
+#include <functional>
+#include <Preferences.h>
 
 // Configuration parameters.
 
@@ -13,7 +20,16 @@
 # include "client_config.h"
 #endif
 
-// All the char* values here point to malloc'd memory.
+// Configuration file format version, see the 'conf' statement help text further down.
+// This is intended to be used in a proper "semantic versioning" way.
+
+#define MAJOR_VERSION 1
+#define MINOR_VERSION 0
+#define BUGFIX_VERSION 0
+
+// All the char* values in a Configuration point to individual malloc'd NUL-terminated strings.
+// By and large none will have leading or trailing whitespace unless they were defined by
+// quoted strings that include such whitespace.
 
 struct Configuration {
   bool  device_enabled;
@@ -30,17 +46,23 @@ struct Configuration {
   int   http_upload_port;
   char* aws_iot_id;
   char* aws_iot_class;
-  char* aws_iot_endpoint;
+  char* aws_iot_endpoint_host;
   int   aws_iot_endpoint_port;
   char* aws_iot_root_ca;
   char* aws_iot_device_cert;
   char* aws_iot_private_key;
 };
 
+// Free anything pointed to by *var, then allocate memory for newstr and
+// copy newstr into it, placing it in *var.
+
 static void replace(char** var, const char* newstr) {
   free(*var);
   *var = strdup(newstr);
 }
+
+// The default ("factory") configuration takes its values from the compiled-in
+// configuration if there is one, otherwise it's mostly empty strings.
 
 static Configuration default_configuration = {
   .device_enabled = true,
@@ -77,10 +99,10 @@ static Configuration default_configuration = {
   .http_upload_host = strdup(""),
   .http_upload_port = 8086,
 #endif
-#ifdef MQTT_UPLOAD
+#if defined(DEVELOPMENT) && defined(MQTT_UPLOAD)
   .aws_iot_id = strdup(AWS_CLIENT_IDENTIFIER),
   .aws_iot_class = strdup("snappysense"),
-  .aws_iot_endpoint = strdup(AWS_IOT_ENDPOINT),
+  .aws_iot_endpoint_host = strdup(AWS_IOT_ENDPOINT),
   .aws_iot_endpoint_port = AWS_MQTT_PORT,
   .aws_iot_root_ca = strdup(AWS_CERT_CA),
   .aws_iot_device_cert = strdup(AWS_CERT_CRT),
@@ -96,9 +118,13 @@ static Configuration default_configuration = {
 #endif
 };
 
+// The current configuration object.  There is only one.
+
 static Configuration cfg;
 
-static int reset_configuration() {
+// Copy the default configuration into the current configuration.
+
+static void reset_configuration() {
   cfg.device_enabled = default_configuration.device_enabled,
   replace(&cfg.location_name, default_configuration.location_name);
   replace(&cfg.ssid1, default_configuration.ssid1);
@@ -113,15 +139,14 @@ static int reset_configuration() {
   cfg.http_upload_port = default_configuration.http_upload_port;
   replace(&cfg.aws_iot_id, default_configuration.aws_iot_id);
   replace(&cfg.aws_iot_class, default_configuration.aws_iot_class);
-  replace(&cfg.aws_iot_endpoint, default_configuration.aws_iot_endpoint);
+  replace(&cfg.aws_iot_endpoint_host, default_configuration.aws_iot_endpoint_host);
   cfg.aws_iot_endpoint_port = default_configuration.aws_iot_endpoint_port;
   replace(&cfg.aws_iot_root_ca, default_configuration.aws_iot_root_ca);
   replace(&cfg.aws_iot_device_cert, default_configuration.aws_iot_device_cert);
   replace(&cfg.aws_iot_private_key, default_configuration.aws_iot_private_key);
-  return 0;
 };
 
-static int init_config_dummy = reset_configuration();
+// Non-configurable preferences
 
 #ifdef DEVELOPMENT
 static const unsigned long SENSOR_POLL_FREQUENCY_S = 15;
@@ -164,6 +189,8 @@ static const unsigned long SCREEN_WAIT_TIME_S = 4;
 #ifdef SERIAL_SERVER
 static const unsigned long SERIAL_SERVER_WAIT_TIME_S = 1;
 #endif
+
+// Preference accessors
 
 unsigned long sensor_poll_frequency_seconds() {
   return SENSOR_POLL_FREQUENCY_S;
@@ -241,7 +268,7 @@ unsigned long mqtt_sleep_interval_seconds() {
 }
 
 const char* mqtt_endpoint_host() {
-  return cfg.aws_iot_endpoint;
+  return cfg.aws_iot_endpoint_host;
 }
 
 int mqtt_endpoint_port() {
@@ -291,6 +318,269 @@ unsigned long serial_command_poll_seconds() {
 }
 #endif
 
+// Provisioning and run-time configuration.
+
+// Format stuff into a String.
+static String fmt(const char* format, ...) {
+  char buf[1024];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buf, sizeof(buf), format, args);
+  va_end(args);
+  return String(buf);
+}
+
+// Manual for the configuration language.
+//
+// The configuration language is used both for user-entered options during provisioning
+// and to persist the configuration in NVRAM.  The function generate_config() generates
+// a program from a set of preferences.
+
+static const char CONFIG_MANUAL[] = R"EOF(
+config
+  This command will wait for you to enter a program in a simple configuration language,
+  as follows.  Generally whitespace is insignificant except within quoted values
+  and in the payloads for `cert`.  Comment lines start with # and go until EOL.
+  Statements are executed in the order they appear.
+
+    Program ::= Statement End
+    End ::= "end" EOL
+    Statement ::= Clear | Version | Set | Cert
+    Clear ::= "clear" EOL
+      -- This resets all variables
+    Version ::= "version" Major-dot-Minor EOL
+      -- This optional statement states the version of the firmware that the
+      -- configuration was written for.
+    Set ::= "set" Variable Value EOL
+      -- This assigns Value to Variable
+      -- Value is a string of non-whitespace characters, or a quoted string
+    Cert ::= "cert" Cert-name EOL Text-lines
+      -- This defines a multi-line text variable
+      -- The first payload line must start with the usual "-----BEGIN ...", and the last
+      -- payload line must end with with the usual "-----END ...".  No blank lines or
+      -- comments may appear after the "cert" line until after the last payload line.
+
+  Variables for 'set' are:
+    ssid1, ssid2, ssid3             - WiFi ssid names for up to 3 networks
+    password1, password2, password3 - WiFi passwords, ditto
+    location                        - name of device location
+    time-server-host                - host name of ad-hoc time server
+    aws-iot-id                      - IoT device ID
+    aws-iot-class                   - IoT device class (default "snappysense")
+    aws-iot-endpoint-host           - IoT endpoint host name
+    aws-iot-endpoint-port           - IoT port number (default 8883)
+    http-upload-host                - host name for http sensor uploads
+    http-upload-port                - port name for http sensor uploads
+  
+  Cert-names for 'cert' are:
+    aws-iot-root-ca                 - Root CA certificate (AmazonRootCA1.pem)
+    aws-iot-device-cert             - Device certificate (XXXXXXXXXX-certificate.pem.crt)
+    aws-iot-private-key             - Private key (XXXXXXXXXX-private.pem.key))EOF";
+
+// evaluate_config() evaluates a configuration program, using the `read_line` parameter
+// to read lines of input from some source of text.  It returns a String, which is empty
+// if everything was fine and is otherwise an error message.
+//
+// The configuration language is described by the manual above.
+
+static String execute_config(std::function<String()> read_line) {
+  for (;;) {
+    String line = read_line();
+    if (line == "") {
+      return fmt("Configuration program did not end with `end`");
+    }
+    String kwd = get_word(line, 0);
+    if (kwd == "end") {
+      return String();
+    } else if (kwd == "clear") {
+      reset_configuration();
+    } else if (kwd == "version") {
+      int major, minor, bugfix;
+      if (sscanf(get_word(line, 1).c_str(), "%d.%d,%d", &major, &minor, &bugfix) != 3) {
+        return fmt("Bad statement [%s]\n", line.c_str());
+      }
+      if (major != MAJOR_VERSION || (major == MAJOR_VERSION && minor > MINOR_VERSION)) {
+        return fmt("Bad version %d.%d.%d, I'm %d.%d.%d\n",
+                   major, minor, bugfix,
+                   MAJOR_VERSION, MINOR_VERSION, BUGFIX_VERSION);
+      }
+      // version is OK
+    } else if (kwd == "set") {
+      String varname = get_word(line, 1);
+      if (varname == "") {
+        return fmt("Missing variable name for 'set'\n");
+      }
+      String value = get_word(line, 2);
+      if (value == "") {
+        return fmt("Missing value for variable [%s]\n", varname.c_str());
+      }
+      if (varname == "ssid1") {
+        replace(&cfg.ssid1, value.c_str());
+      } else if (varname == "ssid2") {
+        replace(&cfg.ssid2, value.c_str());
+      } else if (varname == "ssid3") {
+        replace(&cfg.ssid3, value.c_str());
+      } else if (varname == "password1") {
+        replace(&cfg.password1, value.c_str());
+      } else if (varname == "password2") {
+        replace(&cfg.password2, value.c_str());
+      } else if (varname == "password3") {
+        replace(&cfg.password3, value.c_str());
+      } else if (varname == "location") {
+        replace(&cfg.location_name, value.c_str());
+      } else if (varname == "time-server-host") {
+        replace(&cfg.location_name, value.c_str());
+      } else if (varname == "aws-iot-id") {
+        replace(&cfg.aws_iot_id, value.c_str());
+      } else if (varname == "aws-iot-class") {
+        replace(&cfg.aws_iot_class, value.c_str());
+      } else if (varname == "aws-iot-endpoint-host") {
+        replace(&cfg.aws_iot_endpoint_host, value.c_str());
+      } else if (varname == "aws-iot-endpoint-port") {
+        // FIXME
+      } else if (varname == "http-upload-host") {
+        replace(&cfg.http_upload_host, value.c_str());
+      } else if (varname == "http-upload-port") {
+        // FIXME
+      } else {
+        return fmt("Unknown variable name for 'set': [%s]\n", varname.c_str());
+      }
+    } else if (kwd == "cert") {
+      String varname = get_word(line, 1);
+      if (varname == "") {
+        return fmt("Missing variable name for 'cert'\n");
+      }
+      String value;
+      String line = read_line();
+      if (!line.startsWith("-----BEGIN ")) {
+        return fmt("Expected -----BEGIN at the beginning of cert");
+      }
+      value = line;
+      value += "\n";
+      for (;;) {
+        String line = read_line();
+        value += line;
+        value += "\n";
+        if (line.startsWith("-----END ")) {
+          break;
+        }
+      }
+      value.trim();
+      if (varname == "aws-iot-root-ca") {
+        replace(&cfg.aws_iot_root_ca, value.c_str());
+      } else if (varname == "aws-iot-device-cert") {
+        replace(&cfg.aws_iot_device_cert, value.c_str());
+      } else if (varname == "aws-iot-private-key") {
+        replace(&cfg.aws_iot_private_key, value.c_str());
+      }
+    } else {
+      int i = 0;
+      while (i < line.length() && isspace(line[i])) {
+        i++;
+      }
+      if (i < line.length() && line[i] == '#') {
+        // comment, do nothing
+      } else if (i == line.length()) {
+        // blank, do nothing
+      } else {
+        return fmt("Bad configuration statement [%s]\n", line.c_str());
+      }
+    }
+  }
+  /*NOTREACHED*/
+  log("Should not happen");
+  abort();
+}
+
+// Generate a `set <var> <value>` statement
+template<typename T>
+static void set(String* s, const char* tag, T value) {
+  *s += "set ";
+  *s += tag;
+  // TODO: Choose quoting based on contents of string - it could
+  // require single-quoting.
+  *s += " \"";
+  *s += value;
+  *s += "\"\n";
+}
+
+// Generate a `cert <var>` statement with a trailing text block
+static void cert(String* s, const char* tag, const char* value) {
+  *s += "cert ";
+  *s += tag;
+  *s += '\n';
+  *s += value;
+  *s += '\n';
+}
+
+// Generate a program that will recreate the current prefs, this is useful as the prefs
+// are persisted as this program.
+static String generate_prefs() {
+  String s;
+  s += "clear\n";
+  s += "version ";
+  s += MAJOR_VERSION;
+  s += '.';
+  s += MINOR_VERSION;
+  s += '.';
+  s += BUGFIX_VERSION;
+  s += '\n';
+  set(&s, "location-name", cfg.location_name);
+  set(&s, "ssid1", cfg.ssid1);
+  set(&s, "ssid2", cfg.ssid2);
+  set(&s, "ssid3", cfg.ssid3);
+  set(&s, "password1", cfg.password1);
+  set(&s, "password2", cfg.password2);
+  set(&s, "password3", cfg.password3);
+  set(&s, "time-server-host", cfg.time_server_host);
+  // TODO: time-server-port
+  set(&s, "http-upload-host", cfg.http_upload_host);
+  set(&s, "http-upload-port", cfg.http_upload_port);
+  set(&s, "aws-iot-id", cfg.aws_iot_id);
+  set(&s, "aws-iot-class", cfg.aws_iot_class);
+  set(&s, "aws-iot-endpoint-host", cfg.aws_iot_endpoint_host);
+  set(&s, "aws-iot-endpoint-port", cfg.aws_iot_endpoint_port);
+  cert(&s, "aws-iot-root-ca", cfg.aws_iot_root_ca);
+  cert(&s, "aws-iot-device-cert", cfg.aws_iot_device_cert);
+  cert(&s, "aws-iot-private-key", cfg.aws_iot_private_key);
+  s += "end\n";
+  return s;
+}
+
+// This does not work.  The max value size is 4000 bytes, and only if the parameter store is not fragmented.
+// For a full config we easily have more than that.
+
+static void save_configuration(Stream* io) {
+  String cfg = generate_prefs();
+  Preferences prefs;
+  if (prefs.begin("snappysense")) {
+    log("A");
+    prefs.putString("snappyprefs", generate_prefs());
+    log("B");
+    prefs.end();
+    log("C");
+  } else {
+    io->println("Failed to save configuration\n");
+  }
+}
+
+void read_configuration(Stream* io) {
+  Preferences prefs;
+  if (prefs.begin("snappysense", /* readOnly= */ true)) {
+    String s = prefs.getString("snappyprefs");
+    if (!s.isEmpty()) {
+      StringReader rdr(s);
+      String result = execute_config([&]{ return blocking_read_nonempty_line(&rdr); });
+      if (!result.isEmpty()) {
+        io->println(result);
+      }
+      return;
+    }
+  }
+  log("No configuration in parameter store\n");
+  reset_configuration();
+}
+
 #ifdef INTERACTIVE_CONFIGURATION
 
 static void print_help(Stream* io) {
@@ -307,58 +597,29 @@ config
 clear
   Remove all settings (or restore them to compiled-in values, in development mode).
 
+save
+  Save the configuration to nonvolatile storage.
+
 quit
   Leave configuration mode and start the device in a normal manner.
+
+gen
+  (Development mode only)  Print the config program that would be generated by
+  the current configuration.
 
 Note it is possible to compile default settings into the source for easier development,
 see src/config.cpp.)EOF");
 }
 
 static void print_help_config(Stream* io) {
-  io->println(R"EOF(
-config
-  This command will wait for you to enter a program in a simple configuration language,
-  as follows.  Generally whitespace is insignificant except within quoted values
-  and in the payloads for `cert`.  Comment lines start with # and go until EOL.
-  Statements are executed in the order they appear.
-
-    Program ::= Statement End
-    End ::= "end" EOL
-    Statement ::= Clear | Var | Cert
-    Clear ::= "clear" EOL
-      -- This resets all variables
-    Var ::= "var" Variable Value EOL
-      -- This assigns Value to Variable
-      -- Value is a string of non-whitespace characters, or a quoted string
-    Cert ::= "cert" Cert-name EOL Text-lines
-      -- This defines a multi-line text variable
-      -- The first payload line must start with the usual "-----BEGIN ...", and the last
-      -- payload line must end with with the usual "-----END ...".  No blank lines or
-      -- comments may appear after the "cert" line until after the last payload line.
-
-  Variables for 'var' are:
-    ssid1, ssid2, ssid3             - WiFi ssid names for up to 3 networks
-    password1, password2, password3 - WiFi passwords, ditto
-    location                        - name of device location
-    time-server                     - host name of ad-hoc time server
-    aws-iot-id                      - IoT device ID
-    aws-iot-class                   - IoT device class (default "snappysense")
-    aws-iot-endpoint                - IoT endpoint host name
-    aws-iot-endpoint-port           - IoT port number (default 8883)
-    http-upload-host                - host name for http sensor uploads
-    http-upload-port                - port name for http sensor uploads
-  
-  Cert-names for 'cert' are:
-    aws-iot-root-ca                 - Root CA certificate (AmazonRootCA1.pem)
-    aws-iot-device-cert             - Device certificate (XXXXXXXXXX-certificate.pem.crt)
-    aws-iot-private-key             - Private key (XXXXXXXXXX-private.pem.key))EOF");
+  io->println(CONFIG_MANUAL);
 }
 
 static String cert_first_line(const char* cert) {
   const char* p = strstr(cert, "BEGIN");
   const char* q = strchr(p, '\n');
   const char* r = strchr(q+1, '\n');
-  return String((const uint8_t*)(q+1), (r-q));
+  return String((const uint8_t*)(q+1), (r-q-1));
 }
 
 static void show_cmd(Stream* io) {
@@ -391,78 +652,6 @@ static void show_cmd(Stream* io) {
 #endif
 }
 
-static void execute_config(Stream* io) {
-  for (;;) {
-    String line = blocking_read_nonempty_line(io);
-    String kwd = get_word(line, 0);
-    if (kwd == "end") {
-      break;
-    } else if (kwd == "clear") {
-      reset_configuration();
-    } else if (kwd == "var") {
-      String varname = get_word(line, 1);
-      if (varname == "") {
-        io->printf("Missing variable name for 'var'\n");
-        break;
-      }
-      String value = get_word(line, 2);
-      if (value == "") {
-        io->printf("Missing value for variable [%s]\n", varname.c_str());
-      }
-      if (varname == "ssid1") {
-        replace(&cfg.ssid1, value.c_str());
-      } else if (varname == "ssid2") {
-        replace(&cfg.ssid2, value.c_str());
-      } else if (varname == "ssid3") {
-        replace(&cfg.ssid3, value.c_str());
-      } else if (varname == "password1") {
-        replace(&cfg.password1, value.c_str());
-      } else if (varname == "password2") {
-        replace(&cfg.password2, value.c_str());
-      } else if (varname == "password3") {
-        replace(&cfg.password3, value.c_str());
-      } else if (varname == "location") {
-        replace(&cfg.location_name, value.c_str());
-      } else if (varname == "time-server") {
-        replace(&cfg.location_name, value.c_str());
-      } else if (varname == "aws-iot-id") {
-        replace(&cfg.aws_iot_id, value.c_str());
-      } else if (varname == "aws-iot-class") {
-        replace(&cfg.aws_iot_class, value.c_str());
-      } else if (varname == "aws-iot-endpoint") {
-        replace(&cfg.aws_iot_endpoint, value.c_str());
-      } else if (varname == "aws-iot-endpoint-port") {
-        // FIXME
-      } else if (varname == "http-upload-host") {
-        replace(&cfg.http_upload_host, value.c_str());
-      } else if (varname == "http-upload-port") {
-        // FIXME
-      } else {
-        io->printf("Unknown variable name for 'var': [%s]\n", varname.c_str());
-        break;
-      }
-    } else if (kwd == "cert") {
-      String varname = get_word(line, 1);
-      if (varname == "") {
-        io->printf("Missing variable name for 'cert'\n");
-        break;
-      }
-      String value;
-      // read cert into value.  then:
-      if (varname == "aws-iot-root-ca") {
-        replace(&cfg.aws_iot_root_ca, value.c_str());
-      } else if (varname == "aws-iot-device-cert") {
-        replace(&cfg.aws_iot_device_cert, value.c_str());
-      } else if (varname == "aws-iot-private-key") {
-        replace(&cfg.aws_iot_private_key, value.c_str());
-      }
-    } else {
-      // blank, comment, or error
-      // FIXME
-    }
-  }
-}
-
 void interactive_configuration(Stream* io) {
   io->print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
   io->print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
@@ -478,9 +667,18 @@ void interactive_configuration(Stream* io) {
     } else if (cmd == "show") {
       show_cmd(io);
     } else if (cmd == "config") {
-      execute_config(io);
+      String result = execute_config([&]{ return blocking_read_nonempty_line(io); });
+      if (!result.isEmpty()) {
+        io->println(result);
+      }
     } else if (cmd == "clear") {
       reset_configuration();
+    } else if (cmd == "save") {
+      save_configuration(io);
+#ifdef DEVELOPMENT
+    } else if (cmd == "gen") {
+      io->println(generate_prefs().c_str());
+#endif
     } else if (cmd == "quit") {
       break;
     } else {
@@ -488,4 +686,4 @@ void interactive_configuration(Stream* io) {
     }
   }
 }
-#endif
+#endif  // INTERACTIVE_CONFIGURATION

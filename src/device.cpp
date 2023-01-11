@@ -82,6 +82,9 @@ static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
 
+// This must NOT depend on the configuration because the configuration may not
+// have been read at this point, see main.cpp.
+
 void device_setup() {
   Serial.begin(115200);
 #ifdef LOGGING
@@ -120,8 +123,6 @@ void device_setup() {
   //
   // TODO here:
   //  - if serial was not configured above (for whatever reason) then do so here
-  //  - in config mode, enter a little menu system where values can be read and stored
-  //  - there should definitely be a "factory reset" function
   //  - ideally we want to reboot the device after?  not obvious - but if we needed to
   //    enable serial here then rebooting is fine to clear that type of thing
   //  - if there's a display, then print CONFIG in it
@@ -129,6 +130,7 @@ void device_setup() {
   if (digitalRead(WAKEUP_PIN)) {
     delay(2000);
     if (digitalRead(WAKEUP_PIN)) {
+      read_configuration(&Serial);
       interactive_configuration(&Serial);
     }
   }

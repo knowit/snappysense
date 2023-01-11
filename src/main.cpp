@@ -28,6 +28,10 @@ void setup() {
   device_setup();
   log("SnappySense ready!\n");
 
+  // Load config from NVRAM or flash, if available, otherwise use
+  // default values.
+  read_configuration(&Serial);
+
   show_splash();
 #ifdef TIMESTAMP
   configure_time();

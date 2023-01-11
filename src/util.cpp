@@ -49,10 +49,11 @@ String get_word(const String& cmd, int n) {
   return String();
 }
 
-String blocking_read_nonempty_line(Stream* io) {
+template<typename T>
+String do_read(T* input) {
   String buf;
   for (;;) {
-    int ch = io->read();
+    int ch = input->read();
     if (ch <= 0 || ch > 127) {
       continue;
     }
@@ -64,4 +65,19 @@ String blocking_read_nonempty_line(Stream* io) {
     }
     buf += (char)ch;
   }
+}
+
+String blocking_read_nonempty_line(Stream* io) {
+  return do_read(io);
+}
+
+String blocking_read_nonempty_line(StringReader* io) {
+  return do_read(io);
+}
+
+int StringReader::read() {
+  if (i == s.length()) {
+    return '\n';
+  }
+  return s[i++];
 }
