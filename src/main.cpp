@@ -9,7 +9,8 @@
 //  - DEMO_MODE, in which the device reads the sensors often, keeps the display on,
 //    and displays the sensor variables on the display in a never-ending loop.
 //  - !DEMO_MODE, in which the device reads the sensors much less often, turns the
-//    display off, and and does not display anything unless there's an error.
+//    display off, and does not display anything while it's running unless there's
+//    an unrecoverable error.
 //  - DEVELOPER mode, which can be combined with the other two modes and which 
 //    allows for interactivity over the serial line, configuration values that are
 //    compiled into the code, more frequent activity, and other things.
@@ -18,7 +19,7 @@
 // to set configuration variables.  To do this, connect a terminal over USB, press
 // and hold the "wake" button on the device, then press and release the "reset"
 // button on the CPU.  The device will enter an interactive mode over the USB line.
-// There is some on-line help for this.
+// There is on-line help for how to use that mode.
 //
 // When the device is powered on it may be configured to fetch the current
 // time from a time server.  Follow breadcrumbs from the definition of TIMESTAMP
@@ -30,10 +31,11 @@
 // neither (data are just displayed on the built-in display).  For uploading to
 // work, networking configuration variables have to be set, see config.cpp and the
 // help text for the provisioning mode.  Also, appropriate servers will have to
-// be running.
+// be running.  There is a simple server for http upload in the server/ directory
+// in the present repo.
 //
-// For development, the device will also listen over the serial line or on an http
-// port, see SERIAL_SERVER and WEB_SERVER in main.h.
+// For development, the device will also listen for interactive commands over the
+// serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
 //
 //
 // RESILIENCE.
@@ -92,9 +94,7 @@ void setup() {
   if (do_interactive_configuration) {
     render_text("Configuration mode");
     interactive_configuration(&Serial);
-    render_text("Press reset button!");
-    Serial.println("Press reset button!");
-    for(;;) {}
+    enter_end_state("Press reset button!");
   }
 #endif
 

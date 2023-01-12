@@ -272,6 +272,14 @@ void render_text(const char* value) {
   display.display();
 }
 
+void enter_end_state(const char* msg, bool is_error = false) {
+  render_text("Press reset button!");
+  Serial.println("Press reset button!");
+  for(;;) {
+
+  }
+}
+
 #ifdef TEST_MEMS
 void test_mems() {
   Serial.println(analogRead(MIC_PIN));
