@@ -25,21 +25,33 @@ void configure_time() {
   }
 
   log("Time: obtaining current time from server\n");
-  auto holder = connect_to_wifi();
-  if (!holder.is_valid()) {
+  {
+    auto holder = connect_to_wifi();
+    if (!holder.is_valid()) {
+      goto failed;
+    }
+    WiFiClient wifiClient;
+    HTTPClient httpClient;
+    // GET /time returns a number, representing the number of seconds UTC since the start
+    // of the Posix epoch.
+    if (!httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time")) {
+      goto failed;
+    }
+    int retval = httpClient.GET();
+    if (retval < 200 || retval > 299) {
+      goto failed;
+    }
+    if (sscanf(httpClient.getString().c_str(), "%lu", &timebase) != 1) {
+      goto failed;
+    }
+    httpClient.end();
+    wifiClient.stop();
+    time_configured = true;
     return;
   }
-  WiFiClient wifiClient;
-  HTTPClient httpClient;
-  // GET /time returns a number, representing the number of seconds UTC since the start
-  // of the Posix epoch.
-  // FIXME: Issue 27: Check return values here.
-  httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time");
-  httpClient.GET();
-  sscanf(httpClient.getString().c_str(), "%lu", &timebase);
-  httpClient.end();
-  wifiClient.stop();
-  time_configured = true;
+
+failed:
+  log("Failed to configure time - connection or protocol error.\n");
 }
 
 time_t get_time() {
