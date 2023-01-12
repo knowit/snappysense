@@ -88,11 +88,6 @@ static void initialize_serial_port() {
   if (!serial_port_initialized) {
     Serial.begin(115200);
     serial_port_initialized = true;
-#ifdef LOGGING
-    // This could be something else, and it could be configurable.
-    // FIXME: If the serial port is not connected, this should do nothing?
-    set_log_stream(&Serial);
-#endif
   }
 }
 
@@ -102,6 +97,16 @@ static void power_on_display() {
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
     display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
     display_powered_on = true;
+  } else {
+    // FIXME
+    display.dim(false);
+  }
+}
+
+void power_off_display() {
+  if (display_powered_on) {
+    // FIXME
+    display.dim(true);
   }
 }
 
@@ -109,8 +114,13 @@ static void power_on_display() {
 // have been read at this point, see main.cpp.
 
 void device_setup(bool* do_interactive_configuration) {
-  // TODO: Should this be conditional on something?
+  // Always connect serial on startup
   initialize_serial_port();
+#ifdef LOGGING
+  // This could be something else, and it could be configurable.
+  // FIXME: If the serial port is not connected, this should do nothing?
+  set_log_stream(&Serial);
+#endif
 
   // set up io pins
   pinMode(POWER_ENABLE_PIN, OUTPUT);
@@ -130,10 +140,8 @@ void device_setup(bool* do_interactive_configuration) {
   environment.begin();
   ENS160.begin();
 
-#ifdef DEMO_MODE
-  // In demo mode, the display is on from the start and 
+  // Always power on the display on startup, though it may be powered down later.
   power_on_display();
-#endif
 
   log("Device initialized\n");
 
@@ -143,8 +151,6 @@ void device_setup(bool* do_interactive_configuration) {
   if (digitalRead(WAKEUP_PIN)) {
     delay(1000);
     if (digitalRead(WAKEUP_PIN)) {
-      initialize_serial_port();
-      power_on_display();
       *do_interactive_configuration = true;
     }
   }
@@ -258,6 +264,9 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
 #endif
 
 void render_text(const char* value) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
   display.print(value);
   display.display();

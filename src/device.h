@@ -9,6 +9,7 @@
 void device_setup(bool* interactive_configuration);
 void power_on();
 void power_off();
+void power_off_display();
 int probe_i2c_devices(Stream* stream);
 void get_sensor_values(SnappySenseData* data);
 void show_splash();

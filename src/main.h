@@ -56,16 +56,17 @@
 //  - there will be a menu system for configuring the device
 #define INTERACTIVE_CONFIGURATION
 
+// In this mode, the display is updated frequently with readings.  The device and
+// display are on continually, and the device uses a lot of power.  It is useful in
+// production only when we can count on a non-battery power source.
+#define DEMO_MODE
+
 // The following are mostly useful during development and would not normally be
 // enabled in production.
 
-// In this mode, the display is updated frequently with readings.  The device is
-// on more or less continuously, and uses a lot of power.
-#define DEMO_MODE
-
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-#define SERIAL_SERVER
+//#define SERIAL_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.

@@ -30,10 +30,10 @@
 
 struct Pref {
   enum Flags {
-    Str,     // str_value has value
-    Int,     // int_value has value
-    Cert,    // Must also be Str: is certificate, not simple value
-    Passwd   // Must also be Str: is password
+    Str = 1,     // str_value has value
+    Int = 2,     // int_value has value
+    Cert = 4,    // Must also be Str: is certificate, not simple value
+    Passwd = 8   // Must also be Str: is password
   };
   const char* long_key;   // The key name used in the config script
   const char* short_key;  // The key name used in NVRAM
@@ -532,7 +532,7 @@ static void show_cmd(Stream* io) {
         continue;
       }
       if (p->is_cert()) {
-        io->printf("%-22s - %s\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
+        io->printf("%-22s - %s...\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
       } else if (p->is_passwd() && !p->str_value.isEmpty()) {
         io->printf("%-22s - %c.....\n", p->long_key, p->str_value[0]);
       } else {
