@@ -12,9 +12,9 @@
 #ifdef DEVELOPMENT
 // The file client_config.h provides compiled-in values so as to simplify development.
 //
-// Note, client_config.h is not in the repo, as it contains private values.  DO NOT ADD IT.
-// A template for the file is in client_config_template.txt.  In that file, search for FIXME.
-# include "client_config.h"
+// Note, development_config.h is not in the repo, as it contains private values.  DO NOT ADD IT.
+// A template for the file is in development_config_template.txt.  In that file, search for FIXME.
+# include "development_config.h"
 #endif
 
 // Configuration file format version, see the 'conf' statement help text further down.

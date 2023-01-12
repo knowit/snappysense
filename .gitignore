@@ -3,6 +3,6 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-src/client_config.h
+src/development_config.h
 src/configuration.cfg
 NOTES
