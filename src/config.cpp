@@ -166,7 +166,7 @@ static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*1;
 static const unsigned long MQTT_SLEEP_INTERVAL_S = 60*2;
 #else
 static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
-static const unsigned long MQTT_SLEEP_INTERVAL_S = MQTT_UPLOAD_WAIT_TIME_S 
+static const unsigned long MQTT_SLEEP_INTERVAL_S = MQTT_UPLOAD_WAIT_TIME_S;
 #endif
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 static unsigned long mqtt_upload_wait_time_s = MQTT_UPLOAD_WAIT_TIME_S;
