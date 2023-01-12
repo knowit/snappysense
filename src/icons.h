@@ -6,7 +6,7 @@
 #include "main.h"
 
 extern const unsigned char knowit_logo [];
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 extern const unsigned char temperature_icon [];
 extern const unsigned char humidity_icon [];
 extern const unsigned char uv_icon [];

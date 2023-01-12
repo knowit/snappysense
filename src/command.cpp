@@ -6,6 +6,7 @@
 
 #include "device.h"
 #include "network.h"
+#include "util.h"
 
 struct Command {
   const char* command;
@@ -15,29 +16,6 @@ struct Command {
 
 // The last row of this table has a null `command` field
 extern Command commands[];
-
-// Return nth word, or an empty string if there is no such word
-static String get_word(const String& cmd, int n) {
-  unsigned lim = cmd.length();
-  unsigned i = 0;
-  while (i < lim) {
-    while (i < lim && isspace(cmd[i])) {
-      i++;
-    }
-    unsigned start = i;
-    while (i < lim && !isspace(cmd[i])) {
-      i++;
-    }
-    if (i == start) {
-      break;
-    }
-    if (n == 0) {
-      return cmd.substring(start, i);
-    }
-    n--;
-  }
-  return String();
-}
 
 void ProcessCommandTask::execute(SnappySenseData* data) {
   String w = get_word(cmd, 0);

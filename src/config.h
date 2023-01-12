@@ -15,12 +15,13 @@ unsigned long sensor_poll_frequency_seconds();
 
 // The name of the location at which this device is placed.
 const char* location_name();
+void set_location_name(const char* name);
 
 // WiFi access point SSID
-const char* access_point_ssid();
+const char* access_point_ssid(int n);
 
 // WiFi access point password, this may be nullptr.
-const char* access_point_password();
+const char* access_point_password(int n);
 
 bool device_enabled();
 void set_device_enabled(bool flag);
@@ -82,8 +83,8 @@ const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif
 
-#ifdef STANDALONE
-// Note, STANDALONE will keep the device continually on.
+#ifdef DEMO_MODE
+// Note, DEMO_MODE will keep the device continually on.
 unsigned long display_update_frequency_seconds();
 #endif
 
@@ -105,5 +106,13 @@ int web_server_listen_port();
 // Note, WEB_SERVER will keep the device continually on.
 unsigned long web_command_poll_seconds();
 #endif
+
+#ifdef INTERACTIVE_CONFIGURATION
+// See documentation in main.h
+void interactive_configuration(Stream* io);
+#endif
+
+// Read configuration from some nonvolatile source, or revert to a default.
+void read_configuration();
 
 #endif // !config_h_included

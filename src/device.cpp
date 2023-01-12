@@ -39,6 +39,8 @@
 // practice the Mic functionality is unavailable.
 
 #include "device.h"
+
+#include "config.h"
 #include "icons.h"
 #include "log.h"
 #include "sensor.h"
@@ -79,13 +81,44 @@
 static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
+static bool serial_port_initialized = false;
+static bool display_powered_on = false;
 
-void device_setup() {
-  Serial.begin(115200);
+static void initialize_serial_port() {
+  if (!serial_port_initialized) {
+    Serial.begin(115200);
+    serial_port_initialized = true;
+  }
+}
+
+static void power_on_display() {
+  if (!display_powered_on) {
+    // init oled display
+    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+    display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
+    display_powered_on = true;
+  } else {
+    // FIXME
+    display.dim(false);
+  }
+}
+
+void power_off_display() {
+  if (display_powered_on) {
+    // FIXME
+    display.dim(true);
+  }
+}
+
+// This must NOT depend on the configuration because the configuration may not
+// have been read at this point, see main.cpp.
+
+void device_setup(bool* do_interactive_configuration) {
+  // Always connect serial on startup
+  initialize_serial_port();
 #ifdef LOGGING
   // This could be something else, and it could be configurable.
-  // FIXME: If the serial port is not connected, this should do nothing.
-  // FIXME: Logging could also be to a buffer and the log could be requested interactively.
+  // FIXME: If the serial port is not connected, this should do nothing?
   set_log_stream(&Serial);
 #endif
 
@@ -93,6 +126,7 @@ void device_setup() {
   pinMode(POWER_ENABLE_PIN, OUTPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
   pinMode(MIC_PIN, INPUT);
+  pinMode(WAKEUP_PIN, INPUT);
 
   // turn on peripheral power, must be on for i2c to work!
   digitalWrite(POWER_ENABLE_PIN, HIGH);
@@ -103,14 +137,24 @@ void device_setup() {
   // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
   Wire.begin((int) I2C_SDA, I2C_SCL);
 
-  // init oled display
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
-
   environment.begin();
   ENS160.begin();
 
+  // Always power on the display on startup, though it may be powered down later.
+  power_on_display();
+
   log("Device initialized\n");
+
+#ifdef INTERACTIVE_CONFIGURATION
+  // To enter configuration mode, press and hold the wake pin and then press and release
+  // the reset button.
+  if (digitalRead(WAKEUP_PIN)) {
+    delay(1000);
+    if (digitalRead(WAKEUP_PIN)) {
+      *do_interactive_configuration = true;
+    }
+  }
+#endif
 }
 
 void power_on() {
@@ -201,7 +245,7 @@ void show_splash() {
   display.display();
 }
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units) {
   display.clearDisplay();
 
@@ -218,6 +262,15 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
   display.display();
 }
 #endif
+
+void render_text(const char* value) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print(value);
+  display.display();
+}
 
 #ifdef TEST_MEMS
 void test_mems() {

@@ -70,11 +70,18 @@ WiFiHolder connect_to_wifi() {
   }
 
   // Connect to local WiFi network
-  // FIXME: Failure conditions need to be checked and reported
-  WiFi.begin(access_point_ssid(), access_point_password());
+  // FIXME: Failure conditions need to be checked and reported but should not block
+  // progress per se, we must not hang here.
+  // FIXME: We should flash a message on the display if no access points work
+  // FIXME: There can be multiple accss points
+  log("Access point: [%s]\n", access_point_ssid(1));
+  WiFi.begin(access_point_ssid(1), access_point_password(1));
 #ifdef WIFI_LOGGING
   log("WiFi: Bringing up network ");
 #endif
+  // FIXME: This polling+delay should be implemented as some type of task, so long
+  // as the user of connect_to_wifi() can handle that.  I'm seeing a lot of async/await
+  // patterns here...
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
 #ifdef WIFI_LOGGING
