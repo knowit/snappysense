@@ -83,8 +83,8 @@ const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif
 
-#ifdef STANDALONE
-// Note, STANDALONE will keep the device continually on.
+#ifdef DEMO_MODE
+// Note, DEMO_MODE will keep the device continually on.
 unsigned long display_update_frequency_seconds();
 #endif
 

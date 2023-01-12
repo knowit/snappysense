@@ -172,7 +172,7 @@ static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 static unsigned long mqtt_upload_wait_time_s = MQTT_UPLOAD_WAIT_TIME_S;
 #endif
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 static const unsigned long SCREEN_WAIT_TIME_S = 4;
 #endif
 
@@ -286,7 +286,7 @@ const char* mqtt_device_private_key() {
 }
 #endif
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 unsigned long display_update_frequency_seconds() {
   return SCREEN_WAIT_TIME_S;
 }

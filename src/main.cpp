@@ -12,7 +12,7 @@
 #include "web_server.h"
 #include "web_upload.h"
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 void show_next_view();
 #endif
 
@@ -38,10 +38,17 @@ void setup() {
     // Device code has powered on the serial line and the display
     render_text("Configuration mode");
     interactive_configuration(&Serial);
+    // FIXME: Power down display if not in demo mode.  Although ideally
+    // the device would have reset itself after config so it should not
+    // be an issue, we should not come here.
   }
 #endif
 
+#ifdef DEMO_MODE
+  // TODO: Alternatively, in non-demo mode, power on the display, show
+  // the splash, and then power down the display again.
   show_splash();
+#endif
 #ifdef TIMESTAMP
   configure_time();
 #endif
@@ -60,7 +67,7 @@ void loop() {
 #endif
 }
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 class NextViewTask final : public MicroTask {
   // -1 is the splash screen; values 0..whatever refer to the entries in the 
   // SnappyMetaData array.
@@ -82,7 +89,7 @@ void NextViewTask::execute(SnappySenseData* data) {
       // At end, wrap around
       next_view = -1;
     } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field not for standalone display
+      // Field not for demo_mode display
       next_view++;
     } else {
       char buf[32];
@@ -93,7 +100,7 @@ void NextViewTask::execute(SnappySenseData* data) {
   }
   next_view++;
 }
-#endif // STANDALONE
+#endif // DEMO_MODE
 
 static void create_initial_tasks() {
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_frequency_seconds() * 1000);
@@ -111,7 +118,7 @@ static void create_initial_tasks() {
 #ifdef WEB_SERVER
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_seconds() * 1000);
 #endif
-#ifdef STANDALONE
+#ifdef DEMO_MODE
   sched_microtask_periodically(new NextViewTask, display_update_frequency_seconds() * 1000);
-#endif // STANDALONE
+#endif // DEMO_MODE
 }

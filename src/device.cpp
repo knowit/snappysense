@@ -81,18 +81,36 @@
 static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
+static bool serial_port_initialized = false;
+static bool display_powered_on = false;
+
+static void initialize_serial_port() {
+  if (!serial_port_initialized) {
+    Serial.begin(115200);
+    serial_port_initialized = true;
+#ifdef LOGGING
+    // This could be something else, and it could be configurable.
+    // FIXME: If the serial port is not connected, this should do nothing?
+    set_log_stream(&Serial);
+#endif
+  }
+}
+
+static void power_on_display() {
+  if (!display_powered_on) {
+    // init oled display
+    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+    display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
+    display_powered_on = true;
+  }
+}
 
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
 
 void device_setup(bool* do_interactive_configuration) {
-  Serial.begin(115200);
-#ifdef LOGGING
-  // This could be something else, and it could be configurable.
-  // FIXME: If the serial port is not connected, this should do nothing.
-  // FIXME: Logging could also be to a buffer and the log could be requested interactively.
-  set_log_stream(&Serial);
-#endif
+  // TODO: Should this be conditional on something?
+  initialize_serial_port();
 
   // set up io pins
   pinMode(POWER_ENABLE_PIN, OUTPUT);
@@ -109,24 +127,24 @@ void device_setup(bool* do_interactive_configuration) {
   // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
   Wire.begin((int) I2C_SDA, I2C_SCL);
 
-  // init oled display
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
-
   environment.begin();
   ENS160.begin();
 
+#ifdef DEMO_MODE
+  // In demo mode, the display is on from the start and 
+  power_on_display();
+#endif
+
   log("Device initialized\n");
 
+#ifdef INTERACTIVE_CONFIGURATION
   // To enter configuration mode, press and hold the wake pin and then press and release
   // the reset button.
-#ifdef INTERACTIVE_CONFIGURATION
   if (digitalRead(WAKEUP_PIN)) {
     delay(1000);
     if (digitalRead(WAKEUP_PIN)) {
-      // TODO here:
-      //  - if serial was not configured above (for whatever reason) then do so here
-      //  - if display was not powered on above then do so here
+      initialize_serial_port();
+      power_on_display();
       *do_interactive_configuration = true;
     }
   }
@@ -221,7 +239,7 @@ void show_splash() {
   display.display();
 }
 
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units) {
   display.clearDisplay();
 

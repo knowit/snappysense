@@ -13,7 +13,7 @@ int probe_i2c_devices(Stream* stream);
 void get_sensor_values(SnappySenseData* data);
 void show_splash();
 void render_text(const char* value);
-#ifdef STANDALONE
+#ifdef DEMO_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units);
 #endif
 #ifdef TEST_MEMS
