@@ -2,7 +2,7 @@
 
 #include "network.h"
 
-#ifdef HAVE_WIFI
+#ifdef SNAPPY_WIFI
 
 #include "config.h"
 #include "log.h"
@@ -106,4 +106,4 @@ String local_ip_address() {
   return WiFi.localIP().toString();
 }
 
-#endif // HAVE_WIFI
+#endif // SNAPPY_WIFI

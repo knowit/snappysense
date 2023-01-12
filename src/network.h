@@ -5,7 +5,7 @@
 
 #include "main.h"
 
-#ifdef HAVE_WIFI
+#ifdef SNAPPY_WIFI
 
 class WiFiHolder {
   bool valid;
@@ -21,6 +21,6 @@ public:
 WiFiHolder connect_to_wifi();
 String local_ip_address();
 
-#endif // HAVE_WIFI
+#endif // SNAPPY_WIFI
 
 #endif // !network_h_included

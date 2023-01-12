@@ -5,7 +5,7 @@
 
 #include "main.h"
 
-#if defined(SERIAL_SERVER) || defined(WEB_SERVER)
+#ifdef SNAPPY_COMMAND_PROCESSOR
 
 #include "microtask.h"
 #include "sensor.h"
@@ -27,6 +27,6 @@ public:
   void execute(SnappySenseData*) override;
 };
 
-#endif
+#endif // SNAPPY_COMMAND_PROCESSOR
 
-#endif
+#endif // !command_h_included

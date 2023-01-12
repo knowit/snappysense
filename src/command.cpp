@@ -2,7 +2,7 @@
 
 #include "command.h"
 
-#if defined(SERIAL_SERVER) || defined(WEB_SERVER)
+#ifdef SNAPPY_COMMAND_PROCESSOR
 
 #include "device.h"
 #include "network.h"
@@ -134,4 +134,4 @@ Command commands[] = {
   {nullptr,    nullptr,                                              nullptr}
 };
 
-#endif // SERIAL_SERVER || WEB_SERVER
+#endif // SNAPPY_COMMAND_PROCESSOR

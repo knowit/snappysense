@@ -1,5 +1,7 @@
 // Snappysense program configuration and base include file.
 
+// For a general overview, see comment block in main.cpp.
+
 #ifndef main_h_included
 #define main_h_included
 
@@ -84,7 +86,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP)
-# define HAVE_WIFI
+# define SNAPPY_WIFI
+#endif
+
+#if defined(SERIAL_SERVER) || defined(WEB_SERVER)
+# define SNAPPY_COMMAND_PROCESSOR
 #endif
 
 #if !defined(DEVELOPMENT)
@@ -107,7 +113,7 @@
 
 #ifdef HARDWARE_1_0_0
 // In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
-# if !defined(HAVE_WIFI)
+# if !defined(SNAPPY_WIFI)
 #  define READ_NOISE
 # endif
 #endif // HARDWARE_1_0_0
