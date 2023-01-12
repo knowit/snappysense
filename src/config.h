@@ -1,5 +1,6 @@
 // SnappySense configuration manager.  Anything that's a parameter that could sensibly
-// be customized at runtime or stored in a configuration file is handled here.
+// be customized at runtime or stored in a configuration file is handled here, and
+// many compile-time parameters besides.
 
 #ifndef config_h_included
 #define config_h_included
@@ -17,12 +18,17 @@ unsigned long sensor_poll_interval_s();
 const char* location_name();
 void set_location_name(const char* name);
 
-// WiFi access point SSID
+// WiFi access point SSID - up to three of them, n=1, 2, or 3.  If the ssid is
+// not defined then the return value will be an empty string, not nullptr.
 const char* access_point_ssid(int n);
 
-// WiFi access point password, this may be nullptr.
+// WiFi access point password.  Again n=1, 2, or 3.  If the password is empty
+// then the return value is an empty string, not nullptr.
 const char* access_point_password(int n);
 
+// The device can be disabled and enabled by an mqtt message or during provisioning.
+// If it is disabled is is still operable (responds to mqtt messages, for one thing)
+// but does not read sensors or report their values.
 bool device_enabled();
 void set_device_enabled(bool flag);
 
@@ -45,7 +51,7 @@ int web_upload_port();
 //
 // Note this is independent of mqtt upload, which is OK - web upload
 // is for development and experimentation, mqtt upload for production.
-unsigned long web_upload_frequency_s();
+unsigned long web_upload_interval_s();
 #endif
 
 #ifdef MQTT_UPLOAD
