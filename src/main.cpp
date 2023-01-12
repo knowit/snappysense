@@ -125,6 +125,7 @@ void loop() {
   if (power_down) {
     log("Power up\n");
     power_peripherals_on();
+    show_splash();
   }
 #endif
 }
