@@ -158,22 +158,22 @@ void NextViewTask::execute(SnappySenseData* data) {
 #endif // DEMO_MODE
 
 static void create_initial_tasks() {
-  sched_microtask_periodically(new ReadSensorsTask, sensor_poll_frequency_seconds() * 1000);
+  sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_seconds() * 1000);
 #ifdef SERIAL_SERVER
-  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_seconds() * 1000);
+  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_seconds() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);
   sched_microtask_after(new MqttCommsTask, 0);
-  sched_microtask_periodically(new CaptureSensorsForMqttTask, mqtt_capture_frequency_seconds() * 1000);
+  sched_microtask_periodically(new CaptureSensorsForMqttTask, mqtt_capture_interval_seconds() * 1000);
 #endif
 #ifdef WEB_UPLOAD
-  sched_microtask_periodically(new WebUploadTask, web_upload_frequency_seconds() * 1000);
+  sched_microtask_periodically(new WebUploadTask, web_upload_interval_seconds() * 1000);
 #endif
 #ifdef WEB_SERVER
-  sched_microtask_periodically(new ReadWebInputTask, web_command_poll_seconds() * 1000);
+  sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_seconds() * 1000);
 #endif
 #ifdef DEMO_MODE
-  sched_microtask_periodically(new NextViewTask, display_update_frequency_seconds() * 1000);
+  sched_microtask_periodically(new NextViewTask, display_update_interval_seconds() * 1000);
 #endif // DEMO_MODE
 }

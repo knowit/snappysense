@@ -30,7 +30,7 @@ void get_sensor_values(SnappySenseData* data);
 // Go into a state where `msg` is displayed on all available surfaces and the
 // device hangs.  If `is_error` is true then an additional error indication
 // may be produced (eg a sound or additional message).
-void enter_end_state(const char* msg, bool is_error);
+void enter_end_state(const char* msg, bool is_error = false);
 
 // (Obscure) Bring the signal on the periperal power line low.
 void power_off();

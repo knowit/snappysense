@@ -138,15 +138,34 @@ const char* get_string_pref(const char* name) {
 
 // Non-configurable preferences
 
-#ifdef DEVELOPMENT
-static const unsigned long SENSOR_POLL_FREQUENCY_S = 15;
+#define MINUTE(s) (s*60)
+#define HOUR(s) (s*60*60)
+
+#if defined(DEMO_MODE) || defined(DEVELOPMENT)
+static const unsigned long SENSOR_POLL_INTERVAL_S = 15;
 #else
-static const unsigned long SENSOR_POLL_FREQUENCY_S = 60;
+static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
+#endif
+
+#ifdef MQTT_UPLOAD
+#ifdef DEVELOPMENT
+static const unsigned long MQTT_CAPTURE_INTERVAL_S = 60*1;
+static const unsigned long MQTT_UPLOAD_INTERVAL_S = 60*2;
+#else
+static const unsigned long MQTT_CAPTURE_INTERVAL_S = HOUR(1);
+static const unsigned long MQTT_UPLOAD_INTERVAL_S = MQTT_CAPTURE_INTERVAL_S;
+#endif
+static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
+static unsigned long mqtt_capture_interval_s = MQTT_CAPTURE_INTERVAL_S;
+#endif
+
+#ifdef DEMO_MODE
+static const unsigned long DISPLAY_UPDATE_INTERVAL_S = 4;
 #endif
 
 #ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
-static const unsigned long WEB_SERVER_WAIT_TIME_S = 1;
+static const unsigned long WEB_SERVER_POLL_INTERVAL_S = 1;
 #endif
 
 #ifdef WEB_UPLOAD
@@ -154,36 +173,20 @@ static const unsigned long WEB_SERVER_WAIT_TIME_S = 1;
 // poll frequency; and/or there should be no upload if the sensor
 // has not been read since the last time. 
 #ifdef DEVELOPMENT
-static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*1;
+static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*1;
 #else
-static const unsigned long WEB_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
+static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*60; // 1 hour
 #endif
-#endif
-
-#ifdef MQTT_UPLOAD
-#ifdef DEVELOPMENT
-static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*1;
-static const unsigned long MQTT_SLEEP_INTERVAL_S = 60*2;
-#else
-static const unsigned long MQTT_UPLOAD_WAIT_TIME_S = 60*60; // 1 hour
-static const unsigned long MQTT_SLEEP_INTERVAL_S = MQTT_UPLOAD_WAIT_TIME_S;
-#endif
-static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
-static unsigned long mqtt_upload_wait_time_s = MQTT_UPLOAD_WAIT_TIME_S;
-#endif
-
-#ifdef DEMO_MODE
-static const unsigned long SCREEN_WAIT_TIME_S = 4;
 #endif
 
 #ifdef SERIAL_SERVER
-static const unsigned long SERIAL_SERVER_WAIT_TIME_S = 1;
+static const unsigned long SERIAL_SERVER_POLL_INTERVAL_S = 1;
 #endif
 
 // Preference accessors
 
-unsigned long sensor_poll_frequency_seconds() {
-  return SENSOR_POLL_FREQUENCY_S;
+unsigned long sensor_poll_interval_seconds() {
+  return SENSOR_POLL_INTERVAL_S;
 }
 
 bool device_enabled() {
@@ -235,26 +238,26 @@ int web_upload_port() {
   return get_int_pref("http-upload-port");
 }
 
-unsigned long web_upload_frequency_seconds() {
-  return WEB_UPLOAD_WAIT_TIME_S;
+unsigned long web_upload_interval_seconds() {
+  return WEB_UPLOAD_INTERVAL_S;
 }
 #endif
 
 #ifdef MQTT_UPLOAD
-unsigned long mqtt_capture_frequency_seconds() {
-  return mqtt_upload_wait_time_s;
+unsigned long mqtt_capture_interval_seconds() {
+  return mqtt_capture_interval_s;
 }
 
-void set_mqtt_capture_frequency_seconds(unsigned long interval) {
-  mqtt_upload_wait_time_s = interval;
+void set_mqtt_capture_interval_seconds(unsigned long interval) {
+  mqtt_capture_interval_s = interval;
 }
 
 unsigned long mqtt_max_idle_time_seconds() {
   return MQTT_MAX_IDLE_TIME_S;
 }
 
-unsigned long mqtt_sleep_interval_seconds() {
-  return MQTT_SLEEP_INTERVAL_S;
+unsigned long mqtt_upload_interval_seconds() {
+  return MQTT_UPLOAD_INTERVAL_S;
 }
 
 const char* mqtt_endpoint_host() {
@@ -287,8 +290,8 @@ const char* mqtt_device_private_key() {
 #endif
 
 #ifdef DEMO_MODE
-unsigned long display_update_frequency_seconds() {
-  return SCREEN_WAIT_TIME_S;
+unsigned long display_update_interval_seconds() {
+  return DISPLAY_UPDATE_INTERVAL_S;
 }
 #endif
 
@@ -297,14 +300,14 @@ int web_server_listen_port() {
   return WEB_SERVER_LISTEN_PORT;
 }
 
-unsigned long web_command_poll_seconds() {
-  return WEB_SERVER_WAIT_TIME_S;
+unsigned long web_command_poll_interval_seconds() {
+  return WEB_SERVER_POLL_INTERVAL_S;
 }
 #endif
 
 #ifdef SERIAL_SERVER
-unsigned long serial_command_poll_seconds() {
-  return SERIAL_SERVER_WAIT_TIME_S;
+unsigned long serial_command_poll_interval_seconds() {
+  return SERIAL_SERVER_POLL_INTERVAL_S;
 }
 #endif
 

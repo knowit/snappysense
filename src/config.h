@@ -11,7 +11,7 @@
 // Note reading frequency is independent of both web and mqtt upload frequencies.
 // Sensor readings draw little power and can be frequent, allowing for sampling
 // if necessary.
-unsigned long sensor_poll_frequency_seconds();
+unsigned long sensor_poll_interval_seconds();
 
 // The name of the location at which this device is placed.
 const char* location_name();
@@ -53,8 +53,8 @@ unsigned long web_upload_frequency_seconds();
 //
 // Note this is independent of sensor reading frequency; fewer readings
 // may be captured for upload than are performed.
-unsigned long mqtt_capture_frequency_seconds();
-void set_mqtt_capture_frequency_seconds(unsigned long interval);
+unsigned long mqtt_capture_interval_seconds();
+void set_mqtt_capture_interval_seconds(unsigned long interval);
 
 // How long will an idle connection (no outgoing or incoming messages) be
 // kept alive?
@@ -65,7 +65,7 @@ unsigned long mqtt_max_idle_time_seconds();
 //
 // Note this is independent of web upload, which is OK - web upload
 // is for development and experimentation, mqtt upload for production.
-unsigned long mqtt_sleep_interval_seconds();
+unsigned long mqtt_upload_interval_seconds();
 
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();
@@ -85,7 +85,7 @@ const char* mqtt_device_private_key();
 
 #ifdef DEMO_MODE
 // Note, DEMO_MODE will keep the device continually on.
-unsigned long display_update_frequency_seconds();
+unsigned long display_update_interval_seconds();
 #endif
 
 #ifdef SERIAL_SERVER
@@ -93,7 +93,7 @@ unsigned long display_update_frequency_seconds();
 // This is typically a pretty low value.
 //
 // Note, SERIAL_SERVER will keep the device continually on.
-unsigned long serial_command_poll_seconds();
+unsigned long serial_command_poll_interval_seconds();
 #endif
 
 #ifdef WEB_SERVER
@@ -104,7 +104,7 @@ int web_server_listen_port();
 // This is typically a pretty low value.
 //
 // Note, WEB_SERVER will keep the device continually on.
-unsigned long web_command_poll_seconds();
+unsigned long web_command_poll_interval_seconds();
 #endif
 
 #ifdef INTERACTIVE_CONFIGURATION

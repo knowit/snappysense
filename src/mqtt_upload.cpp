@@ -83,7 +83,7 @@ void StartMqttTask::execute(SnappySenseData*) {
   topic += mqtt_device_id();
 
   body += "{\"interval\":";
-  body += sensor_poll_frequency_seconds();
+  body += sensor_poll_interval_seconds();
 #ifdef TIMESTAMP
   body += ",\"time\":\"";
   body += format_time(snappy_local_time());
@@ -148,7 +148,7 @@ void MqttCommsTask::execute(SnappySenseData*) {
     disconnect();
     delete mqtt_state;
     mqtt_state = nullptr;
-    next_work = millis() + mqtt_sleep_interval_seconds() * 1000;
+    next_work = millis() + mqtt_upload_interval_seconds() * 1000;
   } else {
     next_work = millis() + 1000;
   }
@@ -286,6 +286,6 @@ bool MqttCommsTask::poll() {
 }
 
 void SetMqttIntervalTask::execute(SnappySenseData*) {
-  set_mqtt_capture_frequency_seconds(interval_s);
+  set_mqtt_capture_interval_seconds(interval_s);
 }
 #endif
