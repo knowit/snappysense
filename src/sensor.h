@@ -105,6 +105,9 @@ public:
   const char* name() override {
     return "Read sensors";
   }
+  virtual bool only_when_device_enabled() {
+    return true;
+  }
   void execute(SnappySenseData* data) override;
 };
 
@@ -131,6 +134,9 @@ public:
   {}
   const char* name() override {
     return "Run actuator";
+  }
+  virtual bool only_when_device_enabled() {
+    return true;
   }
   void execute(SnappySenseData*) override;
 };

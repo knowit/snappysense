@@ -18,6 +18,9 @@ public:
   const char* name() override {
     return "Web upload";
   }
+  virtual bool only_when_device_enabled() {
+    return true;
+  }
   void execute(SnappySenseData*) override;
 };
 

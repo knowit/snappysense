@@ -15,9 +15,6 @@
 // wait time.
 //unsigned long perform_mqtt_step();
 
-// Create an mqtt message with current readings and enqeueue it.
-//void capture_readings_for_mqtt_upload(const SnappySenseData& data);
-
 // A task that sets the mqtt capture interval.
 class SetMqttIntervalTask final : public MicroTask {
   unsigned interval_s;
@@ -64,6 +61,9 @@ class CaptureSensorsForMqttTask final : public MicroTask {
 public:
   const char* name() override {
     return "MQTT capture";
+  }
+  virtual bool only_when_device_enabled() {
+    return true;
   }
   void execute(SnappySenseData*) override;
 };

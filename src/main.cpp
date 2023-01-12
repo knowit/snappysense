@@ -104,9 +104,6 @@ void setup() {
   // until it works, but it should not block other things from happening I think.
   configure_time();
 #endif
-#ifndef DEMO_MODE
-  power_off_display();
-#endif
   create_initial_tasks();
   log("SnappySense running!\n");
 }
@@ -118,7 +115,17 @@ void loop() {
 #ifdef TEST_MEMS
   test_mems();
 #else
-  delay(run_scheduler(&snappy));
+  unsigned long wait_time_ms = run_scheduler(&snappy);
+  bool power_down = wait_time_ms >= 60*1000;
+  if (power_down) {
+    log("Power down: %d seconds to wait\n", wait_time_ms / 1000);
+    power_peripherals_off();
+  }
+  delay(wait_time_ms);
+  if (power_down) {
+    log("Power up\n");
+    power_peripherals_on();
+  }
 #endif
 }
 
@@ -130,6 +137,9 @@ class NextViewTask final : public MicroTask {
 public:
   const char* name() override {
     return "Next view";
+  }
+  virtual bool only_when_device_enabled() {
+    return true;
   }
   void execute(SnappySenseData* data) override;
 };
@@ -158,6 +168,9 @@ void NextViewTask::execute(SnappySenseData* data) {
 #endif // DEMO_MODE
 
 static void create_initial_tasks() {
+  // TODO: This works for most sensors but not for PIR, see issue #9.  We don't want to
+  // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
+  // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
   sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);

@@ -81,33 +81,9 @@
 static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
-static bool serial_port_initialized = false;
-static bool display_powered_on = false;
+static bool peripherals_powered_on = false;
 
-static void initialize_serial_port() {
-  if (!serial_port_initialized) {
-    Serial.begin(115200);
-    serial_port_initialized = true;
-  }
-}
-
-static void power_on_display() {
-  if (!display_powered_on) {
-    // init oled display
-    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-    display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
-    display_powered_on = true;
-  } else {
-    // FIXME
-    display.dim(false);
-  }
-}
-
-void power_off_display() {
-  if (display_powered_on) {
-    // FIXME
-    display.dim(true);
-  }
+static void init_peripherals_after_power_on() {
 }
 
 // This must NOT depend on the configuration because the configuration may not
@@ -115,33 +91,21 @@ void power_off_display() {
 
 void device_setup(bool* do_interactive_configuration) {
   // Always connect serial on startup
-  initialize_serial_port();
+  Serial.begin(115200);
 #ifdef LOGGING
   // This could be something else, and it could be configurable.
   // FIXME: If the serial port is not connected, this should do nothing?
   set_log_stream(&Serial);
 #endif
 
-  // set up io pins
+  // Set up io pins
   pinMode(POWER_ENABLE_PIN, OUTPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
   pinMode(MIC_PIN, INPUT);
   pinMode(WAKEUP_PIN, INPUT);
 
-  // turn on peripheral power, must be on for i2c to work!
-  digitalWrite(POWER_ENABLE_PIN, HIGH);
-  delay(100);
-
-  // init i2c
-  // Note the (int) cast, some versions of the ESP32 libs need this, ref
-  // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
-  Wire.begin((int) I2C_SDA, I2C_SCL);
-
-  environment.begin();
-  ENS160.begin();
-
-  // Always power on the display on startup, though it may be powered down later.
-  power_on_display();
+  // Bring up all peripherals
+  power_peripherals_on();
 
   log("Device initialized\n");
 
@@ -157,18 +121,43 @@ void device_setup(bool* do_interactive_configuration) {
 #endif
 }
 
-void power_on() {
-  digitalWrite(POWER_ENABLE_PIN, HIGH);
+void power_peripherals_on() {
+  if (!peripherals_powered_on) {
+    // turn on peripheral power, must be on for i2c to work!
+    digitalWrite(POWER_ENABLE_PIN, HIGH);
+    delay(100);
+
+    // init i2c
+    // Note the (int) cast, some versions of the ESP32 libs need this, ref
+    // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
+    Wire.begin((int) I2C_SDA, I2C_SCL);
+
+    environment.begin();
+    ENS160.begin();
+
+    // init oled display
+    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+    display.begin(SSD1306_SWITCHCAPVCC, I2C_OLED_ADDRESS);
+    peripherals_powered_on = true;
+  }
 }
 
-void power_off() {
+void power_peripherals_off() {
+  // Do this unconditionally so that we can use it as a kind of fail-safe to reset
+  // the peripherals.
   digitalWrite(POWER_ENABLE_PIN, LOW);
+  peripherals_powered_on = false;
 }
 
 int probe_i2c_devices(Stream* stream) {
   byte error, address;
   uint8_t num = 0;
  
+  if (!peripherals_powered_on) {
+    stream->println("Peripherals are presently powered off");
+    return num;
+  }
+
   for(address = 1; address < 127; address++ )
   {
     // The i2c_scanner uses the return value of
@@ -194,6 +183,10 @@ int probe_i2c_devices(Stream* stream) {
 static unsigned sequence_number;
 
 void get_sensor_values(SnappySenseData* data) {
+  if (!peripherals_powered_on) {
+    return;
+  }
+
   data->sequence_number = sequence_number++;
 #ifdef TIMESTAMP
   data->time = snappy_local_time();
@@ -235,6 +228,10 @@ void get_sensor_values(SnappySenseData* data) {
 }
 
 void show_splash() {
+  if (!peripherals_powered_on) {
+    return;
+  }
+
   display.clearDisplay();
 
   display.drawBitmap(
@@ -247,6 +244,9 @@ void show_splash() {
 
 #ifdef DEMO_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units) {
+  if (!peripherals_powered_on) {
+    return;
+  }
   display.clearDisplay();
 
   display.drawBitmap
@@ -264,6 +264,9 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
 #endif
 
 void render_text(const char* value) {
+  if (!peripherals_powered_on) {
+    return;
+  }
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -282,6 +285,9 @@ void enter_end_state(const char* msg, bool is_error) {
 
 #ifdef TEST_MEMS
 void test_mems() {
+  if (!peripherals_powered_on) {
+    return;
+  }
   Serial.println(analogRead(MIC_PIN));
   delay(10);
 }

@@ -175,9 +175,9 @@ void RunActuatorTask::execute(SnappySenseData*) {
 }
 
 void PowerOnTask::execute(SnappySenseData*) {
-  power_on();
+  power_peripherals_on();
 }
 
 void PowerOffTask::execute(SnappySenseData*) {
-  power_off();
+  power_peripherals_off();
 }
