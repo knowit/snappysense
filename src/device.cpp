@@ -93,8 +93,9 @@ void device_setup(bool* do_interactive_configuration) {
   // Always connect serial on startup
   Serial.begin(115200);
 #ifdef LOGGING
-  // This could be something else, and it could be configurable.
-  // FIXME: If the serial port is not connected, this should do nothing?
+  // TODO: If the serial port is not connected, this should do nothing?  It's
+  // unclear, actually - what if the serial is plugged in later?  Then we have
+  // to detect that and so on.  Seems like a mess.
   set_log_stream(&Serial);
 #endif
 
@@ -160,8 +161,7 @@ int probe_i2c_devices(Stream* stream) {
 
   for(address = 1; address < 127; address++ )
   {
-    // The i2c_scanner uses the return value of
-    // the Wire.endTransmisstion to see if
+    // The i2c_scanner uses the return value of the Wire.endTransmisstion to see if
     // a device did acknowledge to the address.
     Wire.beginTransmission(address);
     error = Wire.endTransmission();
@@ -202,6 +202,8 @@ void get_sensor_values(SnappySenseData* data) {
   // The gas sensor does not appear to like repeated initialization, so do it only
   // once.  Do it only when the environment values have stabilized (the first reading
   // is usually bogus).
+  // FIXME: Issue 4: The problem persists.
+  // FIXME: Issue 19: sequence_number 0 needs to be ignored ad-hoc.
   data->air_sensor_status = 2;  // startup
   if (sequence_number > 1) {
     static bool set = false;

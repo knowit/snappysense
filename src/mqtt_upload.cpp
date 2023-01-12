@@ -8,7 +8,7 @@
 // On a reading, we publish to topic snappy/reading/<device-class>/<device-id> with
 // all the fields in the sensor object.
 //
-// TODO: There might also be snappy/distress/<device-class>/<device-id> to report problems, or
+// DESIGN: There might also be snappy/distress/<device-class>/<device-id> to report problems, or
 // some ditto log message.  (In contrast, a ping should not be necessary because the mqtt broker
 // ought to know when the device last connected.)
 //
@@ -94,7 +94,7 @@ void StartMqttTask::execute(SnappySenseData*) {
 }
 
 void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
-  // Number 0 is mostly bogus data so skip it
+  // FIXME: Issue 19: Number 0 is mostly bogus data so skip it
   if (data->sequence_number == 0) {
     return;
   }
@@ -113,7 +113,7 @@ void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
 }
 
 // The MqttCommsTask will re-enqueue itself with the new deadline.
-// FIXME: millis() is not a reliable API in the long term (beyond 49 days).
+// FIXME: Issue 16: millis() is not a reliable API in the long term (beyond 49 days).
 
 void MqttCommsTask::execute(SnappySenseData*) {
   unsigned long now = millis();
@@ -168,6 +168,7 @@ void MqttCommsTask::connect() {
   mqtt_state->mqtt.setCleanSession(first_time);
 
   // Connect to the MQTT broker on the AWS endpoint
+  // FIXME: Issue 15: don't block here
   log("Mqtt: Connecting to AWS IOT ");
   while (!mqtt_state->mqtt.connect(mqtt_endpoint_host(), mqtt_endpoint_port())) {
     log(".");

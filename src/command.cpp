@@ -81,7 +81,7 @@ static void cmd_view(const String& cmd, const SnappySenseData& data, Stream* out
   out->println("Measurement Data");
   out->println("----------------");
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
-    // This ignores m->display
+    // This ignores m->display on purpose
     out->print(m->explanatory_text);
     out->print(": ");
     char buf[32];

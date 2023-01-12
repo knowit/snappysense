@@ -95,7 +95,7 @@ void setup() {
 
   // We are up.
 #ifdef TIMESTAMP
-  // TODO: Is this perhaps a task?  If it fails (b/c no wifi), it should be repeated
+  // TODO: Issue 15: Is this perhaps a task?  If it fails (b/c no wifi), it should be repeated
   // until it works, but it should not block other things from happening I think.
   configure_time();
 #endif
@@ -164,7 +164,7 @@ void NextViewTask::execute(SnappySenseData* data) {
 #endif // DEMO_MODE
 
 static void create_initial_tasks() {
-  // TODO: This works for most sensors but not for PIR, see issue #9.  We don't want to
+  // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
   // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);

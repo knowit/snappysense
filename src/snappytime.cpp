@@ -32,9 +32,6 @@ void configure_time() {
   // of the Posix epoch.
   httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time");
   httpClient.GET();
-  // TODO: Probably want some integrity checking here; for example, the format of the
-  // returned value could be "<...>" so that we could check that we've gotten a complete
-  // value, and we should check the return value from sscanf.
   sscanf(httpClient.getString().c_str(), "%lu", &timebase);
   httpClient.end();
   wifiClient.stop();
@@ -49,7 +46,7 @@ time_t get_time() {
 
 struct tm snappy_local_time() {
   time_t the_time = get_time();
-  // FIXME: localtime wants a time zone to be set...
+  // FIXME: Issue 7: localtime wants a time zone to be set...
   struct tm the_local_time;
   localtime_r(&the_time, &the_local_time);
   return the_local_time;

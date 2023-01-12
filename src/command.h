@@ -10,7 +10,7 @@
 #include "microtask.h"
 #include "sensor.h"
 
-// This is not final, because the web server subclasses it to handle garbage
+// This class is not `final`, as the web server task subclasses it to handle garbage
 // collection of the output stream.
 class ProcessCommandTask : public MicroTask {
   String cmd;

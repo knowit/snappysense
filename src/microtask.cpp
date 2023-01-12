@@ -4,7 +4,7 @@
 
 //#define MICROTASK_LOGGING
 
-// FIXME: millis() overflows after 49 days.  We could just reboot?  And if
+// FIXME: Issue 16: millis() overflows after 49 days.  We could just reboot?  And if
 // we enter deep-sleep state everything may be handled differently in any case.
 
 // The queue is sorted by increasing deadline.  During system initialization

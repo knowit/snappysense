@@ -182,9 +182,6 @@ static const unsigned long WEB_SERVER_POLL_INTERVAL_S = 1;
 #endif
 
 #ifdef WEB_UPLOAD
-// TODO: The upload frequency should ideally be a multiple of the sensor
-// poll frequency; and/or there should be no upload if the sensor
-// has not been read since the last time. 
 # ifdef DEVELOPMENT
 static const unsigned long WEB_UPLOAD_INTERVAL_S = MINUTE(1);
 # else
@@ -333,7 +330,7 @@ unsigned long serial_command_poll_interval_s() {
 // Provisioning and run-time configuration.
 
 static void save_configuration() {
-  // TODO: In principle the setting could fail due to fragmentation.
+  // TODO: Issue 18: In principle the setting could fail due to fragmentation.
   // If so, we might be able to clear the prefs outright and then write
   // all of them again.
   Preferences nvr_prefs;

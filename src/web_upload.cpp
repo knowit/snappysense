@@ -13,6 +13,7 @@
 #include <HTTPClient.h>
 
 void WebUploadTask::execute(SnappySenseData* data) {
+  // FIXME: Issue 19: sequence_number 0 needs to be ignored ad-hoc.
   if (data->sequence_number == 0) {
     // Mostly bogus data
     return;
@@ -22,9 +23,10 @@ void WebUploadTask::execute(SnappySenseData* data) {
 
   String payload = format_readings_as_json(*data);
 
-  // FIXME: There are lots of failure conditions here, and they all need to be checked somehow.
+  // FIXME: Issue 15: There are lots of failure conditions here, and they all need to be
+  // checked somehow.
   //
-  // FIXME: Basically the HTTPClient framework is not reliable.  Looking at addHeader(), for
+  // FIXME: Issue 17: Basically the HTTPClient framework is not reliable.  Looking at addHeader(), for
   // example, it can OOM silently because it uses String without checking for OOM at all.
   // For another example, sendRequest() takes a String *by copy* for the payload; the copy can
   // fail due to OOM (in addition to being inefficient), but sendRequest() does not check
