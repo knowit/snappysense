@@ -1,4 +1,7 @@
+// Common utilities
+
 #include "util.h"
+#include <cstdarg>
 
 String get_word(const String& cmd, int n) {
   unsigned lim = cmd.length();
@@ -51,8 +54,7 @@ String get_word(const String& cmd, int n) {
   return String();
 }
 
-template<typename T>
-String do_read(T* input) {
+String blocking_read_nonempty_line(Stream* input) {
   String buf;
   for (;;) {
     int ch = input->read();
@@ -69,17 +71,11 @@ String do_read(T* input) {
   }
 }
 
-String blocking_read_nonempty_line(Stream* io) {
-  return do_read(io);
-}
-
-String blocking_read_nonempty_line(StringReader* io) {
-  return do_read(io);
-}
-
-int StringReader::read() {
-  if (i == s.length()) {
-    return '\n';
-  }
-  return s[i++];
+String fmt(const char* format, ...) {
+  char buf[1024];
+  va_list args;
+  va_start(args, format);
+  vsnprintf(buf, sizeof(buf), format, args);
+  va_end(args);
+  return String(buf);
 }

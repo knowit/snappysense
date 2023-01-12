@@ -27,74 +27,76 @@
 // All the str_values in a Configuration point to individual malloc'd NUL-terminated strings.
 // By and large none will have leading or trailing whitespace unless they were defined by
 // quoted strings that include such whitespace.
-//
-// TODO: Things would be easier if str_value were a String and not a char*.
 
 struct Pref {
-  enum Ty {
-    Str,
-    Int
+  enum Flags {
+    Str,     // str_value has value
+    Int,     // int_value has value
+    Cert,    // Must also be Str: is certificate, not simple value
+    Passwd   // Must also be Str: is password
   };
   const char* long_key;   // The key name used in the config script
   const char* short_key;  // The key name used in NVRAM
-  Ty type;
-  bool cert;              // cert string, not normal string
-  int int_value;
-  char* str_value;        // Is malloced
-  const char* help;
+  int flags;              // Bitwise 'or' of flags above
+  int int_value;          // Valid iff flags & Int
+  String str_value;       // Valid iff flags & Str
+  const char* help;       // Arbitrary text
+
+  bool is_string() { return flags & Str; }
+  bool is_int() { return flags & Int; }
+  bool is_cert() { return flags & Cert; }
+  bool is_passwd() { return flags & Passwd; }
 };
 
 #ifdef DEVELOPMENT
-# define IF_DEVEL(x) strdup(x)
+# define IF_DEVEL(x, y) x
 #else
-# define IF_DEVEL(x) strdup("")
+# define IF_DEVEL(x, y) y
 #endif
 #if defined(DEVELOPMENT) && defined(TIMESTAMP)
-# define IF_TIMESTAMP_S(x) strdup(x)
-# define IF_TIMESTAMP_I(x, y) x
+# define IF_TIMESTAMP(x, y) x
 #else
-# define IF_TIMESTAMP_S(x) strdup("")
-# define IF_TIMESTAMP_I(x, y) y
+# define IF_TIMESTAMP(x, y) y
 #endif
 #if defined(DEVELOPMENT) && defined(WEB_UPLOAD)
-# define IF_HTTP_UP_S(x) strdup(x)
-# define IF_HTTP_UP_I(x, y) x
+# define IF_HTTP_UP(x, y) x
 #else
-# define IF_HTTP_UP_S(x) strdup("")
-# define IF_HTTP_UP_I(x, y) y
+# define IF_HTTP_UP(x, y) y
 #endif
 #if defined(DEVELOPMENT) && defined(MQTT_UPLOAD)
-# define IF_MQTT_UP_S(x) strdup(x)
-# define IF_MQTT_UP_I(x, y) x
+# define IF_MQTT_UP(x, y) x
 #else
-# define IF_MQTT_UP_S(x) strdup("")
-# define IF_MQTT_UP_I(x, y) y
+# define IF_MQTT_UP(x, y) y
 #endif
 
 // Each table of prefs has a last element whose long_key is nullptr.
 
 static Pref factory_prefs[] = {
-  {"enabled",               "en",    Pref::Int, false, 1, nullptr,                                      "Device recording is enabled"},
-  {"location",              "loc",   Pref::Str, false, 0, IF_DEVEL(LOCATION_NAME),                      "Name of device location"},
-  {"ssid1",                 "s1",    Pref::Str, false, 0, IF_DEVEL(WIFI_SSID),                          "SSID name for the first WiFi network"},
-  {"ssid2",                 "s2",    Pref::Str, false, 0, strdup(""),                                   "SSID name for the second WiFi network"},
-  {"ssid3",                 "s3",    Pref::Str, false, 0, strdup(""),                                   "SSID name for the third WiFi network"},
-  {"password1",             "p1",    Pref::Str, false, 0, IF_DEVEL(WIFI_PASSWORD),                      "Password for the first WiFi network"},
-  {"password2",             "p2",    Pref::Str, false, 0, strdup(""),                                   "Password for the second WiFi network"},
-  {"password3",             "p3",    Pref::Str, false, 0, strdup(""),                                   "Password for the third WiFi network"},
-  {"time-server-host",      "tsh",   Pref::Str, false, 0, IF_TIMESTAMP_S(TIME_SERVER_HOST),             "Host name of ad-hoc time server"},
-  {"time-server-port",      "tsp",   Pref::Int, false, IF_TIMESTAMP_I(TIME_SERVER_PORT, 8086), nullptr, "Port name on the ad-hoc time server"},
-  {"http-upload-host",      "huh",   Pref::Str, false, 0, IF_HTTP_UP_S(WEB_UPLOAD_HOST),                "Host name of ad-hoc http sensor-reading upload server"},
-  {"http-upload-port",      "hup",   Pref::Int, false, IF_HTTP_UP_I(WEB_UPLOAD_PORT, 8086), nullptr,    "Port number on the ad-hoc http sensor-reading upload server"},
-  {"aws-iot-id",            "aid",   Pref::Str, false, 0, IF_MQTT_UP_S(AWS_CLIENT_IDENTIFIER),          "IoT device ID"},
-  {"aws-iot-class",         "acls",  Pref::Str, false, 0, IF_MQTT_UP_S("snappysense"),                  "IoT device class"},
-  {"aws-iot-endpoint-host", "ahost", Pref::Str, false, 0, IF_MQTT_UP_S(AWS_IOT_ENDPOINT),               "IoT endpoint host name"},
-  {"aws-iot-endpoint-port", "aport", Pref::Int, false, IF_MQTT_UP_I(AWS_MQTT_PORT, 8883), nullptr,      "IoT port number"},
-  {"aws-iot-root-ca",       "aroot", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CA),                    "Root CA certificate (AmazonRootCA1.pem)"},
-  {"aws-iot-device-cert",   "acert", Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_CRT),                   "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
-  {"aws-iot-private-key",   "akey",  Pref::Str, true,  0, IF_MQTT_UP_S(AWS_CERT_PRIVATE),                "Private key (XXXXXXXXXX-private.pem.key"},
+  {"enabled",               "en",    Pref::Int,              1, "",                                    "Device recording is enabled"},
+  {"location",              "loc",   Pref::Str,              0, IF_DEVEL(LOCATION_NAME, ""),           "Name of device location"},
+  {"ssid1",                 "s1",    Pref::Str,              0, IF_DEVEL(WIFI_SSID, ""),               "SSID name for the first WiFi network"},
+  {"ssid2",                 "s2",    Pref::Str,              0, "",                                    "SSID name for the second WiFi network"},
+  {"ssid3",                 "s3",    Pref::Str,              0, "",                                    "SSID name for the third WiFi network"},
+  {"password1",             "p1",    Pref::Str|Pref::Passwd, 0, IF_DEVEL(WIFI_PASSWORD, ""),           "Password for the first WiFi network"},
+  {"password2",             "p2",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the second WiFi network"},
+  {"password3",             "p3",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the third WiFi network"},
+  {"time-server-host",      "tsh",   Pref::Str,              0, IF_TIMESTAMP(TIME_SERVER_HOST, ""),    "Host name of ad-hoc time server"},
+  {"time-server-port",      "tsp",   Pref::Int,              IF_TIMESTAMP(TIME_SERVER_PORT, 8086), "", "Port name on the ad-hoc time server"},
+  {"http-upload-host",      "huh",   Pref::Str,              0, IF_HTTP_UP(WEB_UPLOAD_HOST, ""),       "Host name of ad-hoc http sensor-reading upload server"},
+  {"http-upload-port",      "hup",   Pref::Int,              IF_HTTP_UP(WEB_UPLOAD_PORT, 8086), "",    "Port number on the ad-hoc http sensor-reading upload server"},
+  {"aws-iot-id",            "aid",   Pref::Str,              0, IF_MQTT_UP(AWS_CLIENT_IDENTIFIER, ""), "IoT device ID"},
+  {"aws-iot-class",         "acls",  Pref::Str,              0, IF_MQTT_UP("snappysense", ""),         "IoT device class"},
+  {"aws-iot-endpoint-host", "ahost", Pref::Str,              0, IF_MQTT_UP(AWS_IOT_ENDPOINT, ""),      "IoT endpoint host name"},
+  {"aws-iot-endpoint-port", "aport", Pref::Int,              IF_MQTT_UP(AWS_MQTT_PORT, 8883), "",      "IoT port number"},
+  {"aws-iot-root-ca",       "aroot", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_CA, ""),           "Root CA certificate (AmazonRootCA1.pem)"},
+  {"aws-iot-device-cert",   "acert", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_CRT, ""),          "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
+  {"aws-iot-private-key",   "akey",  Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_PRIVATE, ""),      "Private key (XXXXXXXXXX-private.pem.key"},
   { nullptr }
 };
+
+// `prefs` *must* be initialized with a call to reset_configuration() before its values
+// are used for anything sensible.  The reason is that that operation copies in values
+// from `factory_prefs`.
 
 static Pref prefs[sizeof(factory_prefs)/sizeof(Pref)];
 
@@ -104,45 +106,34 @@ static void reset_configuration() {
   while (fp->long_key != nullptr) {
     p->long_key = fp->long_key;
     p->short_key = fp->short_key;
-    p->type = fp->type;
-    p->cert = fp->cert;
-    if (p->type == Pref::Str) {
-      free(p->str_value);
-      p->str_value = strdup(fp->str_value);
-    } else {
-      p->int_value = fp->int_value;
-    }
+    p->flags = fp->flags;
+    p->str_value = fp->str_value;
+    p->int_value = fp->int_value;
     p->help = fp->help;
     fp++;
     p++;
   }
 }
 
-int get_int_pref(const char* name) {
+static Pref* get_pref(const char* name) {
   for (Pref* p = prefs; p->long_key != nullptr; p++) {
-    if (strcmp(p->long_key, name) == 0 && p->type == Pref::Int) {
-      return p->int_value;
-    }
-  }
-  return -1;
-}
-
-static void set_int_pref(const char* name, int val) {
-  for (Pref* p = prefs; p->long_key != nullptr; p++) {
-    if (strcmp(p->long_key, name) == 0 && p->type == Pref::Int) {
-      p->int_value = val;
-      return;
-    }
-  }
-}
-
-const char* get_string_pref(const char* name) {
-  for (Pref* p = prefs; p->long_key != nullptr; p++) {
-    if (strcmp(p->long_key, name) == 0 && p->type == Pref::Str) {
-      return p->str_value;
+    if (strcmp(p->long_key, name) == 0) {
+      return p;
     }
   }
   return nullptr;
+}
+
+int get_int_pref(const char* name) {
+  return get_pref(name)->int_value;
+}
+
+static void set_int_pref(const char* name, int val) {
+  get_pref(name)->int_value = val;
+}
+
+const char* get_string_pref(const char* name) {
+  return get_pref(name)->str_value.c_str();
 }
 
 // Non-configurable preferences
@@ -319,57 +310,52 @@ unsigned long serial_command_poll_seconds() {
 
 // Provisioning and run-time configuration.
 
-// Format stuff into a String.
-static String fmt(const char* format, ...) {
-  char buf[1024];
-  va_list args;
-  va_start(args, format);
-  vsnprintf(buf, sizeof(buf), format, args);
-  va_end(args);
-  return String(buf);
+static void save_configuration() {
+  // TODO: In principle the setting could fail due to fragmentation.
+  // If so, we might be able to clear the prefs outright and then write
+  // all of them again.
+  Preferences nvr_prefs;
+  if (nvr_prefs.begin("snappysense")) {
+    for (Pref* p = prefs; p->long_key != nullptr; p++) {
+      if (p->is_string()) {
+        nvr_prefs.putString(p->short_key, p->str_value);
+      } else {
+        nvr_prefs.putInt(p->short_key, p->int_value);
+      }
+    }
+    nvr_prefs.end();
+  } else {
+    log("Unable to open parameter store\n");
+  }
 }
 
-#ifdef INTERACTIVE_CONFIGURATION
-
-// Manual for the configuration language.
-//
-// The configuration language is used only for user-entered options during provisioning
-// at this point.
-
-static const char CONFIG_MANUAL_PART1[] = R"EOF(
-config
-  This command will wait for you to enter a program in a simple configuration language,
-  as follows.  Generally whitespace is insignificant except within quoted values
-  and in the payloads for `cert`.  Comment lines start with # and go until EOL.
-  Statements are executed in the order they appear.
-
-    Program ::= Statements End
-    End ::= "end" EOL
-    Statement ::= Clear | Version | Set | Cert
-    Clear ::= "clear" EOL
-      -- This resets all variables
-    Version ::= "version" Major-dot-Minor EOL
-      -- This optional statement states the version of the firmware that the
-      -- configuration was written for.
-    Set ::= "set" Variable Value EOL
-      -- This assigns Value to Variable
-      -- Value is a string of non-whitespace characters, or a quoted string
-    Cert ::= "cert" Cert-name EOL Text-lines
-      -- This defines a multi-line text variable
-      -- The first payload line must start with the usual "-----BEGIN ...", and the last
-      -- payload line must end with with the usual "-----END ...".  No blank lines or
-      -- comments may appear after the "cert" line until after the last payload line.)EOF";
-
-// "Part 2" is the list of variable names for `set` and `cert`; see later.
-#endif
+void read_configuration() {
+  reset_configuration();
+  Preferences nvr_prefs;
+  if (nvr_prefs.begin("snappysense", /* readOnly= */ true)) {
+    log("Reading all prefs from parameter store\n");
+    for (Pref* p = prefs; p->long_key != nullptr; p++) {
+      if (!nvr_prefs.isKey(p->short_key)) {
+        log("Not found: %s %s\n", p->long_key, p->short_key);
+      } else if (p->is_string()) {
+        p->str_value = nvr_prefs.getString(p->short_key);
+      } else {
+        p->int_value = nvr_prefs.getInt(p->short_key);
+      }
+    }
+    nvr_prefs.end();
+  } else {
+    log("No configuration in parameter store\n");
+  }
+}
 
 // evaluate_config() evaluates a configuration program, using the `read_line` parameter
 // to read lines of input from some source of text.  It returns a String, which is empty
 // if everything was fine and is otherwise an error message.
 //
-// The configuration language is described by the manual above.
+// The configuration language is described by the manual below.
 
-static String execute_config(std::function<String()> read_line) {
+static String evaluate_config(std::function<String()> read_line) {
   for (;;) {
     String line = read_line();
     if (line == "") {
@@ -380,6 +366,8 @@ static String execute_config(std::function<String()> read_line) {
       return String();
     } else if (kwd == "clear") {
       reset_configuration();
+    } else if (kwd == "save") {
+      save_configuration();
     } else if (kwd == "version") {
       int major, minor, bugfix;
       if (sscanf(get_word(line, 1).c_str(), "%d.%d,%d", &major, &minor, &bugfix) != 3) {
@@ -400,20 +388,14 @@ static String execute_config(std::function<String()> read_line) {
       if (value == "") {
         return fmt("Missing value for variable [%s]\n", varname.c_str());
       }
-      Pref* p;
-      for (p = prefs; p->long_key != nullptr; p++) {
-        if (strcmp(p->long_key, varname.c_str()) == 0 && !p->cert) {
-          if (p->type == Pref::Str) {
-            free(p->str_value);
-            p->str_value = strdup(value.c_str());
-          } else {
-            // FIXME
-          }
-          break;
-        }
+      Pref* p = get_pref(varname.c_str());
+      if (p == nullptr || p->is_cert()) {
+        return fmt("Unknown or inappropriate variable name for 'set': [%s]\n", varname.c_str());
       }
-      if (p->long_key == nullptr) {
-        return fmt("Unknown variable name for 'set': [%s]\n", varname.c_str());
+      if (p->is_string()) {
+        p->str_value = value;
+      } else {
+        p->int_value = int(value.toInt());
       }
     } else if (kwd == "cert") {
       String varname = get_word(line, 1);
@@ -436,18 +418,11 @@ static String execute_config(std::function<String()> read_line) {
         }
       }
       value.trim();
-      Pref* p;
-      for (p = prefs; p->long_key != nullptr; p++) {
-        if (strcmp(p->long_key, varname.c_str()) == 0 && p->cert) {
-          // Must be string
-          free(p->str_value);
-          p->str_value = strdup(value.c_str());
-          break;
-        }
+      Pref* p = get_pref(varname.c_str());
+      if (p == nullptr || !p->is_cert()) {
+        return fmt("Unknown or inappropriate variable name for 'cert': [%s]\n", varname.c_str());
       }
-      if (p->long_key == nullptr) {
-        return fmt("Unknown variable name for 'cert': [%s]\n", varname.c_str());
-      }
+      p->str_value = value;
     } else {
       int i = 0;
       while (i < line.length() && isspace(line[i])) {
@@ -467,48 +442,39 @@ static String execute_config(std::function<String()> read_line) {
   abort();
 }
 
-static void save_configuration(Stream* io) {
-  // TODO: In principle the setting could fail due to fragmentation.
-  // If so, we might be able to clear the prefs outright and then write
-  // all of them again.
-  Preferences nvr_prefs;
-  if (nvr_prefs.begin("snappysense")) {
-    for (Pref* p = prefs; p->long_key != nullptr; p++) {
-      if (p->type == Pref::Str) {
-        nvr_prefs.putString(p->short_key, String(p->str_value));
-      } else {
-        nvr_prefs.putInt(p->short_key, p->int_value);
-      }
-    }
-    nvr_prefs.end();
-  } else {
-    log("Unable to open parameter store\n");
-  }
-}
-
-void read_configuration(Stream* io) {
-  reset_configuration();
-  Preferences nvr_prefs;
-  if (nvr_prefs.begin("snappysense", /* readOnly= */ true)) {
-    log("Reading all prefs from parameter store\n");
-    for (Pref* p = prefs; p->long_key != nullptr; p++) {
-      if (!nvr_prefs.isKey(p->short_key)) {
-        log("Not found: %s %s\n", p->long_key, p->short_key);
-      } else if (p->type == Pref::Str) {
-        String s = nvr_prefs.getString(p->short_key);
-        free(p->str_value);
-        p->str_value = strdup(s.c_str());
-      } else {
-        p->int_value = nvr_prefs.getInt(p->short_key);
-      }
-    }
-    nvr_prefs.end();
-  } else {
-    log("No configuration in parameter store\n");
-  }
-}
-
 #ifdef INTERACTIVE_CONFIGURATION
+
+// Manual for the configuration language.
+//
+// The configuration language is used only during provisioning at this point.
+
+static const char CONFIG_MANUAL_PART1[] = R"EOF(
+config
+  This command will wait for you to enter a program in a simple configuration language,
+  as follows.  Generally whitespace is insignificant except within quoted values
+  and in the payloads for `cert`.  Comment lines start with # and go until EOL.
+  Statements are executed in the order they appear.
+
+    Program ::= Statements End
+    End ::= "end" EOL
+    Statement ::= Clear | Version | Save | Set | Cert
+    Clear ::= "clear" EOL
+      -- This resets all variables
+    Version ::= "version" Major-dot-Minor EOL
+      -- This optional statement states the version of the firmware that the
+      -- configuration was written for.
+    Save ::= "save" EOL
+      -- This saves all variables to nonvolatile storage.
+    Set ::= "set" Variable Value EOL
+      -- This assigns Value to Variable
+      -- Value is a string of non-whitespace characters, or a quoted string
+    Cert ::= "cert" Cert-name EOL Text-lines
+      -- This defines a multi-line text variable
+      -- The first payload line must start with the usual "-----BEGIN ...", and the last
+      -- payload line must end with with the usual "-----END ...".  No blank lines or
+      -- comments may appear after the "cert" line until after the last payload line.)EOF";
+
+// "Part 2" of the manual is the list of variable names for `set` and `cert`; see later.
 
 static void print_help(Stream* io) {
   io->println(R"EOF(Interactive configuration commands:
@@ -539,14 +505,14 @@ static void print_help_config(Stream* io) {
   io->println();
   io->println("  Variables for 'set' are:");
   for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (!p->cert) {
+    if (!p->is_cert()) {
       io->printf("    %-22s - %s\n", p->long_key, p->help);
     }
   }
   io->println();
   io->println("  Cert-names for 'cert' are:");
   for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (p->cert) {
+    if (p->is_cert()) {
       io->printf("    %-20s - %s\n", p->long_key, p->help);
     }
   }
@@ -561,15 +527,16 @@ static String cert_first_line(const char* cert) {
 
 static void show_cmd(Stream* io) {
   for (Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (p->type == Pref::Str) {
-      if (*p->str_value == 0) {
+    if (p->is_string()) {
+      if (p->str_value.isEmpty()) {
         continue;
       }
-      if (p->cert) {
-        io->printf("%-22s - %s\n", p->long_key, cert_first_line(p->str_value).c_str());
+      if (p->is_cert()) {
+        io->printf("%-22s - %s\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
+      } else if (p->is_passwd() && !p->str_value.isEmpty()) {
+        io->printf("%-22s - %c.....\n", p->long_key, p->str_value[0]);
       } else {
-        // TODO: Hide passwords
-        io->printf("%-22s - %s\n", p->long_key, p->str_value);
+        io->printf("%-22s - %s\n", p->long_key, p->str_value.c_str());
       }
     } else {
       io->printf("%-22s - %d\n", p->long_key, p->int_value);
@@ -592,14 +559,14 @@ void interactive_configuration(Stream* io) {
     } else if (cmd == "show") {
       show_cmd(io);
     } else if (cmd == "config") {
-      String result = execute_config([&]{ return blocking_read_nonempty_line(io); });
+      String result = evaluate_config([&]{ return blocking_read_nonempty_line(io); });
       if (!result.isEmpty()) {
         io->println(result);
       }
     } else if (cmd == "clear") {
       reset_configuration();
     } else if (cmd == "save") {
-      save_configuration(io);
+      save_configuration();
     } else if (cmd == "quit") {
       break;
     } else {

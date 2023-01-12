@@ -25,12 +25,21 @@ static SnappySenseData snappy;
 static void create_initial_tasks();
 
 void setup() {
-  device_setup();
+  bool do_interactive_configuration = false;
+  device_setup(&do_interactive_configuration);
   log("SnappySense ready!\n");
 
   // Load config from NVRAM or flash, if available, otherwise use
   // default values.
-  read_configuration(&Serial);
+  read_configuration();
+
+#ifdef INTERACTIVE_CONFIGURATION
+  if (do_interactive_configuration) {
+    // Device code has powered on the serial line and the display
+    render_text("Configuration mode");
+    interactive_configuration(&Serial);
+  }
+#endif
 
   show_splash();
 #ifdef TIMESTAMP

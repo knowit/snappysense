@@ -85,7 +85,7 @@ static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wir
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
 
-void device_setup() {
+void device_setup(bool* do_interactive_configuration) {
   Serial.begin(115200);
 #ifdef LOGGING
   // This could be something else, and it could be configurable.
@@ -120,18 +120,14 @@ void device_setup() {
 
   // To enter configuration mode, press and hold the wake pin and then press and release
   // the reset button.
-  //
-  // TODO here:
-  //  - if serial was not configured above (for whatever reason) then do so here
-  //  - ideally we want to reboot the device after?  not obvious - but if we needed to
-  //    enable serial here then rebooting is fine to clear that type of thing
-  //  - if there's a display, then print CONFIG in it
 #ifdef INTERACTIVE_CONFIGURATION
   if (digitalRead(WAKEUP_PIN)) {
-    delay(2000);
+    delay(1000);
     if (digitalRead(WAKEUP_PIN)) {
-      read_configuration(&Serial);
-      interactive_configuration(&Serial);
+      // TODO here:
+      //  - if serial was not configured above (for whatever reason) then do so here
+      //  - if display was not powered on above then do so here
+      *do_interactive_configuration = true;
     }
   }
 #endif
@@ -242,6 +238,12 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
   display.display();
 }
 #endif
+
+void render_text(const char* value) {
+  display.setCursor(0, 0);
+  display.print(value);
+  display.display();
+}
 
 #ifdef TEST_MEMS
 void test_mems() {
