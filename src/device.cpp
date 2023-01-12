@@ -83,9 +83,6 @@ static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
 static bool peripherals_powered_on = false;
 
-static void init_peripherals_after_power_on() {
-}
-
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
 
