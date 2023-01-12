@@ -23,18 +23,23 @@ void configure_time() {
   if (time_configured) {
     return;
   }
+
   log("Time: obtaining current time from server\n");
-  time_configured = true;
   auto holder = connect_to_wifi();
+  if (!holder.is_valid()) {
+    return;
+  }
   WiFiClient wifiClient;
   HTTPClient httpClient;
   // GET /time returns a number, representing the number of seconds UTC since the start
   // of the Posix epoch.
+  // FIXME: Issue 27: Check return values here.
   httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time");
   httpClient.GET();
   sscanf(httpClient.getString().c_str(), "%lu", &timebase);
   httpClient.end();
   wifiClient.stop();
+  time_configured = true;
 }
 
 time_t get_time() {

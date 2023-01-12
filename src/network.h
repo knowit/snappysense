@@ -16,9 +16,14 @@ public:
   WiFiHolder& operator=(const WiFiHolder& other);
   WiFiHolder(const WiFiHolder& other);
   ~WiFiHolder();
+  bool is_valid() const { return valid; }
 };
 
+// If the return value tests as !is_valid() then connection failed
+// and the connection must not be used.
 WiFiHolder connect_to_wifi();
+
+// Returns an empty string if we're not connected.
 String local_ip_address();
 
 #endif // SNAPPY_WIFI

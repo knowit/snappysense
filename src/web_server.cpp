@@ -60,6 +60,12 @@ struct WebServerState {
 void ReadWebInputTask::start() {
   state = new WebServerState();
   state->server_holder = connect_to_wifi();
+  if (!state->server_holder.is_valid()) {
+    // TODO: Does somebody need to know?
+    log("Failed to bring up web server\n");
+    delete state;
+    return;
+  }
   state->server.begin();
   log("Web server: listening on port %d\n", web_server_listen_port());
 }

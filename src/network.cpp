@@ -70,16 +70,10 @@ WiFiHolder connect_to_wifi() {
     return WiFiHolder(true);
   }
 
-  // Connect to local WiFi network
-  // FIXME: Issue 15: Failure conditions need to be checked and reported but should not block
-  // progress per se, we must not hang here.
-  // FIXME: Issue 10: There can be multiple accss points, we must scan for one that works.
-  // TODO: Issue 21: We should flash a message on the display if no access points work
-
   static int last_successful_access_point = 0;
   int access_point = last_successful_access_point;
   bool is_connected = false;
-  for(int i=0 ; i < 3; i++) {
+  for (int i=0 ; i < 3; i++) {
     const char* ap = access_point_ssid(access_point+1);
     const char* pw = access_point_password(access_point+1);
     if (*ap == 0) {

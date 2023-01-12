@@ -43,7 +43,7 @@ class MqttCommsTask final : public MicroTask {
   unsigned long next_work = 0;  // millisecond timestamp
   unsigned long last_work = 0;  // millisecond timestamp
 
-  void connect();
+  bool connect();
   void disconnect();
   void send();
   bool poll();

@@ -36,6 +36,9 @@ void WebUploadTask::execute(SnappySenseData* data) {
   // of the Arduino libraries - "maker" quality, not "production".
   
   auto holder(connect_to_wifi());
+  if (!holder.is_valid()) {
+    return;
+  }
   WiFiClient wifiClient;
   HTTPClient httpClient;
   httpClient.begin(wifiClient, web_upload_host(), web_upload_port(), "/data");

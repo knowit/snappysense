@@ -129,7 +129,11 @@ void MqttCommsTask::execute(SnappySenseData*) {
   // want to poll for incoming messages.
   if (mqtt_state == nullptr) {
     mqtt_state = new MqttState();
-    connect();
+    if (!connect()) {
+      delete mqtt_state;
+      mqtt_state = nullptr;
+      return;
+    }
   }
   if (mqtt_queue != nullptr) {
     send();
@@ -155,8 +159,11 @@ void MqttCommsTask::execute(SnappySenseData*) {
   sched_microtask_after(this, max(next_work - millis(), 1000LU));
 }
 
-void MqttCommsTask::connect() {
+bool MqttCommsTask::connect() {
   mqtt_state->holder = connect_to_wifi();
+  if (!mqtt_state->holder.is_valid()) {
+    return false;
+  }
   mqtt_state->wifi.setCACert(mqtt_root_ca_cert());
   mqtt_state->wifi.setCertificate(mqtt_device_cert());
   mqtt_state->wifi.setPrivateKey(mqtt_device_private_key());
@@ -176,7 +183,7 @@ void MqttCommsTask::connect() {
   }
   if(!mqtt_state->mqtt.connected()){
     log("AWS IoT Timeout!\n");
-    return;
+    return false;
   }
   log("Connected!\n");
 
@@ -190,6 +197,7 @@ void MqttCommsTask::connect() {
   command_msg += mqtt_device_id();
   mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
   first_time = false;
+  return true;
 }
 
 void MqttCommsTask::disconnect() {
