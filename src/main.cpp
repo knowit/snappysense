@@ -2,15 +2,16 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //
-// OVERALL APPLICATION LOGIC
+// MODES and CONFIGURATION.
 //
 // SnappySense can be compile-time configured to several modes, in main.h.  These are:
 //
 //  - DEMO_MODE, in which the device reads the sensors often, keeps the display on,
 //    and displays the sensor variables on the display in a never-ending loop.
-//  - !DEMO_MODE, in which the device reads the sensors much less often, turns the
-//    display off, and does not display anything while it's running unless there's
-//    an unrecoverable error.
+//    Demo mode is power-hungry.
+//  - !DEMO_MODE, in which the device reads the sensors much less often and turns
+//    off the display and the peripherals when they are not needed.  This mode
+//    conserves power (relatively).
 //  - DEVELOPER mode, which can be combined with the other two modes and which 
 //    allows for interactivity over the serial line, configuration values that are
 //    compiled into the code, more frequent activity, and other things.
@@ -21,35 +22,29 @@
 // button on the CPU.  The device will enter an interactive mode over the USB line.
 // There is on-line help for how to use that mode.
 //
-// When the device is powered on it may be configured to fetch the current
-// time from a time server.  Follow breadcrumbs from the definition of TIMESTAMP
-// in main.h for more information.  A simple time server is in the server/
-// directory in the present repo.
+// The device may be configured to fetch the current time from a time server.
+// Follow breadcrumbs from the definition of TIMESTAMP in main.h for more information.
+// A simple time server is in the server/ directory in the present repo.
 //
-// When the device is running, it can be configured to upload results to an MQTT
-// broker (typically AWS) or to a Web server (for development and testing), or to
-// neither (data are just displayed on the built-in display).  For uploading to
-// work, networking configuration variables have to be set, see config.cpp and the
-// help text for the provisioning mode.  Also, appropriate servers will have to
-// be running.  There is a simple server for http upload in the server/ directory
-// in the present repo.
+// The device can be configured to upload results to an MQTT broker (typically AWS)
+// or to a Web server (for development and testing), or to neither (data are displayed
+// on the built-in display).  For uploading to work, networking configuration
+// variables have to be set, see config.cpp and the help text for the provisioning mode.
+// Also, appropriate servers will have to be running.  There is a simple server for
+// http upload in the server/ directory in the present repo.
 //
-// For development, the device will also listen for interactive commands over the
+// For development, the device can also listen for interactive commands over the
 // serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
-//
-//
-// RESILIENCE.
-//
-// Resilience is currently poor.  There are delays embedded in the code (as when waiting
-// for the network to come up) that should be handled differently.  The device is not
-// good at reporting problems, or recovering from them.
 //
 //
 // SYSTEM ARCHITECTURE.
 //
-// The system is constructed around a microtask system that currently sits on top
-// of the Arduino runloop.  This cannot (yet) express task dependencies, but this
-// will become necessary for greater resilience.
+// The system is constructed around a simple microtask system that currently sits on top
+// of the Arduino runloop.  Periodic tasks handle polling, sensor reading, and data
+// uploading; ad-hoc tasks are created to deal with system management needs.
+//
+// The system will sleep when there's no work to be done.  If the time to sleep is long
+// enough, it will power down peripherals while it's sleeping.
 
 #include "config.h"
 #include "device.h"

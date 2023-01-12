@@ -138,8 +138,8 @@ const char* get_string_pref(const char* name) {
 
 // Non-configurable preferences
 
-#define MINUTE(s) (s*60)
-#define HOUR(s) (s*60*60)
+#define MINUTE(s) ((s)*60)
+#define HOUR(s) ((s)*60*60)
 
 //#define POWER_MANAGEMENT_TEST
 
@@ -158,9 +158,9 @@ static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
 #endif
 
 #ifdef MQTT_UPLOAD
-# ifdef DEVELOPMENT
-static const unsigned long MQTT_CAPTURE_INTERVAL_S = 60*1;
-static const unsigned long MQTT_UPLOAD_INTERVAL_S = 60*2;
+# if defined(DEMO_MODE) || defined(DEVELOPMENT)
+static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
 #  ifdef POWER_MANAGEMENT_TEST
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(5);
@@ -186,9 +186,9 @@ static const unsigned long WEB_SERVER_POLL_INTERVAL_S = 1;
 // poll frequency; and/or there should be no upload if the sensor
 // has not been read since the last time. 
 # ifdef DEVELOPMENT
-static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*1;
+static const unsigned long WEB_UPLOAD_INTERVAL_S = MINUTE(1);
 # else
-static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*60; // 1 hour
+static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
 # endif
 #endif
 
