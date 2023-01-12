@@ -211,7 +211,7 @@ void MqttCommsTask::send() {
     }
     mqtt_state->mqtt.endMessage();
 
-    // TODO: In principle we could fail to send because the connection drops.  In that
+    // FIXME: Issue 20: We could fail to send because the connection drops.  In that
     // case, detect the error and do not dequeue the message, but leave it in the buffer
     // for a subsequent attempt and exit the loop here.
 

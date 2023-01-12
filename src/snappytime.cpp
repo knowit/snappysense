@@ -1,6 +1,6 @@
 // Stuff to obtain the current time from a web server and to obtain timestamps with that adjustment.
 //
-// TODO: This is hacky, it can be integrated with Posix time code by using settimeofday() after
+// TODO: Issue 23: This is hacky, it can be integrated with Posix time code by using settimeofday() after
 // obtaining the time base.
 
 #include "snappytime.h"

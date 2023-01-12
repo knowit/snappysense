@@ -73,7 +73,7 @@ WiFiHolder connect_to_wifi() {
   // FIXME: Issue 15: Failure conditions need to be checked and reported but should not block
   // progress per se, we must not hang here.
   // FIXME: Issue 10: There can be multiple accss points, we must scan for one that works.
-  // TODO: We should flash a message on the display if no access points work
+  // TODO: Issue 21: We should flash a message on the display if no access points work
   log("Access point: [%s]\n", access_point_ssid(1));
   WiFi.begin(access_point_ssid(1), access_point_password(1));
 #ifdef WIFI_LOGGING

@@ -51,7 +51,7 @@ static void cmd_help(const String& cmd, const SnappySenseData&, Stream* out) {
 }
 
 static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) {
-  // TODO: turn this into a control task.  Note this may be difficult,
+  // TODO: Issue 25: Turn this into a control task.  Note this may be difficult,
   // as the task cannot hold a reference to the stream - the task may
   // outlive the stream - unless we do something to make sure the stream
   // lives longer, or is safe-for-deletion.

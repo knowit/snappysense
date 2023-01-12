@@ -93,9 +93,8 @@ void device_setup(bool* do_interactive_configuration) {
   // Always connect serial on startup
   Serial.begin(115200);
 #ifdef LOGGING
-  // TODO: If the serial port is not connected, this should do nothing?  It's
-  // unclear, actually - what if the serial is plugged in later?  Then we have
-  // to detect that and so on.  Seems like a mess.
+  // Connect the serial port whether anyone's listening or not.  This is in favor
+  // of being able to plug in a serial cable to check on what's going on, after startup.
   set_log_stream(&Serial);
 #endif
 

@@ -127,7 +127,6 @@ SnappyMetaDatum snappy_metadata[] = {
 };
 
 String format_readings_as_json(const SnappySenseData& data) {
-  // TODO, maybe use ArduinoJSON here, we're pulling that in for mqtt anyway.
   // TODO: Issue 17: for production code we have to handle OOM all the way down, see
   // comments below.  String::operator+= does not deal with that.
   String buf;
@@ -158,8 +157,8 @@ void EnableDeviceTask::execute(SnappySenseData*) {
 }
 
 void RunActuatorTask::execute(SnappySenseData*) {
-  // TODO: Display something, if the display is going
-  // TODO: Manipulate an actuator, if we have one (we don't, really)
+  // TODO: Issue 21: Display something, if the display is going
+  // TODO: Issue 22: Manipulate an actuator, if we have one (we don't, really)
   if (actuator.equals("temperature")) {
     if (reading >= ideal+2) {
       log("It's HOT in here!\n");

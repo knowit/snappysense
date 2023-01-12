@@ -191,7 +191,7 @@ void WebClientState::process_request() {
     int idx = r.indexOf(' ');
     if (idx != -1) {
       r = r.substring(0, idx);
-      // TODO: technically this is url-encoded and needs to be decoded
+      // TODO: Issue 24: technically this is url-encoded and needs to be decoded
     }
     if (r.isEmpty()) {
       r = String("help");
