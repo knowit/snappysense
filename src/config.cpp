@@ -148,15 +148,14 @@ static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
 #endif
 
 #ifdef MQTT_UPLOAD
-#ifdef DEVELOPMENT
+# ifdef DEVELOPMENT
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = 60*1;
 static const unsigned long MQTT_UPLOAD_INTERVAL_S = 60*2;
-#else
+# else
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = HOUR(1);
 static const unsigned long MQTT_UPLOAD_INTERVAL_S = MQTT_CAPTURE_INTERVAL_S;
-#endif
+# endif
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
-static unsigned long mqtt_capture_interval_s = MQTT_CAPTURE_INTERVAL_S;
 #endif
 
 #ifdef DEMO_MODE
@@ -172,20 +171,26 @@ static const unsigned long WEB_SERVER_POLL_INTERVAL_S = 1;
 // TODO: The upload frequency should ideally be a multiple of the sensor
 // poll frequency; and/or there should be no upload if the sensor
 // has not been read since the last time. 
-#ifdef DEVELOPMENT
+# ifdef DEVELOPMENT
 static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*1;
-#else
+# else
 static const unsigned long WEB_UPLOAD_INTERVAL_S = 60*60; // 1 hour
-#endif
+# endif
 #endif
 
 #ifdef SERIAL_SERVER
 static const unsigned long SERIAL_SERVER_POLL_INTERVAL_S = 1;
 #endif
 
+static struct {
+  unsigned long mqtt_capture_interval_s;
+} builtin_cfg = {
+  .mqtt_capture_interval_s = MQTT_CAPTURE_INTERVAL_S
+};
+
 // Preference accessors
 
-unsigned long sensor_poll_interval_seconds() {
+unsigned long sensor_poll_interval_s() {
   return SENSOR_POLL_INTERVAL_S;
 }
 
@@ -238,25 +243,25 @@ int web_upload_port() {
   return get_int_pref("http-upload-port");
 }
 
-unsigned long web_upload_interval_seconds() {
+unsigned long web_upload_interval_s() {
   return WEB_UPLOAD_INTERVAL_S;
 }
 #endif
 
 #ifdef MQTT_UPLOAD
-unsigned long mqtt_capture_interval_seconds() {
-  return mqtt_capture_interval_s;
+unsigned long mqtt_capture_interval_s() {
+  return builtin_cfg.mqtt_capture_interval_s;
 }
 
-void set_mqtt_capture_interval_seconds(unsigned long interval) {
-  mqtt_capture_interval_s = interval;
+void set_mqtt_capture_interval_s(unsigned long interval) {
+  builtin_cfg.mqtt_capture_interval_s = interval;
 }
 
-unsigned long mqtt_max_idle_time_seconds() {
+unsigned long mqtt_max_idle_time_s() {
   return MQTT_MAX_IDLE_TIME_S;
 }
 
-unsigned long mqtt_upload_interval_seconds() {
+unsigned long mqtt_upload_interval_s() {
   return MQTT_UPLOAD_INTERVAL_S;
 }
 
@@ -290,7 +295,7 @@ const char* mqtt_device_private_key() {
 #endif
 
 #ifdef DEMO_MODE
-unsigned long display_update_interval_seconds() {
+unsigned long display_update_interval_s() {
   return DISPLAY_UPDATE_INTERVAL_S;
 }
 #endif
@@ -300,13 +305,13 @@ int web_server_listen_port() {
   return WEB_SERVER_LISTEN_PORT;
 }
 
-unsigned long web_command_poll_interval_seconds() {
+unsigned long web_command_poll_interval_s() {
   return WEB_SERVER_POLL_INTERVAL_S;
 }
 #endif
 
 #ifdef SERIAL_SERVER
-unsigned long serial_command_poll_interval_seconds() {
+unsigned long serial_command_poll_interval_s() {
   return SERIAL_SERVER_POLL_INTERVAL_S;
 }
 #endif
