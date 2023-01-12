@@ -5,6 +5,7 @@
 #ifdef SNAPPY_WIFI
 
 #include "config.h"
+#include "device.h"
 #include "log.h"
 
 #include <WiFi.h>
@@ -74,29 +75,43 @@ WiFiHolder connect_to_wifi() {
   // progress per se, we must not hang here.
   // FIXME: Issue 10: There can be multiple accss points, we must scan for one that works.
   // TODO: Issue 21: We should flash a message on the display if no access points work
-  log("Access point: [%s]\n", access_point_ssid(1));
-  WiFi.begin(access_point_ssid(1), access_point_password(1));
-#ifdef WIFI_LOGGING
-  log("WiFi: Bringing up network ");
-#endif
-  // FIXME: Issue 15: This polling+delay should be implemented as some type of task, so long
-  // as the user of connect_to_wifi() can handle that.  I'm seeing a lot of async/await
-  // patterns here...
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-#ifdef WIFI_LOGGING
-    log(".");
-#endif
+
+  static int last_successful_access_point = 0;
+  int access_point = last_successful_access_point;
+  bool is_connected = false;
+  for(int i=0 ; i < 3; i++) {
+    const char* ap = access_point_ssid(access_point+1);
+    const char* pw = access_point_password(access_point+1);
+    if (*ap == 0) {
+      continue;
+    }
+    if (*pw == 0) {
+      pw = nullptr;
+    }
+    log("Trying access point: [%s]\n", ap);
+    wl_status_t stat = WiFi.begin(ap, pw);
+    int attempts = 0;
+    while (stat != WL_CONNECTED && attempts < 5) {
+      delay(500);
+      stat = WiFi.status();
+      attempts++;
+    }
+    if (stat == WL_CONNECTED) {
+      last_successful_access_point = access_point;
+      is_connected = true;
+      break;
+    }
+    access_point = (access_point + 1) % 3;
   }
-#ifdef WIFI_LOGGING
-  log("\n");
-#endif
-  // Create the holder first: otherwise local_ip_address() will return an empty string.
-  WiFiHolder holder(true);
-#ifdef WIFI_LOGGING
-  log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
-#endif
-  return holder;
+  if (is_connected) {
+    WiFiHolder holder(true);
+    log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
+    return holder;
+  }
+  log("WiFi: Failed to connect to any access point\n");
+  render_text("No WiFi\n");
+  delay(1000);
+  return WiFiHolder();
 }
 
 String local_ip_address() {
