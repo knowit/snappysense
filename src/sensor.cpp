@@ -7,8 +7,6 @@
 #include "log.h"
 #include "snappytime.h"
 
-SnappySenseData snappy;
-
 // The "formatters" format the various members of SnappySenseData into a buffer.  In all
 // cases, `buflim` points to the address beyond the buffer.  No error is returned
 // if the buffer is too small, but the operation is guaranteed not to write beyond
