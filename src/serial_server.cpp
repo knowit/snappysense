@@ -2,7 +2,7 @@
 
 #include "serial_server.h"
 
-#ifdef SERIAL_SERVER
+#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
 
 #include "command.h"
 
@@ -18,7 +18,7 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
       if (buf.isEmpty()) {
         continue;
       }
-      sched_microtask_after(new ProcessCommandTask(buf, &Serial), 0);
+      perform();
       buf.clear();
       continue;
     }
@@ -26,4 +26,24 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
   }
 }
 
-#endif // SERIAL_SERVER
+#ifdef SERIAL_SERVER
+void ReadSerialCommandInputTask::perform() {
+  sched_microtask_after(new ProcessCommandTask(buf, &Serial), 0);
+}
+#endif
+
+#ifdef INTERACTIVE_CONFIGURATION
+void ReadSerialConfigInputTask::perform() {
+  // FIXME
+  // Unlike command processing, we don't want to fork off a separate task for
+  // each line read, because these are not quite independent.  But perhaps the
+  // config processing state can be kept in an object shared among the tasks.
+  // This would be meaningful since it could then be shared among the different
+  // input sources too.
+  //    interactive_configuration(&Serial);
+  //    enter_end_state("Press reset button!");
+  abort();
+}
+#endif
+
+#endif // SERIAL_SERVER || INTERACTIVE_CONFIGURATION

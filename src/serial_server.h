@@ -5,23 +5,43 @@
 
 #include "main.h"
 
-#ifdef SERIAL_SERVER
+#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
 
 #include "microtask.h"
 #include "sensor.h"
 
 // Read from the serial port.  This will not block!  If a complete line has been read,
-// a task is spun off to process it by the command processor, which will produce some
-// output on the serial line.
+// a task is spun off to process it by the a suitable processor, which will produce some
+// output on the serial line.  The processor is defined by the subclass.
+
 class ReadSerialInputTask : public MicroTask {
+protected:
   String buf;
+  virtual void perform() = 0;
 public:
-  const char* name() override {
-    return "Serial server input";
-  }
   void execute(SnappySenseData*) override;
 };
 
+#ifdef SERIAL_SERVER
+class ReadSerialCommandInputTask final : public ReadSerialInputTask {
+public:
+  const char* name() override {
+    return "Serial server command input";
+  }
+  void perform() override;
+};
 #endif
+
+#ifdef INTERACTIVE_CONFIGURATION
+class ReadSerialConfigInputTask final : public ReadSerialInputTask {
+public:
+  const char* name() override {
+    return "Serial server config input";
+  }
+  void perform() override;
+};
+#endif
+
+#endif // SERIAL_SERVER || INTERACTIVE_CONFIGURATION
 
 #endif // !serial_server_h_included

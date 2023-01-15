@@ -69,6 +69,9 @@ static SnappySenseData snappy;
 
 // Defined below all the task types
 static void create_initial_tasks();
+#ifdef INTERACTIVE_CONFIGURATION
+static void create_configuration_tasks();
+#endif
 
 void setup() {
   bool do_interactive_configuration = false;
@@ -86,10 +89,17 @@ void setup() {
   read_configuration();
 
 #ifdef INTERACTIVE_CONFIGURATION
+  // FIXME: This is not the best way once we can have multiple input sources
+  // for config - serial, bluetooth, wifi.  In that situation, we instead want
+  // to create some tasks here to listen on various input sources and then
+  // handle the input as it arrives, as for command processing.  We want to
+  // reuse the serial-server and probably web-server input handling here, but
+  // to generalize them a bit.
   if (do_interactive_configuration) {
     render_text("Configuration mode");
-    interactive_configuration(&Serial);
-    enter_end_state("Press reset button!");
+    create_configuration_tasks();
+    log("Configuration is running!\n");
+    return;
   }
 #endif
 
@@ -169,7 +179,7 @@ static void create_initial_tasks() {
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
-  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);
+  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_command_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);
@@ -186,3 +196,11 @@ static void create_initial_tasks() {
   sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
 #endif // DEMO_MODE
 }
+
+#ifdef INTERACTIVE_CONFIGURATION
+static void create_configuration_tasks() {
+  sched_microtask_periodically(new ReadSerialConfigInputTask, serial_command_poll_interval_s() * 1000);
+  // schedule a wifi task, maybe
+  // schedule a bluetooth task, maybe
+}
+#endif
