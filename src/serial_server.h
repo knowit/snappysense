@@ -1,4 +1,4 @@
-// An interactive server that reads from the serial port.
+// A task that reads from the serial port.
 
 #ifndef serial_server_h_included
 #define serial_server_h_included
@@ -9,8 +9,9 @@
 
 // Read a line of text from the serial port and when complete, pass it to a dispatch
 // function passed as a parameter.  Here, `parameters` is a ReadLineHandler*.
-// parameters->handle() should not block; it should send it to some other task for any
-// extensive processing.
+// parameters->handle() should not block; it should send the input to some other task
+// for any extensive processing.
+
 void serial_input_reader_task(void* parameters);
 
 #endif // SERIAL_SERVER

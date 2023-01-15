@@ -1,4 +1,4 @@
-// An interactive server that reads from the serial port.
+// A task that reads from the serial port.
 
 #include "serial_server.h"
 
@@ -8,8 +8,14 @@
 #include "log.h"
 #include "microtask.h"
 
+// A FreeRTOS task that reads from serial (USB) input and dispatches each line
+// to a consumer.  As the serial input is on the FeatherESP and there's only
+// one of these tasks there's no need to synchronize access to the serial input.
+//
+// TODO: #13: Make serial input interrupt-driven, not polling.
+
 void serial_input_reader_task(void* parameters) {
-  log("Entering serial server\n");
+  log("Starting serial server\n");
   auto* handler = reinterpret_cast<ReadLineHandler*>(parameters);
   String buf;
   for(;;) {

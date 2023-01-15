@@ -75,6 +75,12 @@ static void create_initial_tasks();
 TaskHandle_t scheduler_handle;
 static void scheduler_loop(void*);
 
+// The "big lock" temporarily avoids reentrancy problems among the tasks, but it is
+// not a sensible long-term solution.  The problem seems to be that some operations,
+// probably WiFi, "complete" operations by forking off tasks, allowing the task that
+// uses WiFi to race ahead and start another task in the microtask scheduler (at least),
+// which leads to crashes.  This needs a deeper analysis.
+
 StaticSemaphore_t mutex_buf;
 SemaphoreHandle_t big_lock = xSemaphoreCreateMutexStatic(&mutex_buf);
 
@@ -115,29 +121,8 @@ void setup() {
   vTaskStartScheduler();
 }
 
-// The system is constructed around a set of microtasks layered on top of the
-// Arduino runloop.  See microtask.h for more documentation.
+// A scheduler task for the tasks that use the old microtask system.  This will disappear.
 
-#if 0
-void loop() {
-#ifdef TEST_MEMS
-  test_mems();
-#else
-  unsigned long wait_time_ms = run_scheduler(&snappy);
-  bool power_down = wait_time_ms >= 60*1000;
-  if (power_down) {
-    log("Power down: %d seconds to wait\n", wait_time_ms / 1000);
-    power_peripherals_off();
-  }
-  delay(wait_time_ms);
-  if (power_down) {
-    log("Power up\n");
-    power_peripherals_on();
-    show_splash();
-  }
-#endif
-}
-#else
 static void scheduler_loop(void*) {
   log("Entering scheduler\n");
   for(;;) {
@@ -159,11 +144,11 @@ static void scheduler_loop(void*) {
     }
   }
 }
+
 void loop() {
   // If this is not sleeping then it's sucking all the CPU out of the room.
   delay(100000);
 }
-#endif
 
 #ifdef DEMO_MODE
 class NextViewTask final : public MicroTask {
@@ -209,23 +194,30 @@ static void create_initial_tasks() {
   // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
   // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
   // interrupt driven.
+  //
+  // Maybe spin this off as two different tasks, then, with an eye toward eventually
+  // getting rid of the PIR task.
+  //
+  // For the I2C sensors this must obtain the lock on the I2C bus, if the Arduino
+  // layer does not handle that properly.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
-# if 0
-  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);
-# else
+  // There should only ever be one task that reads from the serial input.
   if (xTaskCreatePinnedToCore(serial_input_reader_task,
                               "rdln-serialsrv",
                               /* stackDepthInWords= */ 2048, 
                               new CommandHandler(/* output_stream= */ &Serial), 
                               /* priority= */ 0, 
                               &serial_input_task_handle,
-                              /* core= */ 1) != pdPASS)
-      {
+                              /* core= */ 1) != pdPASS) {
     enter_end_state("Serial server task", true);
   };
-# endif
 #endif
+#ifdef DEMO_MODE
+  // This task must obtain a lock on the I2C bus if the Arduino layer does not
+  // handle that properly.
+  sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
+#endif // DEMO_MODE
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);
   sched_microtask_after(new MqttCommsTask, 0);
@@ -237,7 +229,4 @@ static void create_initial_tasks() {
 #ifdef WEB_SERVER
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
-#ifdef DEMO_MODE
-  sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
-#endif // DEMO_MODE
 }
