@@ -72,6 +72,12 @@ SnappySenseData snappy;
 // Defined below all the task types
 static void create_initial_tasks();
 
+TaskHandle_t scheduler_handle;
+static void scheduler_loop(void*);
+
+StaticSemaphore_t mutex_buf;
+SemaphoreHandle_t big_lock = xSemaphoreCreateMutexStatic(&mutex_buf);
+
 void setup() {
   bool do_interactive_configuration = false;
   device_setup(&do_interactive_configuration);
@@ -102,13 +108,17 @@ void setup() {
   configure_time();
 #endif
   create_initial_tasks();
-  vTaskStartScheduler();
+  if (xTaskCreatePinnedToCore(scheduler_loop, "snappy-sched", 4096, nullptr, 0, &scheduler_handle, /* core= */ 1) != pdPASS) {
+    enter_end_state("scheduler", true);
+  };
   log("SnappySense running!\n");
+  vTaskStartScheduler();
 }
 
 // The system is constructed around a set of microtasks layered on top of the
 // Arduino runloop.  See microtask.h for more documentation.
 
+#if 0
 void loop() {
 #ifdef TEST_MEMS
   test_mems();
@@ -127,6 +137,33 @@ void loop() {
   }
 #endif
 }
+#else
+static void scheduler_loop(void*) {
+  log("Entering scheduler\n");
+  for(;;) {
+    xSemaphoreTake(big_lock, portMAX_DELAY);
+    unsigned long wait_time_ms = run_scheduler(&snappy);
+    xSemaphoreGive(big_lock);
+    bool power_down = wait_time_ms >= 60*1000;
+    if (power_down) {
+      log("Power down: %d seconds to wait\n", wait_time_ms / 1000);
+      power_peripherals_off();
+    }
+    log("Scheduler blocking %u", wait_time_ms);
+    delay(wait_time_ms);
+    log("Scheduler woke\n");
+    if (power_down) {
+      log("Power up\n");
+      power_peripherals_on();
+      show_splash();
+    }
+  }
+}
+void loop() {
+  // If this is not sleeping then it's sucking all the CPU out of the room.
+  delay(100000);
+}
+#endif
 
 #ifdef DEMO_MODE
 class NextViewTask final : public MicroTask {
@@ -177,12 +214,16 @@ static void create_initial_tasks() {
 # if 0
   sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);
 # else
-  xTaskCreate(serial_input_reader_task,
-              "read-line-for-serial-server",
-              /* stackDepthInWords= */ 2048, 
-              new CommandHandler(/* output_stream= */ &Serial), 
-              /* priority= */ 0, 
-              &serial_input_task_handle);
+  if (xTaskCreatePinnedToCore(serial_input_reader_task,
+                              "rdln-serialsrv",
+                              /* stackDepthInWords= */ 2048, 
+                              new CommandHandler(/* output_stream= */ &Serial), 
+                              /* priority= */ 0, 
+                              &serial_input_task_handle,
+                              /* core= */ 1) != pdPASS)
+      {
+    enter_end_state("Serial server task", true);
+  };
 # endif
 #endif
 #ifdef MQTT_UPLOAD

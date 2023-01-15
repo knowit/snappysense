@@ -7,29 +7,12 @@
 
 #ifdef SERIAL_SERVER
 
-#include "microtask.h"
-#include "sensor.h"
-
 // Read a line of text from the serial port and when complete, pass it to a dispatch
 // function passed as a parameter.  Here, `parameters` is a ReadLineHandler*.
 // parameters->handle() should not block; it should send it to some other task for any
 // extensive processing.
 void serial_input_reader_task(void* parameters);
 
-#if 0
-// Read from the serial port.  This will not block!  If a complete line has been read,
-// a task is spun off to process it by the command processor, which will produce some
-// output on the serial line.
-class ReadSerialInputTask : public MicroTask {
-  String buf;
-public:
-  const char* name() override {
-    return "Serial server input";
-  }
-  void execute(SnappySenseData*) override;
-};
-#endif
-
-#endif
+#endif // SERIAL_SERVER
 
 #endif // !serial_server_h_included
