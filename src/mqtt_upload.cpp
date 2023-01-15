@@ -132,6 +132,9 @@ void MqttCommsTask::execute(SnappySenseData*) {
     if (!connect()) {
       delete mqtt_state;
       mqtt_state = nullptr;
+      now = millis();
+      next_work = now + mqtt_upload_interval_s() * 1000;
+      sched_microtask_after(this, next_work - now);
       return;
     }
   }
