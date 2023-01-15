@@ -3,6 +3,10 @@
 
 #include "main.h"
 
+struct ReadLineHandler {
+  virtual void handle(String line) = 0;
+};
+
 // The system is structured around microtasks that are run on top of the Arduino runloop;
 // this is almost a little silly - making them FreeRTOS task would have been more sensible - but
 // OK for a PoC.

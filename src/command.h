@@ -10,6 +10,13 @@
 #include "microtask.h"
 #include "sensor.h"
 
+struct CommandHandler final : public ReadLineHandler {
+  Stream* output;
+  CommandHandler(Stream* output) : output(output) {};
+  virtual void handle(String) override;
+};
+
+#if 0
 // This class is not `final`, as the web server task subclasses it to handle garbage
 // collection of the output stream.
 class ProcessCommandTask : public MicroTask {
@@ -26,6 +33,7 @@ public:
   }
   void execute(SnappySenseData*) override;
 };
+#endif
 
 #endif // SNAPPY_COMMAND_PROCESSOR
 

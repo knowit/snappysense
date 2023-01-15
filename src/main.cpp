@@ -46,6 +46,7 @@
 // The system will sleep when there's no work to be done.  If the time to sleep is long
 // enough, it will power down peripherals while it's sleeping.
 
+#include "command.h"
 #include "config.h"
 #include "device.h"
 #include "icons.h"
@@ -62,10 +63,11 @@
 void show_next_view();
 #endif
 
+// FIXME
 // Currently only one copy of sensor data globally but the code's properly parameterized and
 // there could be several of these, useful in a threaded world or when snapshots of the data
 // are useful.
-static SnappySenseData snappy;
+SnappySenseData snappy;
 
 // Defined below all the task types
 static void create_initial_tasks();
@@ -100,6 +102,7 @@ void setup() {
   configure_time();
 #endif
   create_initial_tasks();
+  vTaskStartScheduler();
   log("SnappySense running!\n");
 }
 
@@ -163,13 +166,24 @@ void NextViewTask::execute(SnappySenseData* data) {
 }
 #endif // DEMO_MODE
 
+TaskHandle_t serial_input_task_handle;
+
 static void create_initial_tasks() {
   // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
   // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
+# if 0
   sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);
+# else
+  xTaskCreate(serial_input_reader_task,
+              "read-line-for-serial-server",
+              /* stackDepthInWords= */ 2048, 
+              new CommandHandler(/* output_stream= */ &Serial), 
+              /* priority= */ 0, 
+              &serial_input_task_handle);
+# endif
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);

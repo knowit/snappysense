@@ -17,6 +17,23 @@ struct Command {
 // The last row of this table has a null `command` field
 extern Command commands[];
 
+struct SnappySenseData;
+extern SnappySenseData snappy;
+
+void CommandHandler::handle(String cmd) {
+  String w = get_word(cmd, 0);
+  if (!w.isEmpty()) {
+    for (Command* c = commands; c->command != nullptr; c++ ) {
+      if (strcmp(c->command, w.c_str()) == 0) {
+        c->handler(cmd, snappy, output);
+        return;
+      }
+    }
+  }
+  output->printf("Unrecognized command [%s]\n", cmd.c_str());
+}
+
+#if 0
 void ProcessCommandTask::execute(SnappySenseData* data) {
   String w = get_word(cmd, 0);
   if (!w.isEmpty()) {
@@ -29,6 +46,7 @@ void ProcessCommandTask::execute(SnappySenseData* data) {
   }
   output->printf("Unrecognized command [%s]\n", cmd.c_str());
 }
+#endif
 
 static void cmd_hello(const String& cmd, const SnappySenseData&, Stream* out) {
   String arg = get_word(cmd, 1);
