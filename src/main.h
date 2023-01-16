@@ -62,7 +62,7 @@
 // In this mode, the display is updated frequently with readings.  The device and
 // display are on continually, and the device uses a lot of power.  It is useful in
 // production only when we can count on a non-battery power source.
-#define DEMO_MODE
+#define SLIDESHOW_MODE
 
 // The following are mostly useful during development and would not normally be
 // enabled in production.
@@ -86,7 +86,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP)
+#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(INTERACTIVE_CONFIGURATION)
 # define SNAPPY_WIFI
 #endif
 
@@ -94,9 +94,17 @@
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
+#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
+# define SNAPPY_SERIAL_LINE
+#endif
+
+#if defined(SERIAL_SERVER) && defined(INTERACTIVE_CONFIGURATION)
+# error "Contention for the serial line!"
+#endif
+
 #if !defined(DEVELOPMENT)
-# ifdef DEMO_MODE
-#  warning "DEMO_MODE not usually enabled in production"
+# ifdef SLIDESHOW_MODE
+#  warning "SLIDESHOW_MODE not usually enabled in production"
 # endif
 # ifdef SERIAL_SERVER
 #  warning "SERIAL_SERVER not usually enabled in production"

@@ -77,7 +77,7 @@ static void format_noise(const SnappySenseData& data, char* buf, char* buflim) {
 // The "displayers" format the data so that they can be shown on the unit's
 // display.  There may be some information loss.  Where there's a formatter
 // that would produce the same string, we use that.
-// "Displayers" display for DEMO_MODE use, if the "formatted" display has too much
+// "Displayers" display for SLIDESHOW_MODE use, if the "formatted" display has too much
 // information.
 
 static void display_temp(const SnappySenseData& data, char* buf, char* buflim) { 
@@ -96,7 +96,7 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
   snprintf(buf, buflim - buf, "%d", (int)data.elevation);
 }
 
-#ifdef DEMO_MODE
+#ifdef SLIDESHOW_MODE
 #define ICON(x) x
 #else
 #define ICON(x) nullptr

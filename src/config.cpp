@@ -143,11 +143,11 @@ const char* get_string_pref(const char* name) {
 
 //#define POWER_MANAGEMENT_TEST
 
-#if defined(POWER_MANAGEMENT_TEST) && (defined(DEMO_MODE) || defined(DEVELOPMENT) || defined(SNAPPY_COMMAND_PROCESSOR))
+#if defined(POWER_MANAGEMENT_TEST) && (defined(SLIDESHOW_MODE) || defined(DEVELOPMENT) || defined(SNAPPY_COMMAND_PROCESSOR))
 # error "Power management test won't work"
 #endif
 
-#if defined(DEMO_MODE) || defined(DEVELOPMENT)
+#if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
 static const unsigned long SENSOR_POLL_INTERVAL_S = 15;
 #else
 # ifdef POWER_MANAGEMENT_TEST
@@ -158,7 +158,7 @@ static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
 #endif
 
 #ifdef MQTT_UPLOAD
-# if defined(DEMO_MODE) || defined(DEVELOPMENT)
+# if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
@@ -172,8 +172,8 @@ static const unsigned long MQTT_UPLOAD_INTERVAL_S = MQTT_CAPTURE_INTERVAL_S;
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
-#ifdef DEMO_MODE
-static const unsigned long DISPLAY_UPDATE_INTERVAL_S = 4;
+#ifdef SLIDESHOW_MODE
+static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 4;
 #endif
 
 #ifdef WEB_SERVER
@@ -189,8 +189,8 @@ static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
 # endif
 #endif
 
-#ifdef SERIAL_SERVER
-static const unsigned long SERIAL_SERVER_POLL_INTERVAL_S = 1;
+#ifdef SNAPPY_SERIAL_LINE
+static const unsigned long SERIAL_LINE_POLL_INTERVAL_S = 1;
 #endif
 
 static struct {
@@ -305,9 +305,9 @@ const char* mqtt_device_private_key() {
 }
 #endif
 
-#ifdef DEMO_MODE
-unsigned long display_update_interval_s() {
-  return DISPLAY_UPDATE_INTERVAL_S;
+#ifdef SLIDESHOW_MODE
+unsigned long slideshow_update_interval_s() {
+  return SLIDESHOW_UPDATE_INTERVAL_S;
 }
 #endif
 
@@ -321,9 +321,9 @@ unsigned long web_command_poll_interval_s() {
 }
 #endif
 
-#ifdef SERIAL_SERVER
-unsigned long serial_command_poll_interval_s() {
-  return SERIAL_SERVER_POLL_INTERVAL_S;
+#ifdef SNAPPY_SERIAL_LINE
+unsigned long serial_line_poll_interval_s() {
+  return SERIAL_LINE_POLL_INTERVAL_S;
 }
 #endif
 

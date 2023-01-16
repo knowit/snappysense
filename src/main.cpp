@@ -6,10 +6,10 @@
 //
 // SnappySense can be compile-time configured to several modes, in main.h.  These are:
 //
-//  - DEMO_MODE, in which the device reads the sensors often, keeps the display on,
+//  - SLIDESHOW_MODE, in which the device reads the sensors often, keeps the display on,
 //    and displays the sensor variables on the display in a never-ending loop.
 //    Demo mode is power-hungry.
-//  - !DEMO_MODE, in which the device reads the sensors much less often and turns
+//  - !SLIDESHOW_MODE, in which the device reads the sensors much less often and turns
 //    off the display and the peripherals when they are not needed.  This mode
 //    conserves power (relatively).
 //  - DEVELOPER mode, which can be combined with the other two modes and which 
@@ -55,12 +55,9 @@
 #include "sensor.h"
 #include "serial_server.h"
 #include "snappytime.h"
+#include "slideshow.h"
 #include "web_server.h"
 #include "web_upload.h"
-
-#ifdef DEMO_MODE
-void show_next_view();
-#endif
 
 // Currently only one copy of sensor data globally but the code's properly parameterized and
 // there could be several of these, useful in a threaded world or when snapshots of the data
@@ -89,12 +86,6 @@ void setup() {
   read_configuration();
 
 #ifdef INTERACTIVE_CONFIGURATION
-  // FIXME: This is not the best way once we can have multiple input sources
-  // for config - serial, bluetooth, wifi.  In that situation, we instead want
-  // to create some tasks here to listen on various input sources and then
-  // handle the input as it arrives, as for command processing.  We want to
-  // reuse the serial-server and probably web-server input handling here, but
-  // to generalize them a bit.
   if (do_interactive_configuration) {
     render_text("Configuration mode");
     create_configuration_tasks();
@@ -135,51 +126,13 @@ void loop() {
 #endif
 }
 
-#ifdef DEMO_MODE
-class NextViewTask final : public MicroTask {
-  // -1 is the splash screen; values 0..whatever refer to the entries in the 
-  // SnappyMetaData array.
-  int next_view = -1;
-public:
-  const char* name() override {
-    return "Next view";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData* data) override;
-};
-
-void NextViewTask::execute(SnappySenseData* data) {
-  bool done = false;
-  while (!done) {
-    if (next_view == -1) {
-      show_splash();
-      done = true;
-    } else if (snappy_metadata[next_view].json_key == nullptr) {
-      // At end, wrap around
-      next_view = -1;
-    } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field not for demo_mode display
-      next_view++;
-    } else {
-      char buf[32];
-      snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
-      render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
-      done = true;
-    }
-  }
-  next_view++;
-}
-#endif // DEMO_MODE
-
 static void create_initial_tasks() {
   // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
   // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
-  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_command_poll_interval_s() * 1000);
+  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_line_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);
@@ -192,14 +145,14 @@ static void create_initial_tasks() {
 #ifdef WEB_SERVER
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
-#ifdef DEMO_MODE
-  sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
-#endif // DEMO_MODE
+#ifdef SLIDESHOW_MODE
+  sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
+#endif // SLIDESHOW_MODE
 }
 
 #ifdef INTERACTIVE_CONFIGURATION
 static void create_configuration_tasks() {
-  sched_microtask_periodically(new ReadSerialConfigInputTask, serial_command_poll_interval_s() * 1000);
+  sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
   // schedule a wifi task, maybe
   // schedule a bluetooth task, maybe
 }
