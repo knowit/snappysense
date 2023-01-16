@@ -59,11 +59,7 @@
 #include "web_server.h"
 #include "web_upload.h"
 
-#ifdef DEMO_MODE
-void show_next_view();
-#endif
-
-// FIXME
+// FIXME - comment is wrong, some code sees this global.
 // Currently only one copy of sensor data globally but the code's properly parameterized and
 // there could be several of these, useful in a threaded world or when snapshots of the data
 // are useful.
@@ -72,8 +68,8 @@ SnappySenseData snappy;
 // Defined below all the task types
 static void create_initial_tasks();
 
-TaskHandle_t scheduler_handle;
 static void scheduler_loop(void*);
+static TaskHandle_t scheduler_handle;
 
 // The "big lock" temporarily avoids reentrancy problems among the tasks, but it is
 // not a sensible long-term solution.  The problem seems to be that some operations,
@@ -114,14 +110,31 @@ void setup() {
   configure_time();
 #endif
   create_initial_tasks();
-  if (xTaskCreatePinnedToCore(scheduler_loop, "snappy-sched", 4096, nullptr, 0, &scheduler_handle, /* core= */ 1) != pdPASS) {
+  if (xTaskCreateUniversal(scheduler_loop,
+                           "snappy-sched",
+                           4096,
+                           nullptr,
+                           1,
+                           &scheduler_handle,
+                           ARDUINO_RUNNING_CORE) != pdPASS) {
     enter_end_state("scheduler", true);
   };
   log("SnappySense running!\n");
+  /* Not obvious that we should do this - should not the Arduino framework take care of it? */
   vTaskStartScheduler();
+  /*NOTREACHED*/
 }
 
 // A scheduler task for the tasks that use the old microtask system.  This will disappear.
+
+// TODO: With FreeRTOS tasks, how can we expect to power down peripherals if we don't know
+// how tasks are sleeping?  We need some kind of callback from the scheduler for that, or
+// tasks that access the
+// peripherals must coordinate amongst themselves.  They can record the wait time when they go
+// to sleep in a global but this is not enough storage.  Essentially, it needs to become a
+// queue of wait times.
+//
+// It's no different with deep-sleep mode.  We must *know* what the future system demands are.
 
 static void scheduler_loop(void*) {
   log("Entering scheduler\n");
@@ -146,82 +159,96 @@ static void scheduler_loop(void*) {
 }
 
 void loop() {
+  // TODO: This should not be called, actually?
   // If this is not sleeping then it's sucking all the CPU out of the room.
   delay(100000);
 }
 
 #ifdef DEMO_MODE
-class NextViewTask final : public MicroTask {
-  // -1 is the splash screen; values 0..whatever refer to the entries in the 
-  // SnappyMetaData array.
-  int next_view = -1;
-public:
-  const char* name() override {
-    return "Next view";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData* data) override;
-};
+// FreeRTOS task that requests a display update periodically to show a rotating display
+// of sensor readings.
+//
+// Synchronization:
+//  - this needs to worry about concurrent access to the data object
+//  - this may need to worry about overwriting error messages on the display
 
-void NextViewTask::execute(SnappySenseData* data) {
-  bool done = false;
-  while (!done) {
-    if (next_view == -1) {
-      show_splash();
-      done = true;
-    } else if (snappy_metadata[next_view].json_key == nullptr) {
-      // At end, wrap around
-      next_view = -1;
-    } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field not for demo_mode display
+static TaskHandle_t slideshow_task_handle;
+
+static void slideshow_task(void* parameter /* const SnappySenseData* */) {
+  auto* data = reinterpret_cast<const SnappySenseData*>(parameter);
+  int next_view = -1;
+  for(;;) {
+    if (device_enabled()) {
+      bool done = false;
+      while (!done) {
+        if (next_view == -1) {
+          show_splash();
+          done = true;
+        } else if (snappy_metadata[next_view].json_key == nullptr) {
+          // At end, wrap around
+          next_view = -1;
+        } else if (snappy_metadata[next_view].display == nullptr) {
+          // Field not for demo_mode display
+          next_view++;
+        } else {
+          char buf[32];
+          snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
+          render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
+          done = true;
+        }
+      }
       next_view++;
-    } else {
-      char buf[32];
-      snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
-      render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
-      done = true;
     }
+    delay(display_update_interval_s() * 1000);
   }
-  next_view++;
 }
 #endif // DEMO_MODE
 
-TaskHandle_t serial_input_task_handle;
-
 static void create_initial_tasks() {
-  // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
-  // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
-  // interrupt driven.
-  //
-  // Maybe spin this off as two different tasks, then, with an eye toward eventually
-  // getting rid of the PIR task.
-  //
-  // For the I2C sensors this must obtain the lock on the I2C bus, if the Arduino
-  // layer does not handle that properly.
-  sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
+  if (xTaskCreateUniversal(sensor_reader_task,
+                           "sensor-read",
+                           /* stackDepthInWords= */ 1024,
+                           &snappy,
+                           /* priority= */ 1,
+                           &sensor_read_task_handle,
+                           ARDUINO_RUNNING_CORE) != pdPASS) {
+    enter_end_state("Sensor task", true);
+  }
 #ifdef SERIAL_SERVER
   // There should only ever be one task that reads from the serial input.
-  if (xTaskCreatePinnedToCore(serial_input_reader_task,
-                              "rdln-serialsrv",
-                              /* stackDepthInWords= */ 2048, 
-                              new CommandHandler(/* output_stream= */ &Serial), 
-                              /* priority= */ 0, 
-                              &serial_input_task_handle,
-                              /* core= */ 1) != pdPASS) {
+  if (xTaskCreateUniversal(serial_input_reader_task,
+                           "rdln-serialsrv",
+                           /* stackDepthInWords= */ 1024, 
+                           new CommandHandler(/* output_stream= */ &Serial), 
+                           /* priority= */ 1, 
+                           &serial_input_task_handle,
+                           ARDUINO_RUNNING_CORE) != pdPASS) {
     enter_end_state("Serial server task", true);
   };
 #endif
 #ifdef DEMO_MODE
-  // This task must obtain a lock on the I2C bus if the Arduino layer does not
-  // handle that properly.
-  sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
+  if (xTaskCreateUniversal(slideshow_task,
+                              "slideshow",
+                              /* stackDepthInWords= */ 1024, 
+                              &snappy, 
+                              /* priority= */ 1, 
+                              &slideshow_task_handle,
+                              ARDUINO_RUNNING_CORE) != pdPASS) {
+    enter_end_state("Slideshow task", true);
+  };
 #endif // DEMO_MODE
 #ifdef MQTT_UPLOAD
+  if (xTaskCreateUniversal(mqtt_capture_task,
+                              "mqtt-capture",
+                              /* stackDepthInWords= */ 1024, 
+                              &snappy, 
+                              /* priority= */ 1, 
+                              &mqtt_capture_task_handle,
+                              ARDUINO_RUNNING_CORE) != pdPASS) {
+    enter_end_state("MQTT capture task", true);
+  };
   sched_microtask_after(new StartMqttTask, 0);
   sched_microtask_after(new MqttCommsTask, 0);
-  sched_microtask_periodically(new CaptureSensorsForMqttTask, mqtt_capture_interval_s() * 1000);
 #endif
 #ifdef WEB_UPLOAD
   sched_microtask_periodically(new WebUploadTask, web_upload_interval_s() * 1000);

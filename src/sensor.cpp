@@ -146,8 +146,26 @@ String format_readings_as_json(const SnappySenseData& data) {
   return buf;
 }
 
-void ReadSensorsTask::execute(SnappySenseData* data) {
-  get_sensor_values(data);
+// A FreeRTOS task that reads the device sensors and stores the readings in
+// the readings in a designated object.
+//
+// Synchronization:
+// - The device level must itself ensure synchronization around access to the
+//   sensors and their busses.
+// - The data object is locked here, if necessary
+
+TaskHandle_t sensor_read_task_handle;
+
+void sensor_reader_task(void* parameter /* SnappySenseData* */) {
+  auto* data = reinterpret_cast<SnappySenseData*>(parameter);
+  log("Starting sensor reader task\n");
+  for (;;) {
+    if (device_enabled()) {
+      // TODO: Lock/unlock the object if necessary
+      get_sensor_values(data);
+    }
+    delay(sensor_poll_interval_s() * 1000);
+  }
 }
 
 void EnableDeviceTask::execute(SnappySenseData*) {

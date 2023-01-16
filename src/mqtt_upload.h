@@ -8,13 +8,6 @@
 #ifdef MQTT_UPLOAD
 #include "sensor.h"
 
-// Perform MQTT work.  Returns the time to delay (in seconds) before
-// calling this function again.  The function is robust: if there is
-// no outgoing traffic and not enough time has passed since checking
-// for incoming traffic, it does nothing, and returns the appropriate
-// wait time.
-//unsigned long perform_mqtt_step();
-
 // A task that sets the mqtt capture interval.
 class SetMqttIntervalTask final : public MicroTask {
   unsigned interval_s;
@@ -55,18 +48,9 @@ public:
   void execute(SnappySenseData*) override;
 };
 
-// This captures the data from the sensor model into a message which it
-// then enqueues for upload by the comms task.
-class CaptureSensorsForMqttTask final : public MicroTask {
-public:
-  const char* name() override {
-    return "MQTT capture";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData*) override;
-};
+extern TaskHandle_t mqtt_capture_task_handle;
+void mqtt_capture_task(void* parameter /* SnappySenseData* */);
+
 #endif // MQTT_UPLOAD
 
 #endif // !mqtt_upload_h_included

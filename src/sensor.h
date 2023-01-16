@@ -99,17 +99,10 @@ extern SnappyMetaDatum snappy_metadata[];
 
 String format_readings_as_json(const SnappySenseData& data);
 
-// This task is used both for periodic reading and one-shot reading.
-class ReadSensorsTask final : public MicroTask {
-public:
-  const char* name() override {
-    return "Read sensors";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData* data) override;
-};
+// Read the sensors.  This is used for periodic readings primarily, but it receives
+// an event to wake it up when an interactive command is entered to read sensors.
+extern TaskHandle_t sensor_read_task_handle;
+void sensor_reader_task(void* parameter /* SnappySenseData* */);
 
 // A one-shot task that enables or disables the device.  When the device is disabled,
 // tasks that respond `true` to only_when_device_enabled() are skipped.

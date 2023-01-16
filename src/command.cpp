@@ -33,21 +33,6 @@ void CommandHandler::handle(String cmd) {
   output->printf("Unrecognized command [%s]\n", cmd.c_str());
 }
 
-#if 0
-void ProcessCommandTask::execute(SnappySenseData* data) {
-  String w = get_word(cmd, 0);
-  if (!w.isEmpty()) {
-    for (Command* c = commands; c->command != nullptr; c++ ) {
-      if (strcmp(c->command, w.c_str()) == 0) {
-        c->handler(cmd, *data, output);
-        return;
-      }
-    }
-  }
-  output->printf("Unrecognized command [%s]\n", cmd.c_str());
-}
-#endif
-
 static void cmd_hello(const String& cmd, const SnappySenseData&, Stream* out) {
   String arg = get_word(cmd, 1);
   if (!arg.isEmpty()) {
@@ -81,18 +66,29 @@ static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) 
 }
 
 static void cmd_poweron(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new PowerOnTask, 0);
+//  sched_microtask_after(new PowerOnTask, 0);
   out->println("Peripheral power turned on");
 }
 
 static void cmd_poweroff(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new PowerOffTask, 0);
+//  sched_microtask_after(new PowerOffTask, 0);
   out->println("Peripheral power turned off");
 }
 
 static void cmd_read(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new ReadSensorsTask, 0);
-  out->println("Sensor measurements gathered");
+  // TODO: Send a notification to the sensor task to wake it up.
+  // For this we must pass the data*.  Maybe there needs to be some locking.
+  // The notification must wake the task even if it is sleeping waiting for a timer
+  // to expire.  It's possible that vTaskDelay() is not the thing to use for
+  // suspension, instead vTaskSuspend() after setting up some kind of event
+  // that executes vTaskResume(); then we can call vTaskResume() here too.
+  //
+  // The easy answer is probably to have a known timer for this task
+  // and then to reset it from the command so that it expires immediately.  Most
+  // plausibly this would be a one-shot timer that we reset to the usual interval
+  // after processing it.
+//  sched_microtask_after(new ReadSensorsTask, 0);
+//  out->println("Sensor measurements gathered");
 }
 
 static void cmd_view(const String& cmd, const SnappySenseData& data, Stream* out) {

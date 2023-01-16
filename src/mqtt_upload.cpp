@@ -93,23 +93,37 @@ void StartMqttTask::execute(SnappySenseData*) {
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
-  // FIXME: Issue 19: Number 0 is mostly bogus data so skip it
-  if (data->sequence_number == 0) {
-    return;
+extern TaskHandle_t mqtt_capture_task_handle;
+
+void mqtt_capture_task(void* parameter /* SnappySenseData* */) {
+  auto* data = reinterpret_cast<SnappySenseData*>(parameter);
+  for (;;) {
+    // TODO: Mutual exclusion?  The following code depends on:
+    // - tasks not being preempted
+    // - tasks all running on the same core
+    // If these are violated then there's a race on the fields of *data, and on
+    // the mqtt message queue.
+    if (device_enabled()) {
+
+      // FIXME: Issue 19: Number 0 is mostly bogus data so skip it
+      if (data->sequence_number == 0) {
+        return;
+      }
+
+      String topic;
+      String body;
+
+      topic += "snappy/reading/";
+      topic += mqtt_device_class();
+      topic += "/";
+      topic += mqtt_device_id();
+
+      body = format_readings_as_json(*data);
+
+      mqtt_enqueue(std::move(topic), std::move(body));
+    }
+    delay(mqtt_capture_interval_s() * 1000);
   }
-
-  String topic;
-  String body;
-
-  topic += "snappy/reading/";
-  topic += mqtt_device_class();
-  topic += "/";
-  topic += mqtt_device_id();
-
-  body = format_readings_as_json(*data);
-
-  mqtt_enqueue(std::move(topic), std::move(body));
 }
 
 // The MqttCommsTask will re-enqueue itself with the new deadline.
