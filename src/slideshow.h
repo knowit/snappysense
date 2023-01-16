@@ -9,7 +9,7 @@
 #include "sensor.h"
 
 class SlideshowTask final : public MicroTask {
-  // -1 is the splash screen; values 0..whatever refer to the entries in the 
+  // -1 means the splash screen; values 0..whatever refer to the entries in the 
   // SnappyMetaData array.
   int next_view = -1;
 public:

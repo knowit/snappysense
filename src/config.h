@@ -6,6 +6,9 @@
 #define config_h_included
 
 #include "main.h"
+#include "microtask.h"
+#include "serial_server.h"
+#include "util.h"
 
 // Frequency of sensor readings.
 //
@@ -114,8 +117,18 @@ unsigned long web_command_poll_interval_s();
 #endif
 
 #ifdef INTERACTIVE_CONFIGURATION
-// See documentation in main.h
-void interactive_configuration(Stream* io);
+class ReadSerialConfigInputTask final : public ReadSerialInputTask {
+  enum {
+    RUNNING,
+    COLLECTING,
+  } state = RUNNING;
+  List<String> config_lines;
+public:
+  const char* name() override {
+    return "Serial server config input";
+  }
+  void perform() override;
+};
 #endif
 
 // Read configuration from some nonvolatile source, or revert to a default.

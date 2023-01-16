@@ -16,7 +16,7 @@
 
 class ReadSerialInputTask : public MicroTask {
 protected:
-  String buf;
+  String line;
   virtual void perform() = 0;
 public:
   void execute(SnappySenseData*) override;
@@ -27,16 +27,6 @@ class ReadSerialCommandInputTask final : public ReadSerialInputTask {
 public:
   const char* name() override {
     return "Serial server command input";
-  }
-  void perform() override;
-};
-#endif
-
-#ifdef INTERACTIVE_CONFIGURATION
-class ReadSerialConfigInputTask final : public ReadSerialInputTask {
-public:
-  const char* name() override {
-    return "Serial server config input";
   }
   void perform() override;
 };

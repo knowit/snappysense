@@ -62,73 +62,51 @@
 // Currently only one copy of sensor data globally but the code's properly parameterized and
 // there could be several of these, useful in a threaded world or when snapshots of the data
 // are useful.
-static SnappySenseData snappy;
 
-// Defined below all the task types
-static void create_initial_tasks();
-#ifdef INTERACTIVE_CONFIGURATION
-static void create_configuration_tasks();
-#endif
+static SnappySenseData snappy;
 
 void setup() {
   bool do_interactive_configuration = false;
   device_setup(&do_interactive_configuration);
   log("SnappySense ready!\n");
 
-  // Serial port and display are enabled now.
+  // Serial port and display are up now.
 
   // Always show the splash on startup.
   show_splash();
   delay(1000);
 
-  // Load config from nonvolatile memory, if available, otherwise use
-  // default values.
+  // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
 
+  // We are up.  Choose between config mode and normal mode.
+  
 #ifdef INTERACTIVE_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
-    create_configuration_tasks();
+    Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
+    Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
+    sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
+    // TODO: schedule a wifi task
     log("Configuration is running!\n");
     return;
   }
 #endif
 
-  // We are up.
+  // Normal mode.
+
 #ifdef TIMESTAMP
+  // Configure time first.
   // TODO: Issue 15: Is this perhaps a task?  If it fails (b/c no wifi), it should be repeated
   // until it works, but it should not block other things from happening I think.
   configure_time();
+  delay(1000);
 #endif
-  create_initial_tasks();
-  log("SnappySense running!\n");
-}
 
-// The system is constructed around a set of microtasks layered on top of the
-// Arduino runloop.  See microtask.h for more documentation.
+  // Configure tasks.
 
-void loop() {
-#ifdef TEST_MEMS
-  test_mems();
-#else
-  unsigned long wait_time_ms = run_scheduler(&snappy);
-  bool power_down = wait_time_ms >= 60*1000;
-  if (power_down) {
-    log("Power down: %d seconds to wait\n", wait_time_ms / 1000);
-    power_peripherals_off();
-  }
-  delay(wait_time_ms);
-  if (power_down) {
-    log("Power up\n");
-    power_peripherals_on();
-    show_splash();
-  }
-#endif
-}
-
-static void create_initial_tasks() {
-  // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
-  // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
+  // TODO: Issue 9: This task works for most sensors but not for PIR.  We don't want to
+  // poll as often as PIR needs us to (except in slideshow mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
@@ -148,12 +126,25 @@ static void create_initial_tasks() {
 #ifdef SLIDESHOW_MODE
   sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
 #endif // SLIDESHOW_MODE
+
+  log("SnappySense running!\n");
 }
 
-#ifdef INTERACTIVE_CONFIGURATION
-static void create_configuration_tasks() {
-  sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
-  // schedule a wifi task, maybe
-  // schedule a bluetooth task, maybe
-}
+void loop() {
+#ifdef TEST_MEMS
+  test_mems();
+#else
+  unsigned long wait_time_ms = run_scheduler(&snappy);
+  bool power_down = wait_time_ms >= 60*1000;
+  if (power_down) {
+    log("Power down: %u seconds to wait\n", (unsigned)(wait_time_ms / 1000));
+    power_peripherals_off();
+  }
+  delay(wait_time_ms);
+  if (power_down) {
+    log("Power up\n");
+    power_peripherals_on();
+    show_splash();
+  }
 #endif
+}

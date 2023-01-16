@@ -15,34 +15,20 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
     }
     if (ch == '\r' || ch == '\n') {
       // End of line (we handle CRLF by handling CR and ignoring blank lines)
-      if (buf.isEmpty()) {
+      if (line.isEmpty()) {
         continue;
       }
       perform();
-      buf.clear();
+      line.clear();
       continue;
     }
-    buf += (char)ch;
+    line += (char)ch;
   }
 }
 
 #ifdef SERIAL_SERVER
 void ReadSerialCommandInputTask::perform() {
-  sched_microtask_after(new ProcessCommandTask(buf, &Serial), 0);
-}
-#endif
-
-#ifdef INTERACTIVE_CONFIGURATION
-void ReadSerialConfigInputTask::perform() {
-  // FIXME
-  // Unlike command processing, we don't want to fork off a separate task for
-  // each line read, because these are not quite independent.  But perhaps the
-  // config processing state can be kept in an object shared among the tasks.
-  // This would be meaningful since it could then be shared among the different
-  // input sources too.
-  //    interactive_configuration(&Serial);
-  //    enter_end_state("Press reset button!");
-  abort();
+  sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
 }
 #endif
 

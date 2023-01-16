@@ -13,13 +13,13 @@ void set_log_stream(Stream* output);
 
 // Printf-like formatting but restricted for now to %s, %d, %u, %f and %c.  Don't be fancy!
 // %c prints the character if printable, otherwise the ascii code.
-void log(const char* fmt, ...);
+void log(const char* fmt, ...) __attribute__ ((format (printf, 1, 2)));
 void va_log(const char* fmt, va_list args);
 #else
 static inline void set_log_stream(Stream* output) {
   /* Nothing */
 }
-static inline void log(const char* fmt, ...) {
+static inline void log(const char* fmt, ...) __attribute__ ((format (printf, 1, 2))) {
   /* Nothing */
 }
 static inline void va_log(const char* fmt, va_list) {

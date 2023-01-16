@@ -41,6 +41,7 @@ enum ClientState {
 };
 
 struct WebClientState {
+  // FIXME: Use List<>
   WebClientState* next = nullptr;
   ClientState state = TEXT;
   String request;

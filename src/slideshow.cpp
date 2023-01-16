@@ -14,7 +14,7 @@ void SlideshowTask::execute(SnappySenseData* data) {
       // At end, wrap around
       next_view = -1;
     } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field not for SLIDESHOW_MODE display
+      // Field is not for SLIDESHOW_MODE display
       next_view++;
     } else {
       char buf[32];

@@ -69,7 +69,7 @@
 
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-//#define SERIAL_SERVER
+#define SERIAL_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
@@ -96,10 +96,6 @@
 
 #if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
 # define SNAPPY_SERIAL_LINE
-#endif
-
-#if defined(SERIAL_SERVER) && defined(INTERACTIVE_CONFIGURATION)
-# error "Contention for the serial line!"
 #endif
 
 #if !defined(DEVELOPMENT)
