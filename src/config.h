@@ -6,6 +6,9 @@
 #define config_h_included
 
 #include "main.h"
+#include "microtask.h"
+#include "serial_server.h"
+#include "util.h"
 
 // Frequency of sensor readings.
 //
@@ -89,17 +92,17 @@ const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif
 
-#ifdef DEMO_MODE
-// Note, DEMO_MODE will keep the device continually on.
-unsigned long display_update_interval_s();
+#ifdef SLIDESHOW_MODE
+// Note, SLIDESHOW_MODE will keep the device continually on.
+unsigned long slideshow_update_interval_s();
 #endif
 
-#ifdef SERIAL_SERVER
+#ifdef SNAPPY_SERIAL_LINE
 // How long to wait between looking for input on the serial channel.
 // This is typically a pretty low value.
 //
-// Note, SERIAL_SERVER will keep the device continually on.
-unsigned long serial_command_poll_interval_s();
+// Note, SNAPPY_SERIAL_LINE services will keep the device continually on.
+unsigned long serial_line_poll_interval_s();
 #endif
 
 #ifdef WEB_SERVER
@@ -114,8 +117,18 @@ unsigned long web_command_poll_interval_s();
 #endif
 
 #ifdef INTERACTIVE_CONFIGURATION
-// See documentation in main.h
-void interactive_configuration(Stream* io);
+class ReadSerialConfigInputTask final : public ReadSerialInputTask {
+  enum {
+    RUNNING,
+    COLLECTING,
+  } state = RUNNING;
+  List<String> config_lines;
+public:
+  const char* name() override {
+    return "Serial server config input";
+  }
+  void perform() override;
+};
 #endif
 
 // Read configuration from some nonvolatile source, or revert to a default.

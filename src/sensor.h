@@ -85,7 +85,7 @@ struct SnappyMetaDatum {
   // The icon may be null, otherwise it's a pointer to a bitmap
   const unsigned char* icon;
 
-  // `display` is for the unit's display when running DEMO_MODE, it loses some information.
+  // `display` is for the unit's display when running SLIDESHOW_MODE, it loses some information.
   // This may be null, if it is it's because we don't want to display this.
   void (*display)(const SnappySenseData& data, char* buf, char* buflim);
 

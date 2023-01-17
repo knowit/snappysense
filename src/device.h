@@ -30,7 +30,7 @@ void show_splash();
 // Print the message on the device's builtin display.
 void render_text(const char* value);
 
-#ifdef DEMO_MODE
+#ifdef SLIDESHOW_MODE
 // Print a reading on the display with the accompanying bitmap and unit description.
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units);
 #endif

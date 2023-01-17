@@ -2,7 +2,7 @@
 
 #include "serial_server.h"
 
-#ifdef SERIAL_SERVER
+#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
 
 #include "command.h"
 
@@ -15,15 +15,21 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
     }
     if (ch == '\r' || ch == '\n') {
       // End of line (we handle CRLF by handling CR and ignoring blank lines)
-      if (buf.isEmpty()) {
+      if (line.isEmpty()) {
         continue;
       }
-      sched_microtask_after(new ProcessCommandTask(buf, &Serial), 0);
-      buf.clear();
+      perform();
+      line.clear();
       continue;
     }
-    buf += (char)ch;
+    line += (char)ch;
   }
 }
 
-#endif // SERIAL_SERVER
+#ifdef SERIAL_SERVER
+void ReadSerialCommandInputTask::perform() {
+  sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
+}
+#endif
+
+#endif // SERIAL_SERVER || INTERACTIVE_CONFIGURATION

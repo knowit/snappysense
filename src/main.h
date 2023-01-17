@@ -62,14 +62,14 @@
 // In this mode, the display is updated frequently with readings.  The device and
 // display are on continually, and the device uses a lot of power.  It is useful in
 // production only when we can count on a non-battery power source.
-#define DEMO_MODE
+#define SLIDESHOW_MODE
 
 // The following are mostly useful during development and would not normally be
 // enabled in production.
 
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-//#define SERIAL_SERVER
+#define SERIAL_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
@@ -79,14 +79,21 @@
 // commands, just ask for / or /help to see a directory of the possible requests.
 //#define WEB_SERVER
 
-// On Hardware 1.0.0 this requires all wifi functionality to be disabled
+// (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
+// what you're looking at.
+//
+// Note, on Hardware 1.0.0 this requires all wifi functionality to be disabled.
 //#define TEST_MEMS
+
+// (Obscure) This sets the power-off interval artificially low so that it's
+// easier to test it during development.
+//#define TEST_POWER_MANAGEMENT
 
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP)
+#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(INTERACTIVE_CONFIGURATION)
 # define SNAPPY_WIFI
 #endif
 
@@ -94,9 +101,13 @@
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
+#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
+# define SNAPPY_SERIAL_LINE
+#endif
+
 #if !defined(DEVELOPMENT)
-# ifdef DEMO_MODE
-#  warning "DEMO_MODE not usually enabled in production"
+# ifdef SLIDESHOW_MODE
+#  warning "SLIDESHOW_MODE not usually enabled in production"
 # endif
 # ifdef SERIAL_SERVER
 #  warning "SERIAL_SERVER not usually enabled in production"
@@ -110,6 +121,13 @@
 # ifdef TEST_MEMS
 #  error "TEST_MEMS is incompatible with production mode"
 # endif
+#endif
+
+#if defined(TEST_POWER_MANAGEMENT) && (defined(SLIDESHOW_MODE) || \
+                                       defined(DEVELOPMENT) || \
+                                       defined(SNAPPY_SERIAL_LINE) || \
+                                       defined(SNAPPY_WEB_SERVER))
+# error "Power management test won't work when the device is mostly busy"
 #endif
 
 #ifdef HARDWARE_1_0_0

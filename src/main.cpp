@@ -6,10 +6,10 @@
 //
 // SnappySense can be compile-time configured to several modes, in main.h.  These are:
 //
-//  - DEMO_MODE, in which the device reads the sensors often, keeps the display on,
+//  - SLIDESHOW_MODE, in which the device reads the sensors often, keeps the display on,
 //    and displays the sensor variables on the display in a never-ending loop.
 //    Demo mode is power-hungry.
-//  - !DEMO_MODE, in which the device reads the sensors much less often and turns
+//  - !SLIDESHOW_MODE, in which the device reads the sensors much less often and turns
 //    off the display and the peripherals when they are not needed.  This mode
 //    conserves power (relatively).
 //  - DEVELOPER mode, which can be combined with the other two modes and which 
@@ -55,121 +55,62 @@
 #include "sensor.h"
 #include "serial_server.h"
 #include "snappytime.h"
+#include "slideshow.h"
 #include "web_server.h"
 #include "web_upload.h"
-
-#ifdef DEMO_MODE
-void show_next_view();
-#endif
 
 // Currently only one copy of sensor data globally but the code's properly parameterized and
 // there could be several of these, useful in a threaded world or when snapshots of the data
 // are useful.
-static SnappySenseData snappy;
 
-// Defined below all the task types
-static void create_initial_tasks();
+static SnappySenseData snappy;
 
 void setup() {
   bool do_interactive_configuration = false;
   device_setup(&do_interactive_configuration);
   log("SnappySense ready!\n");
 
-  // Serial port and display are enabled now.
+  // Serial port and display are up now.
 
-  // Always show the splash on startup.
+  // Always show the splash on startup.  The delay is for aesthetic reasons - it means
+  // the display will not immediately be cleared by other operations.
   show_splash();
   delay(1000);
 
-  // Load config from nonvolatile memory, if available, otherwise use
-  // default values.
+  // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
+
+  // We are up.  Choose between config mode and normal mode.
 
 #ifdef INTERACTIVE_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
-    interactive_configuration(&Serial);
-    enter_end_state("Press reset button!");
+    Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
+    Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
+    sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
+    // TODO: schedule a wifi task
+    log("Configuration is running!\n");
+    return;
   }
 #endif
 
-  // We are up.
+  // Normal mode.
+
 #ifdef TIMESTAMP
+  // Configure time first.
   // TODO: Issue 15: Is this perhaps a task?  If it fails (b/c no wifi), it should be repeated
   // until it works, but it should not block other things from happening I think.
   configure_time();
 #endif
-  create_initial_tasks();
-  log("SnappySense running!\n");
-}
 
-// The system is constructed around a set of microtasks layered on top of the
-// Arduino runloop.  See microtask.h for more documentation.
+  // Configure tasks.
 
-void loop() {
-#ifdef TEST_MEMS
-  test_mems();
-#else
-  unsigned long wait_time_ms = run_scheduler(&snappy);
-  bool power_down = wait_time_ms >= 60*1000;
-  if (power_down) {
-    log("Power down: %d seconds to wait\n", wait_time_ms / 1000);
-    power_peripherals_off();
-  }
-  delay(wait_time_ms);
-  if (power_down) {
-    log("Power up\n");
-    power_peripherals_on();
-    show_splash();
-  }
-#endif
-}
-
-#ifdef DEMO_MODE
-class NextViewTask final : public MicroTask {
-  // -1 is the splash screen; values 0..whatever refer to the entries in the 
-  // SnappyMetaData array.
-  int next_view = -1;
-public:
-  const char* name() override {
-    return "Next view";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData* data) override;
-};
-
-void NextViewTask::execute(SnappySenseData* data) {
-  bool done = false;
-  while (!done) {
-    if (next_view == -1) {
-      show_splash();
-      done = true;
-    } else if (snappy_metadata[next_view].json_key == nullptr) {
-      // At end, wrap around
-      next_view = -1;
-    } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field not for demo_mode display
-      next_view++;
-    } else {
-      char buf[32];
-      snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
-      render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
-      done = true;
-    }
-  }
-  next_view++;
-}
-#endif // DEMO_MODE
-
-static void create_initial_tasks() {
-  // TODO: Issue 9: This works for most sensors but not for PIR.  We don't want to
-  // poll as often as PIR needs us to (except in demo mode), so PIR needs to become
+  // TODO: Issue 9: This task works for most sensors but not for PIR.  We don't want to
+  // poll as often as PIR needs us to (except in slideshow mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
-  sched_microtask_periodically(new ReadSerialInputTask, serial_command_poll_interval_s() * 1000);
+  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_line_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);
@@ -182,7 +123,28 @@ static void create_initial_tasks() {
 #ifdef WEB_SERVER
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
-#ifdef DEMO_MODE
-  sched_microtask_periodically(new NextViewTask, display_update_interval_s() * 1000);
-#endif // DEMO_MODE
+#ifdef SLIDESHOW_MODE
+  sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
+#endif // SLIDESHOW_MODE
+
+  log("SnappySense running!\n");
+}
+
+void loop() {
+#ifdef TEST_MEMS
+  test_mems();
+#else
+  unsigned long wait_time_ms = run_scheduler(&snappy);
+  bool power_down = wait_time_ms >= 60*1000;
+  if (power_down) {
+    log("Power down: %u seconds to wait\n", (unsigned)(wait_time_ms / 1000));
+    power_peripherals_off();
+  }
+  delay(wait_time_ms);
+  if (power_down) {
+    log("Power up\n");
+    power_peripherals_on();
+    show_splash();
+  }
+#endif
 }

@@ -240,7 +240,7 @@ void show_splash() {
   display.display();
 }
 
-#ifdef DEMO_MODE
+#ifdef SLIDESHOW_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units) {
   if (!peripherals_powered_on) {
     return;

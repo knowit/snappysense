@@ -86,6 +86,7 @@ WiFiHolder connect_to_wifi() {
     wl_status_t stat = WiFi.begin(ap, pw);
     int attempts = 0;
     while (stat != WL_CONNECTED && attempts < 5) {
+      // TODO: Embedded delay
       delay(500);
       stat = WiFi.status();
       attempts++;
@@ -104,6 +105,7 @@ WiFiHolder connect_to_wifi() {
   }
   log("WiFi: Failed to connect to any access point\n");
   render_text("No WiFi\n");
+  // TODO: Embedded delay
   delay(1000);
   return WiFiHolder();
 }

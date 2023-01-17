@@ -3,11 +3,9 @@
 
 #include "main.h"
 
-// The system is structured around microtasks that are run on top of the Arduino runloop;
-// this is almost a little silly - making them FreeRTOS task would have been more sensible - but
-// OK for a PoC.
+// The system is structured around microtasks that are run on top of the Arduino runloop.
 //
-// The microtasks are supposed to simplify the system in three ways: it moves decisions about
+// The microtasks system simplifies the system in three ways: it moves decisions about
 // what to schedule out of the main loop and into the parts of the system that contain the
 // logic for those decisions, it discourages hiding delays down in the subsystems
 // where they would just block other things from happening, and it encourages a simple architecture
@@ -52,12 +50,12 @@ public:
   // Frequently subtasks will carry data that require deletion.
   virtual ~MicroTask() {}
 
+  // A unique name for the task type, used for debugging.
   virtual const char* name() = 0;
 
-  // Perform the action.
-  // For a task that is scheduled one-shot, execute() is explicitly allowed to call
-  // sched_microtask_after() with the same task and a new deadline, and it will be
-  // rescheduled as expected.
+  // Perform the action.  For a task that is scheduled one-shot, execute() is explicitly
+  // allowed to call sched_microtask_after() with the same task and a new deadline, and 
+  // it will be rescheduled as expected.
   virtual void execute(SnappySenseData*) = 0;
 
   // Guard: Perform the action only when the device is enabled.
@@ -66,7 +64,9 @@ public:
   }
 };
 
-// Returns the delay, in ms, until the next task should be run
+// Returns the delay, in ms, until the next task should be run.  This should be called
+// from the Arduino loop(), which should then delay() as long as the return value indicates
+// before returning to its caller.
 extern unsigned long run_scheduler(SnappySenseData* data);
 
 // This will schedule the task to be run `delay_ms` from now.

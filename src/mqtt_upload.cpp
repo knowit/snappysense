@@ -46,14 +46,15 @@
 // calculation.
 static const size_t MQTT_BUFFER_SIZE = 1024;
 
-static struct MqttMessage {
+struct MqttMessage {
   MqttMessage(String&& topic, String&& message)
-    : topic(std::move(topic)), message(std::move(message)), next(nullptr)
+    : topic(std::move(topic)), message(std::move(message))
   {}
   String topic;
   String message;
-  MqttMessage* next;
-} *mqtt_queue, *mqtt_last;
+};
+
+static List<MqttMessage> mqtt_queue;
 
 static struct MqttState {
   MqttState() : holder(false), mqtt(nullptr), work_done(false) {}
@@ -64,13 +65,7 @@ static struct MqttState {
 } *mqtt_state;
 
 static void mqtt_enqueue(String&& topic, String&& body) {
-  auto* p = new MqttMessage(std::move(topic), std::move(body));
-  if (mqtt_queue == nullptr) {
-    mqtt_queue = mqtt_last = p;
-  } else {
-    mqtt_last->next = p;
-    mqtt_last = p;
-  }
+  mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
 }
 
 void StartMqttTask::execute(SnappySenseData*) {
@@ -138,8 +133,9 @@ void MqttCommsTask::execute(SnappySenseData*) {
       return;
     }
   }
-  if (mqtt_queue != nullptr) {
+  if (!mqtt_queue.is_empty()) {
     send();
+    // TODO: Undocumented embedded delay
     delay(100);
     last_work = millis();
   }
@@ -182,6 +178,7 @@ bool MqttCommsTask::connect() {
   log("Mqtt: Connecting to AWS IOT ");
   while (!mqtt_state->mqtt.connect(mqtt_endpoint_host(), mqtt_endpoint_port())) {
     log(".");
+    // TODO: Embedded delay
     delay(100);
   }
   if(!mqtt_state->mqtt.connected()){
@@ -205,33 +202,33 @@ bool MqttCommsTask::connect() {
 
 void MqttCommsTask::disconnect() {
   mqtt_state->mqtt.stop();
+  // TODO: Oops, this probably reaps the wifi before the client is taken down.
   mqtt_state->holder = WiFiHolder(false);
 }
 
 void MqttCommsTask::send() {
-  while (mqtt_queue != nullptr) {
-    size_t msg_len = mqtt_queue->message.length();
+  while (!mqtt_queue.is_empty()) {
+    MqttMessage& first = mqtt_queue.peek_front();
+    size_t msg_len = first.message.length();
     if (msg_len > MQTT_BUFFER_SIZE) {
-      log("Mqtt: Message too long!\n");
+      log("Mqtt: Message too long: %d!\n", msg_len);
       continue;
     }
 
-    mqtt_state->mqtt.beginMessage(mqtt_queue->topic.c_str(), false, 1, 0);
-    if (mqtt_state->mqtt.write((uint8_t*)mqtt_queue->message.c_str(), msg_len) != msg_len) {
+    // TODO: Status code!
+    mqtt_state->mqtt.beginMessage(first.topic.c_str(), false, 1, 0);
+    // TODO: Status code!
+    if (mqtt_state->mqtt.write((uint8_t*)first.message.c_str(), msg_len) != msg_len) {
       log("Mqtt: Message was chopped by mqtt layer!\n");
     }
+    // TODO: Status code!
     mqtt_state->mqtt.endMessage();
 
     // FIXME: Issue 20: We could fail to send because the connection drops.  In that
     // case, detect the error and do not dequeue the message, but leave it in the buffer
     // for a subsequent attempt and exit the loop here.
 
-    auto* it = mqtt_queue;
-    mqtt_queue = it->next;
-    delete it;
-  }
-  if (mqtt_queue == nullptr) {
-    mqtt_last = nullptr;
+    mqtt_queue.pop_front();
   }
 }
 

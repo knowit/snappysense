@@ -1,10 +1,10 @@
 // SnappySense configuration manager
 
 #include "config.h"
+#include "device.h"
 #include "log.h"
 #include "util.h"
 
-#include <functional>
 #include <Preferences.h>
 
 // Configuration parameters.
@@ -141,16 +141,10 @@ const char* get_string_pref(const char* name) {
 #define MINUTE(s) ((s)*60)
 #define HOUR(s) ((s)*60*60)
 
-//#define POWER_MANAGEMENT_TEST
-
-#if defined(POWER_MANAGEMENT_TEST) && (defined(DEMO_MODE) || defined(DEVELOPMENT) || defined(SNAPPY_COMMAND_PROCESSOR))
-# error "Power management test won't work"
-#endif
-
-#if defined(DEMO_MODE) || defined(DEVELOPMENT)
+#if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
 static const unsigned long SENSOR_POLL_INTERVAL_S = 15;
 #else
-# ifdef POWER_MANAGEMENT_TEST
+# ifdef TEST_POWER_MANAGEMENT
 static const unsigned long SENSOR_POLL_INTERVAL_S = MINUTE(5);
 # else
 static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
@@ -158,11 +152,11 @@ static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
 #endif
 
 #ifdef MQTT_UPLOAD
-# if defined(DEMO_MODE) || defined(DEVELOPMENT)
+# if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
-#  ifdef POWER_MANAGEMENT_TEST
+#  ifdef TEST_POWER_MANAGEMENT
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(5);
 #  else
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = HOUR(1);
@@ -172,8 +166,8 @@ static const unsigned long MQTT_UPLOAD_INTERVAL_S = MQTT_CAPTURE_INTERVAL_S;
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
-#ifdef DEMO_MODE
-static const unsigned long DISPLAY_UPDATE_INTERVAL_S = 4;
+#ifdef SLIDESHOW_MODE
+static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 4;
 #endif
 
 #ifdef WEB_SERVER
@@ -189,8 +183,8 @@ static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
 # endif
 #endif
 
-#ifdef SERIAL_SERVER
-static const unsigned long SERIAL_SERVER_POLL_INTERVAL_S = 1;
+#ifdef SNAPPY_SERIAL_LINE
+static const unsigned long SERIAL_LINE_POLL_INTERVAL_S = 1;
 #endif
 
 static struct {
@@ -305,9 +299,9 @@ const char* mqtt_device_private_key() {
 }
 #endif
 
-#ifdef DEMO_MODE
-unsigned long display_update_interval_s() {
-  return DISPLAY_UPDATE_INTERVAL_S;
+#ifdef SLIDESHOW_MODE
+unsigned long slideshow_update_interval_s() {
+  return SLIDESHOW_UPDATE_INTERVAL_S;
 }
 #endif
 
@@ -321,9 +315,9 @@ unsigned long web_command_poll_interval_s() {
 }
 #endif
 
-#ifdef SERIAL_SERVER
-unsigned long serial_command_poll_interval_s() {
-  return SERIAL_SERVER_POLL_INTERVAL_S;
+#ifdef SNAPPY_SERIAL_LINE
+unsigned long serial_line_poll_interval_s() {
+  return SERIAL_LINE_POLL_INTERVAL_S;
 }
 #endif
 
@@ -374,12 +368,12 @@ void read_configuration() {
 //
 // The configuration language is described by the manual below.
 
-static String evaluate_config(std::function<String()> read_line) {
+static String evaluate_config(List<String>& input) {
   for (;;) {
-    String line = read_line();
-    if (line == "") {
+    if (input.is_empty()) {
       return fmt("Configuration program did not end with `end`");
     }
+    String line = input.pop_front();
     String kwd = get_word(line, 0);
     if (kwd == "end") {
       return String();
@@ -422,14 +416,20 @@ static String evaluate_config(std::function<String()> read_line) {
         return fmt("Missing variable name for 'cert'\n");
       }
       String value;
-      String line = read_line();
+      if (input.is_empty()) {
+        return fmt("Unexpected end of input in config (certificate)");
+      }
+      String line = input.pop_front();
       if (!line.startsWith("-----BEGIN ")) {
         return fmt("Expected -----BEGIN at the beginning of cert");
       }
       value = line;
       value += "\n";
       for (;;) {
-        String line = read_line();
+        if (input.is_empty()) {
+          return fmt("Unexpected end of input in config (certificate)");
+        }
+        String line = input.pop_front();
         value += line;
         value += "\n";
         if (line.startsWith("-----END ")) {
@@ -562,12 +562,24 @@ static void show_cmd(Stream* io) {
     }
   }
 }
+#endif  // INTERACTIVE_CONFIGURATION
 
-void interactive_configuration(Stream* io) {
-  io->print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
-  io->print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
-  for (;;) {
-    String line = blocking_read_nonempty_line(io);
+#ifdef INTERACTIVE_CONFIGURATION
+void ReadSerialConfigInputTask::perform() {
+  auto *io = &Serial;
+  if (state == COLLECTING) {
+    // collecting input for the "config" command in `config_lines`, ending when we've seen
+    // the "end" line.
+    config_lines.add_back(std::move(line));
+    if (get_word(line, 0) == "end") {
+      String result = evaluate_config(config_lines);
+      if (!result.isEmpty()) {
+        io->println(result);
+      }
+      config_lines.clear();
+      state = RUNNING;
+    }
+  } else {
     String cmd = get_word(line, 0);
     if (cmd == "help") {
       if (get_word(line, 1).equals("config")) {
@@ -578,19 +590,17 @@ void interactive_configuration(Stream* io) {
     } else if (cmd == "show") {
       show_cmd(io);
     } else if (cmd == "config") {
-      String result = evaluate_config([&]{ return blocking_read_nonempty_line(io); });
-      if (!result.isEmpty()) {
-        io->println(result);
-      }
+      state = COLLECTING;
     } else if (cmd == "clear") {
       reset_configuration();
     } else if (cmd == "save") {
       save_configuration();
     } else if (cmd == "quit") {
-      break;
+      io->println("PRESS RESET BUTTON");
+      enter_end_state("PRESS RESET BUTTON");
     } else {
       io->printf("Unknown command [%s], try `help`.\n", line.c_str());
     }
   }
 }
-#endif  // INTERACTIVE_CONFIGURATION
+#endif
