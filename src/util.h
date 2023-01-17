@@ -31,9 +31,12 @@ class List {
   struct Node {
     Node(T&& value) : value(std::move(value)) {}
     T value;
-    Node* next;
+    Node* next = nullptr;
   };
 
+  // Invariant: (first == nullptr) == (last == nullptr)
+  // Invariant: first == nullptr || first->next->...->next == last
+  // Invariant: last == nullptr || last->next = nullptr;
   Node* first = nullptr;
   Node* last = nullptr;
 
