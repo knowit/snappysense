@@ -79,8 +79,15 @@
 // commands, just ask for / or /help to see a directory of the possible requests.
 //#define WEB_SERVER
 
-// On Hardware 1.0.0 this requires all wifi functionality to be disabled
+// (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
+// what you're looking at.
+//
+// Note, on Hardware 1.0.0 this requires all wifi functionality to be disabled.
 //#define TEST_MEMS
+
+// (Obscure) This sets the power-off interval artificially low so that it's
+// easier to test it during development.
+//#define TEST_POWER_MANAGEMENT
 
 // END FUNCTIONAL CONFIGURATION
 //
@@ -114,6 +121,13 @@
 # ifdef TEST_MEMS
 #  error "TEST_MEMS is incompatible with production mode"
 # endif
+#endif
+
+#if defined(TEST_POWER_MANAGEMENT) && (defined(SLIDESHOW_MODE) || \
+                                       defined(DEVELOPMENT) || \
+                                       defined(SNAPPY_SERIAL_LINE) || \
+                                       defined(SNAPPY_WEB_SERVER))
+# error "Power management test won't work when the device is mostly busy"
 #endif
 
 #ifdef HARDWARE_1_0_0

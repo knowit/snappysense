@@ -141,16 +141,10 @@ const char* get_string_pref(const char* name) {
 #define MINUTE(s) ((s)*60)
 #define HOUR(s) ((s)*60*60)
 
-//#define POWER_MANAGEMENT_TEST
-
-#if defined(POWER_MANAGEMENT_TEST) && (defined(SLIDESHOW_MODE) || defined(DEVELOPMENT) || defined(SNAPPY_COMMAND_PROCESSOR))
-# error "Power management test won't work"
-#endif
-
 #if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
 static const unsigned long SENSOR_POLL_INTERVAL_S = 15;
 #else
-# ifdef POWER_MANAGEMENT_TEST
+# ifdef TEST_POWER_MANAGEMENT
 static const unsigned long SENSOR_POLL_INTERVAL_S = MINUTE(5);
 # else
 static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
@@ -162,7 +156,7 @@ static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
-#  ifdef POWER_MANAGEMENT_TEST
+#  ifdef TEST_POWER_MANAGEMENT
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(5);
 #  else
 static const unsigned long MQTT_CAPTURE_INTERVAL_S = HOUR(1);
