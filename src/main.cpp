@@ -81,7 +81,7 @@ void setup() {
   read_configuration();
 
   // We are up.  Choose between config mode and normal mode.
-  
+
 #ifdef INTERACTIVE_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
