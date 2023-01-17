@@ -72,7 +72,8 @@ void setup() {
 
   // Serial port and display are up now.
 
-  // Always show the splash on startup.
+  // Always show the splash on startup.  The delay is for aesthetic reasons - it means
+  // the display will not immediately be cleared by other operations.
   show_splash();
   delay(1000);
 
@@ -100,7 +101,6 @@ void setup() {
   // TODO: Issue 15: Is this perhaps a task?  If it fails (b/c no wifi), it should be repeated
   // until it works, but it should not block other things from happening I think.
   configure_time();
-  delay(1000);
 #endif
 
   // Configure tasks.
