@@ -117,7 +117,7 @@ static void cmd_inet(const String& cmd, const SnappySenseData&, Stream* out) {
   out->println("MQTT upload is enabled");
 #endif
 #ifdef WEB_SERVER
-  out->printf("Web server is enabled, inet address %s\n", local_ip_address());
+  out->printf("Web server is enabled, inet address %s\n", local_ip_address().c_str());
 #endif
 }
 
