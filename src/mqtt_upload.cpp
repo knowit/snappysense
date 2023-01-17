@@ -199,38 +199,33 @@ bool MqttCommsTask::connect() {
 
 void MqttCommsTask::disconnect() {
   mqtt_state->mqtt.stop();
+  // TODO: Oops, this probably reaps the wifi before the client is taken down.
   mqtt_state->holder = WiFiHolder(false);
 }
 
 void MqttCommsTask::send() {
-  log("A\n");
   while (!mqtt_queue.is_empty()) {
-    log("B\n");
     MqttMessage& first = mqtt_queue.peek_front();
-    log("C\n");
     size_t msg_len = first.message.length();
-    log("D\n");
     if (msg_len > MQTT_BUFFER_SIZE) {
       log("Mqtt: Message too long: %d!\n", msg_len);
       continue;
     }
-    log("E\n");
 
+    // TODO: Status code!
     mqtt_state->mqtt.beginMessage(first.topic.c_str(), false, 1, 0);
-    log("F\n");
+    // TODO: Status code!
     if (mqtt_state->mqtt.write((uint8_t*)first.message.c_str(), msg_len) != msg_len) {
       log("Mqtt: Message was chopped by mqtt layer!\n");
     }
-    log("G\n");
+    // TODO: Status code!
     mqtt_state->mqtt.endMessage();
-    log("H\n");
 
     // FIXME: Issue 20: We could fail to send because the connection drops.  In that
     // case, detect the error and do not dequeue the message, but leave it in the buffer
     // for a subsequent attempt and exit the loop here.
 
     mqtt_queue.pop_front();
-    log("I\n");
   }
 }
 
