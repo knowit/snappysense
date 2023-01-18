@@ -432,8 +432,10 @@ static String evaluate_config(List<String>& input) {
       if (varname == "") {
         return fmt("Missing variable name for 'set'\n");
       }
-      String value = get_word(line, 2);
-      if (value == "") {
+      // It's legal to use "" as a value, but illegal not to have a value.
+      bool flag = false;
+      String value = get_word(line, 2, &flag);
+      if (!flag) {
         return fmt("Missing value for variable [%s]\n", varname.c_str());
       }
       Pref* p = get_pref(varname.c_str());
