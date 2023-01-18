@@ -1,6 +1,7 @@
 // Common utilities
 
 #include "util.h"
+#include "device.h"
 #include <cstdarg>
 
 String get_word(const String& cmd, int n) {
@@ -78,4 +79,53 @@ String fmt(const char* format, ...) {
   vsnprintf(buf, sizeof(buf), format, args);
   va_end(args);
   return String(buf);
+}
+
+void panic(const char* msg) {
+  log("Panic: %s\n", msg);
+  enter_end_state(msg, true);
+}
+
+static int hexval(char c) {
+  if (c <= '9') {
+    return c - '0';
+  }
+  if (c <= 'Z') {
+    return c - 'A' + 10;
+  }
+  return c - 'a' + 10;
+}
+
+bool get_posted_field(const char** p, String* key, String* value) {
+  const char* q = *p;
+  while (*q && *q != '=') {
+    q++;
+  }
+  if (!*q) {
+    return false;
+  }
+  *key = String(*p, q - *p);
+  q++;
+  const char* start = q;
+  while (*q && *q != '&') {
+    q++;
+  }
+  *value = "";
+  const char *r = start;
+  while (r < q) {
+    if (*r == '+') {
+      *value += ' ';
+      r++;
+    } else if (*r == '%') {
+      *value += (char)((hexval(*(r+1)) << 8) | hexval(*(r+2)));
+      r += 3;
+    } else {
+      *value += *r++;
+    }
+  }
+  if (*q) {
+    q++;
+  }
+  *p = q;
+  return true;
 }

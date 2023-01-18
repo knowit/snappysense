@@ -276,9 +276,8 @@ void render_text(const char* value) {
 void enter_end_state(const char* msg, bool is_error) {
   render_text("Press reset button!");
   Serial.println("Press reset button!");
-  for(;;) {
-
-  }
+  for(;;) { }
+  /*NOTREACHED*/
 }
 
 #ifdef TEST_MEMS
