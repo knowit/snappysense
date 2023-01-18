@@ -59,25 +59,37 @@
 //  - there will be a menu system for configuring the device
 #define INTERACTIVE_CONFIGURATION
 
+// WEB_CONFIGURATION causes a WiFi access point to be created with an SSID
+// printed on the display when the device comes up in config mode (see
+// INTERACTIVE_CONFIGURATION, which is required by WEB_CONFIGURATION).
+// The user can connect to this network and request "/".  This will return
+// an HTML page that contains a form that is submitted with "POST /" and
+// can be used to set some simple parameters in the configuration.
+// (Conflicts with WEB_COMMAND_SERVER.)
+#define WEB_CONFIGURATION
+
 // In this mode, the display is updated frequently with readings.  The device and
 // display are on continually, and the device uses a lot of power.  It is useful in
 // production only when we can count on a non-battery power source.
 #define SLIDESHOW_MODE
 
+// ----------------------------------------------------------------------------
 // The following are mostly useful during development and would not normally be
 // enabled in production.
 
 // With SERIAL_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-#define SERIAL_SERVER
+//#define SERIAL_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
 //#define WEB_UPLOAD
 
-// With WEB_SERVER, the device creates a server on port 8088 and listens for 
-// commands, just ask for / or /help to see a directory of the possible requests.
-//#define WEB_SERVER
+// Simple web server to send commands to the device, obtain data, etc.  The IP address
+// of the device is printed on the serial line and also on the display.  Just ask
+// for / or /help to see a directory of the possible requests.
+// (Conflicts with WEB_CONFIGURATION.)
+//#define WEB_COMMAND_SERVER
 
 // (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
 // what you're looking at.
@@ -92,6 +104,10 @@
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
+
+#if defined(WEB_CONFIGURATION) || defined(WEB_COMMAND_SERVER)
+# define WEB_SERVER
+#endif
 
 #if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(INTERACTIVE_CONFIGURATION)
 # define SNAPPY_WIFI
@@ -115,8 +131,8 @@
 # ifdef WEB_UPLOAD
 #  warning "WEB_UPLOAD not usually enabled in production"
 # endif
-# ifdef WEB_SERVER
-#  warning "WEB_SERVER not usually enabled in production"
+# ifdef WEB_COMMAND_SERVER
+#  warning "WEB_COMMAND_SERVER not usually enabled in production"
 # endif
 # ifdef TEST_MEMS
 #  error "TEST_MEMS is incompatible with production mode"
@@ -128,6 +144,10 @@
                                        defined(SNAPPY_SERIAL_LINE) || \
                                        defined(SNAPPY_WEB_SERVER))
 # error "Power management test won't work when the device is mostly busy"
+#endif
+
+#if defined(WEB_CONFIGURATION) && !defined(INTERACTIVE_CONFIGURATION)
+# error "WEB_CONFIGURATION requires INTERACTIVE_CONFIGURATION."
 #endif
 
 #ifdef HARDWARE_1_0_0

@@ -417,10 +417,11 @@ static String evaluate_config(List<String>& input) {
       save_configuration();
     } else if (kwd == "version") {
       int major, minor, bugfix;
-      if (sscanf(get_word(line, 1).c_str(), "%d.%d,%d", &major, &minor, &bugfix) != 3) {
+      if (sscanf(get_word(line, 1).c_str(), "%d.%d.%d", &major, &minor, &bugfix) != 3) {
         return fmt("Bad statement [%s]\n", line.c_str());
       }
       if (major != MAJOR_VERSION || (major == MAJOR_VERSION && minor > MINOR_VERSION)) {
+        // Ignore the bugfix version for now, but require it in the input
         return fmt("Bad version %d.%d.%d, I'm %d.%d.%d\n",
                    major, minor, bugfix,
                    MAJOR_VERSION, MINOR_VERSION, BUGFIX_VERSION);
@@ -512,7 +513,7 @@ config
     Statement ::= Clear | Version | Save | Set | Cert
     Clear ::= "clear" EOL
       -- This resets all variables
-    Version ::= "version" Major-dot-Minor EOL
+    Version ::= "version" Major-dot-Minor-dot-Bugfix EOL
       -- This optional statement states the version of the firmware that the
       -- configuration was written for.
     Save ::= "save" EOL
@@ -603,8 +604,9 @@ void ReadSerialConfigInputTask::perform() {
   if (state == COLLECTING) {
     // collecting input for the "config" command in `config_lines`, ending when we've seen
     // the "end" line.
+    String cmd = get_word(line, 0);
     config_lines.add_back(std::move(line));
-    if (get_word(line, 0) == "end") {
+    if (cmd == "end") {
       String result = evaluate_config(config_lines);
       if (!result.isEmpty()) {
         io->println(result);

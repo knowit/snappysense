@@ -35,8 +35,10 @@ set http-upload-host ...FIXME...
 # Access point name is per-device (since multiple devices can be active in the same
 # area at the same time).  Something derived from the aws-iot-id is sensible, eg,
 # if aws-iot-id is blahblah then using snappy-blahblah-config here is probably OK,
-# note the name is at most 32 characters.  Using both "snappy-" and "-config" makes
-# it easy to recognize the network but is not required.
+# note the name is at most 32 characters, and it's helpful to keep it <= 20, for
+# display purposes.  Using both "snappy-" and "-config" makes it easy to recognize
+# the network but is not required, and abbreviations like "snp-" and "-cfg" might
+# be just as good.
 set web-config-access-point ...FIXME...
 
 # All of the following except the class comes from AWS IoT.

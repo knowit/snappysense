@@ -1,4 +1,4 @@
-// Support for the device acting as a simple web server, for querying data across HTTP
+// Support for the device acting as a simple web server, for configuration and commands
 
 #ifndef web_server_h_included
 #define web_server_h_included
@@ -13,7 +13,7 @@ struct WebClientState;
 
 class ReadWebInputTask final : public MicroTask {
   WebServerState* state = nullptr;
-  void start();
+  bool start();
   void poll(WebClientState*);
 public:
   const char* name() override {

@@ -12,7 +12,7 @@ If SnappySense is appropriately configured, the readings are uploaded occasional
 
 ## End-user configuration
 
-The SnappySense device can be brought up in end-user configuration mode.  To do this, press and hold the WAKE button on the front of SnappySense and press and release the RESET button on the back.  When SnappySense enters configuration mode, a message on its little screen reads "Configuration mode" along with a network name (usually `snappy-<something>-config`) and an IP address on the form `192.168.x.y`.
+The SnappySense device can be brought up in end-user configuration mode.  To do this, press and hold the WAKE button on the front of SnappySense and press and release the RESET button on the back.  When SnappySense enters configuration mode, a message on its little screen reads "Configuration mode" along with a network name (usually `snappy-<something>-config`) and an IP address on the form `192.168.x.y`.  (If the message reads "No cfg access point" then the factory configuration was faulty.)
 
 On a phone or laptop, connect to the named WiFi network and ignore any errors you may see about the network not providing internet access. Then in a browser on your phone or laptop open a page at `http://192.168.x.y`.  (Be sure not to use `https` at this time.)  You will see a form with configuration options.  Change what you want to change, then press the SUBMIT button to store the options on SnappySense.
 

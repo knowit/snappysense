@@ -12,7 +12,7 @@
 //  - !SLIDESHOW_MODE, in which the device reads the sensors much less often and turns
 //    off the display and the peripherals when they are not needed.  This mode
 //    conserves power (relatively).
-//  - DEVELOPER mode, which can be combined with the other two modes and which 
+//  - DEVELOPER mode, which can be combined with the other two modes and which
 //    allows for interactivity over the serial line, configuration values that are
 //    compiled into the code, more frequent activity, and other things.
 //
@@ -88,7 +88,7 @@ void setup() {
     Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
     Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
     sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
-    // TODO: schedule a wifi task
+    sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
     log("Configuration is running!\n");
     return;
   }
@@ -120,7 +120,7 @@ void setup() {
 #ifdef WEB_UPLOAD
   sched_microtask_periodically(new WebUploadTask, web_upload_interval_s() * 1000);
 #endif
-#ifdef WEB_SERVER
+#ifdef WEB_COMMAND_SERVER
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
 #ifdef SLIDESHOW_MODE
