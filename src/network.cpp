@@ -80,6 +80,8 @@ WiFiHolder::~WiFiHolder() {
 }
 
 WiFiHolder connect_to_wifi() {
+  // TODO: If we fail to bring up the network, we should wait some time before trying again,
+  // otherwise we're just wasting energy.
   if (refcount > 0) {
     return WiFiHolder(true);
   }
