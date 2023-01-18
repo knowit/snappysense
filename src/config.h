@@ -24,10 +24,12 @@ void set_location_name(const char* name);
 // WiFi access point SSID - up to three of them, n=1, 2, or 3.  If the ssid is
 // not defined then the return value will be an empty string, not nullptr.
 const char* access_point_ssid(int n);
+void set_access_point_ssid(int n, const char* val);
 
 // WiFi access point password.  Again n=1, 2, or 3.  If the password is empty
 // then the return value is an empty string, not nullptr.
 const char* access_point_password(int n);
+void set_access_point_password(int n, const char* val);
 
 // The device can be disabled and enabled by an mqtt message or during provisioning.
 // If it is disabled is is still operable (responds to mqtt messages, for one thing)
@@ -115,6 +117,9 @@ int web_server_listen_port();
 // Note, WEB_SERVER will keep the device continually on.
 unsigned long web_command_poll_interval_s();
 #endif
+
+// Save current configuration in nvram.
+void save_configuration();
 
 #ifdef INTERACTIVE_CONFIGURATION
 class ReadSerialConfigInputTask final : public ReadSerialInputTask {

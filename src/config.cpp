@@ -136,6 +136,10 @@ const char* get_string_pref(const char* name) {
   return get_pref(name)->str_value.c_str();
 }
 
+void set_string_pref(const char* name, const char* value) {
+  get_pref(name)->str_value = value;
+}
+
 // Non-configurable preferences
 
 #define MINUTE(s) ((s)*60)
@@ -211,6 +215,10 @@ const char* location_name() {
   return get_string_pref("location");
 }
 
+void set_location_name(const char* name) {
+  set_string_pref("location", name);
+}
+
 const char* access_point_ssid(int n) {
   switch (n) {
     case 1: return get_string_pref("ssid1");
@@ -220,12 +228,28 @@ const char* access_point_ssid(int n) {
   }
 }
 
+void set_access_point_ssid(int n, const char* value) {
+  switch (n) {
+    case 1: set_string_pref("ssid1", value); break;
+    case 2: set_string_pref("ssid2", value); break;
+    case 3: set_string_pref("ssid3", value); break;
+  }
+}
+
 const char* access_point_password(int n) {
   switch (n) {
     case 1: return get_string_pref("password1");
     case 2: return get_string_pref("password2");
     case 3: return get_string_pref("password3");
     default: return "";
+  }
+}
+
+void set_access_point_password(int n, const char* value) {
+  switch (n) {
+    case 1: set_string_pref("password1", value); break;
+    case 2: set_string_pref("password2", value); break;
+    case 3: set_string_pref("password3", value); break;
   }
 }
 
@@ -323,7 +347,7 @@ unsigned long serial_line_poll_interval_s() {
 
 // Provisioning and run-time configuration.
 
-static void save_configuration() {
+void save_configuration() {
   // TODO: Issue 18: In principle the setting could fail due to fragmentation.
   // If so, we might be able to clear the prefs outright and then write
   // all of them again.
@@ -457,8 +481,7 @@ static String evaluate_config(List<String>& input) {
     }
   }
   /*NOTREACHED*/
-  log("Should not happen");
-  abort();
+  panic("Unreachable state in evaluate_config");
 }
 
 #ifdef INTERACTIVE_CONFIGURATION
