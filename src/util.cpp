@@ -34,7 +34,7 @@ String get_word(const String& cmd, int n) {
       if (quoted && cmd[i] == quoted) {
         i++;
         break;
-      } 
+      }
       if (!quoted && isspace(cmd[i])) {
         break;
       }
@@ -117,7 +117,7 @@ bool get_posted_field(const char** p, String* key, String* value) {
       *value += ' ';
       r++;
     } else if (*r == '%') {
-      *value += (char)((hexval(*(r+1)) << 8) | hexval(*(r+2)));
+      *value += (char)((hexval(*(r+1)) << 4) | hexval(*(r+2)));
       r += 3;
     } else {
       *value += *r++;
