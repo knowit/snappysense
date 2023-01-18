@@ -11,10 +11,19 @@
 #include "main.h"
 
 #ifdef TIMESTAMP
-void configure_time();
+#include "microtask.h"
+
 time_t get_time();
 struct tm snappy_local_time();
 String format_time(const struct tm& time);
+
+class ConfigureTimeTask final : public MicroTask {
+public:
+  const char* name() override {
+    return "configure time";
+  }
+  void execute(SnappySenseData*) override;
+};
 #endif
 
 #endif // !snappytime_h_included

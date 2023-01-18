@@ -19,45 +19,37 @@
 static unsigned long timebase;
 static bool time_configured;
 
-void configure_time() {
+static bool configure_time() {
   if (time_configured) {
-    return;
+    return true;
   }
 
-  log("Time: obtaining current time from server\n");
-  {
-    auto holder = connect_to_wifi();
-    if (!holder.is_valid()) {
-      goto failed;
-    }
-    WiFiClient wifiClient;
-    HTTPClient httpClient;
-    // GET /time returns a number, representing the number of seconds UTC since the start
-    // of the Posix epoch.
-    if (!httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time")) {
-      goto failed;
-    }
-    int retval = httpClient.GET();
-    if (retval < 200 || retval > 299) {
-      goto failed;
-    }
-    if (sscanf(httpClient.getString().c_str(), "%lu", &timebase) != 1) {
-      goto failed;
-    }
-    httpClient.end();
-    wifiClient.stop();
-    time_configured = true;
-    return;
+  auto holder = connect_to_wifi();
+  if (!holder.is_valid()) {
+    return false;
   }
-
-failed:
-  log("Failed to configure time - connection or protocol error.\n");
+  WiFiClient wifiClient;
+  HTTPClient httpClient;
+  // GET /time returns a number, representing the number of seconds UTC since the start
+  // of the Posix epoch.
+  if (!httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time")) {
+    return false;
+  }
+  int retval = httpClient.GET();
+  if (retval < 200 || retval > 299) {
+    return false;
+  }
+  if (sscanf(httpClient.getString().c_str(), "%lu", &timebase) != 1) {
+    return false;
+  }
+  httpClient.end();
+  wifiClient.stop();
+  time_configured = true;
+  return true;
 }
 
 time_t get_time() {
-  if (!time_configured) {
-    configure_time();
-  }
+  configure_time();
   return time(nullptr) + timebase;
 }
 
@@ -74,7 +66,7 @@ String format_time(const struct tm& time) {
     "sun", "mon", "tue", "wed", "thu", "fri", "sat"
   };
   char buf[256];
-  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s", 
+  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s",
            time.tm_year + 1900,     // year number
            time.tm_mon + 1,         // month, 1-12
            time.tm_mday,            // day of the month, 1-31
@@ -83,4 +75,20 @@ String format_time(const struct tm& time) {
            weekdays[time.tm_wday]); // day of the week
   return String(buf);
 }
+
+void ConfigureTimeTask::execute(SnappySenseData*) {
+  static unsigned long backoff = 60000;
+  static int backoffs = 0;
+  if (!configure_time()) {
+    log("Failed to configure time - connection or protocol error.  Will try later.\n");
+    sched_microtask_after(this, backoff);
+    if (backoffs < 8) {
+      backoff *= 2;
+      backoffs++;
+    }
+    return;
+  }
+  log("Successfully configured time\n");
+}
+
 #endif // TIMESTAMP
