@@ -11,6 +11,20 @@
 #include <WiFi.h>
 #include <WiFiAP.h>
 
+/* Server/Client wifi state machine is basically similar to the Unix stack:
+ *  WiFi.begin() connects the system to a local access point.
+ *  Then, create a WiFiServer `server` to handle incoming connections on a port.
+ *  server.begin() is bind() + listen(): it starts listening on a port, but does not block.
+ *  server.available() is accept() + client socket setup, but it will not block: if there is no client,
+ *       available() returns a falsy client.  Be sure not to spin...  A callback would have been better.
+ *       Anyway, I can't tell if the server blocks subsequent connects until we've accepted,
+ *       or overwrites one connect with a new one, but perhaps it doesn't matter.
+ *  client.connected() can become false at any time if the client disconnects.
+ *  client.available() says there's data.  Again, would be better to get a callback.
+ *  client.stop() closes the client socket after use
+ *  server.close() closes the server socket and stops listening
+ */
+
 //#define REFCOUNT_LOGGING
 #define WIFI_LOGGING
 
