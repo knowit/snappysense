@@ -9,9 +9,11 @@
 // Return the nth blank or quote delimited word from the line, or "" if there is no such word.
 // If a word starts with '"' then it is assumed to be quoted, and we scan until the closing '"'
 // and return the content between the quotes.  Ditto for single quote.  If the matching quote
-// is missing then we fall back to separating by blanks.
+// is missing then we fall back to separating by blanks.  If flag != nullptr then *flag
+// is set to true if a word was found or false if not, this can be used to distinguish
+// an empty quoted word from no word.
 
-String get_word(const String& line, int n);
+String get_word(const String& line, int n, bool* flag = nullptr);
 
 // Reads nonempty lines terminated by CR, LF, or CRLF, but note there's no line editing
 // unless the front end (terminal, whatever) implements it.

@@ -4,7 +4,7 @@
 #include "device.h"
 #include <cstdarg>
 
-String get_word(const String& cmd, int n) {
+String get_word(const String& cmd, int n, bool* flag) {
   unsigned lim = cmd.length();
   unsigned i = 0;
   while (i < lim) {
@@ -45,12 +45,18 @@ String get_word(const String& cmd, int n) {
       break;
     }
     if (n == 0) {
+      if (flag != nullptr) {
+        *flag = true;
+      }
       if (quoted) {
         return cmd.substring(start+1, i-1);
       }
       return cmd.substring(start, i);
     }
     n--;
+  }
+  if (flag != nullptr) {
+    *flag = false;
   }
   return String();
 }
