@@ -123,7 +123,8 @@ void setup() {
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
 #ifdef SLIDESHOW_MODE
-  sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
+  slideshow_task = new SlideshowTask;
+  sched_microtask_periodically(slideshow_task, slideshow_update_interval_s() * 1000);
 #endif // SLIDESHOW_MODE
 
   log("SnappySense running!\n");
