@@ -118,9 +118,6 @@ int web_server_listen_port();
 unsigned long web_command_poll_interval_s();
 #endif
 
-// Save current configuration in nvram.
-void save_configuration();
-
 #ifdef INTERACTIVE_CONFIGURATION
 class ReadSerialConfigInputTask final : public ReadSerialInputTask {
   enum {
@@ -136,7 +133,14 @@ public:
 };
 #endif
 
+#ifdef WEB_CONFIGURATION
+const char* web_config_access_point();
+#endif
+
 // Read configuration from some nonvolatile source, or revert to a default.
 void read_configuration();
+
+// Save current configuration in nvram.
+void save_configuration();
 
 #endif // !config_h_included
