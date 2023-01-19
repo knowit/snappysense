@@ -118,29 +118,48 @@ int web_server_listen_port();
 unsigned long web_command_poll_interval_s();
 #endif
 
-#ifdef INTERACTIVE_CONFIGURATION
-class ReadSerialConfigInputTask final : public ReadSerialInputTask {
-  enum {
-    RUNNING,
-    COLLECTING,
-  } state = RUNNING;
-  List<String> config_lines;
-public:
-  const char* name() override {
-    return "Serial server config input";
-  }
-  void perform() override;
-};
-#endif
-
 #ifdef WEB_CONFIGURATION
 const char* web_config_access_point();
 #endif
+
+// Reset the configuration (in memory) to factory defaults.
+// TODO: More documentation.
+void reset_configuration();
 
 // Read configuration from some nonvolatile source, or revert to a default.
 void read_configuration();
 
 // Save current configuration in nvram.
 void save_configuration();
+
+// All the str_values in a Configuration point to individual malloc'd NUL-terminated strings.
+// By and large none will have leading or trailing whitespace unless they were defined by
+// quoted strings that include such whitespace.
+
+struct Pref {
+  enum Flags {
+    Str = 1,     // str_value has value
+    Int = 2,     // int_value has value
+    Cert = 4,    // Must also be Str: is certificate, not simple value
+    Passwd = 8   // Must also be Str: is password
+  };
+  const char* long_key;   // The key name used in the config script
+  const char* short_key;  // The key name used in NVRAM
+  int flags;              // Bitwise 'or' of flags above
+  int int_value;          // Valid iff flags & Int
+  String str_value;       // Valid iff flags & Str
+  const char* help;       // Arbitrary text
+
+  bool is_string() { return flags & Str; }
+  bool is_int() { return flags & Int; }
+  bool is_cert() { return flags & Cert; }
+  bool is_passwd() { return flags & Passwd; }
+};
+
+extern Pref prefs[];
+
+// Returns the pref if it is found, otherwise nullptr.
+
+Pref* get_pref(const char* name);
 
 #endif // !config_h_included

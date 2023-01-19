@@ -20,9 +20,9 @@
 //
 // LAYERS.
 //
-// The system layers are roughly as follows (the design is not yet clean):
+// The system layers are roughly as follows:
 //
-// Device layer:
+// Device layer, pretty clean:
 //   Microcontroller and peripheral management, in device.{cpp,h}
 //   Configuration and preferences management, in config.{cpp,h}
 //   Tasking system, in microtask.{cpp,h}
@@ -32,7 +32,7 @@
 //   Utility functions, in util.{cpp,h}
 //   Logging, in log.{cpp,h}
 //
-// Application layer:
+// Application layer (not quite clean):
 //   Sensor data model, in sensor.{cpp,h}
 //   MQTT sensor reading upload, in mqtt_upload.{cpp,h}
 //   HTTP sensor reading upload (for development), in web_upload.{cpp,h}
@@ -41,6 +41,7 @@
 //
 // UI layer:
 //   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
+//   Configuration user interface, in config_ui.{cpp,h}
 //   Orchestration, in main.cpp
 //   Configuration, in main.h
 //
@@ -80,6 +81,7 @@
 // serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
 
 #include "config.h"
+#include "config_ui.h"
 #include "command.h"
 #include "device.h"
 #include "icons.h"
