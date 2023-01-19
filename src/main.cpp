@@ -20,28 +20,28 @@
 //
 // LAYERS.
 //
-// The system layers are roughly as follows:
+// The system layers are roughly as follows, from lowest to highest:
 //
 // Device and tasking layer:
 //   Microcontroller and peripheral management and clock, in device.{cpp,h}
 //   Configuration and preferences management, in config.{cpp,h}
+//   Utility functions, in util.{cpp,h}
+//   Serial line logging, in log.{cpp,h}
+//
+// Connectivity and tasking layer:
 //   Tasking system, in microtask.{cpp,h}
 //   Serial line input, in serial_input.{cpp,h}
-//   Utility functions, in util.{cpp,h}
-//   Logging, in log.{cpp,h}
-//
-// Connectivity and middleware layer:
 //   WiFi connection management, in network.{cpp,h}
 //   Time configuration service, in snappytime.{cpp,h}
 //   Web server infrastructure for config and commands, in web_server.{cpp,h}
 //
-// Application layer:
+// Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
-//   MQTT sensor reading upload, in mqtt_upload.{cpp,h}
-//   HTTP sensor reading upload (for development), in web_upload.{cpp,h}
-//   Interactive command processing, in command.{cpp,h}
+//   MQTT data upload and command handling, in mqtt_upload.{cpp,h}
+//   HTTP data upload (for development), in web_upload.{cpp,h}
+//   Serial & web interactive command processing (for development), in command.{cpp,h}
 //
-// UI layer:
+// Application UI layer:
 //   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
 //   Configuration user interface (serial and web), in config_ui.{cpp,h}
 //   Orchestration of everything, in main.cpp
