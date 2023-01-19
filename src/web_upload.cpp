@@ -23,9 +23,6 @@ void WebUploadTask::execute(SnappySenseData* data) {
 
   String payload = format_readings_as_json(*data);
 
-  // FIXME: Issue 15: There are lots of failure conditions here, and they all need to be
-  // checked somehow.
-  //
   // FIXME: Issue 17: Basically the HTTPClient framework is not reliable.  Looking at addHeader(), for
   // example, it can OOM silently because it uses String without checking for OOM at all.
   // For another example, sendRequest() takes a String *by copy* for the payload; the copy can
@@ -34,7 +31,7 @@ void WebUploadTask::execute(SnappySenseData* data) {
   //
   // In practice this is not going to be good enough.  It is probably indicative of the quality
   // of the Arduino libraries - "maker" quality, not "production".
-  
+
   auto holder(connect_to_wifi());
   if (!holder.is_valid()) {
     return;
