@@ -347,7 +347,6 @@ void WebConfigRequestHandler::process_request() {
       if (!get_posted_field(&p, &key, &value)) {
         break;
       }
-      log("Field: %s %s\n", key.c_str(), value.c_str());
       if (sscanf(key.c_str(), "ssid%c%n", &id, &len) == 1 && len == 5) {
         set_access_point_ssid(id-'0', value.c_str());
         updated = true;
