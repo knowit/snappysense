@@ -86,7 +86,7 @@
 // Simple web server to send commands to the device, obtain data, etc.  The IP address
 // of the device is printed on the serial line and also on the display.  Just ask
 // for / or /help to see a directory of the possible requests.
-#define WEB_COMMAND_SERVER
+//#define WEB_COMMAND_SERVER
 
 // (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
 // what you're looking at.
