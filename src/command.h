@@ -12,8 +12,11 @@
 #include "serial_input.h"
 #include "web_server.h"
 
+// Command tasks are created ad-hoc by serial and web command servers.
+//
 // This class is not `final`, as the web server task subclasses it to handle garbage
 // collection of the output stream.
+
 class ProcessCommandTask : public MicroTask {
   String cmd;
   Stream* output;
@@ -32,6 +35,7 @@ public:
 #endif // SNAPPY_COMMAND_PROCESSOR
 
 #ifdef SERIAL_COMMAND_SERVER
+
 class SerialCommandTask final : public ReadSerialInputTask {
 public:
   const char* name() override {
@@ -39,9 +43,11 @@ public:
   }
   void perform() override;
 };
+
 #endif
 
 #ifdef WEB_COMMAND_SERVER
+
 class WebCommandClient final : public WebRequestHandler {
 public:
   WebCommandClient(WiFiClient&& client) : WebRequestHandler(std::move(client)) {}
@@ -61,6 +67,7 @@ public:
 
   bool start() override;
 };
+
 #endif // WEB_COMMAND_SERVER
 
 #endif // !command_h_included

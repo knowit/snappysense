@@ -32,8 +32,8 @@
 //   Tasking system, in microtask.{cpp,h}
 //   Serial line input, in serial_input.{cpp,h}
 //   WiFi connection management, in network.{cpp,h}
+//   Web server infrastructure, in web_server.{cpp,h}
 //   Time configuration service, in snappytime.{cpp,h}
-//   Web server infrastructure for config and commands, in web_server.{cpp,h}
 //
 // Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
@@ -73,14 +73,15 @@
 // A simple time server is in the server/ directory in the present repo.
 //
 // The device can be configured to upload results to an MQTT broker (typically AWS)
-// or to a Web server (for development and testing), or to neither (data are displayed
-// on the built-in display).  For uploading to work, networking configuration
-// variables have to be set, see config.cpp and the help text for the provisioning mode.
-// Also, appropriate servers will have to be running.  There is a simple server for
-// http upload in the server/ directory in the present repo.
+// or to a Web server (for development and testing), or to neither.  For uploading to
+// work, networking configuration variables have to be set, see config.cpp and the
+// help text for the provisioning mode.  Also, appropriate servers will have to be
+// running.  There is a simple server for http upload in the server/ directory in
+// the present repo.
 //
 // For development, the device can also listen for interactive commands over the
-// serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
+// serial line or on an http port, see SERIAL_COMMAND_SERVER and WEB_COMMAND_SERVER
+// in main.h.
 
 #include "config.h"
 #include "config_ui.h"

@@ -122,8 +122,8 @@ unsigned long web_command_poll_interval_s();
 const char* web_config_access_point();
 #endif
 
-// Reset the configuration (in memory) to factory defaults.
-// TODO: More documentation.
+// Reset the configuration (in memory) to "factory defaults", which is either almost nothing
+// in release mode or the developer settings in DEVELOPER mode.
 void reset_configuration();
 
 // Read configuration from some nonvolatile source, or revert to a default.
@@ -132,9 +132,10 @@ void read_configuration();
 // Save current configuration in nvram.
 void save_configuration();
 
-// All the str_values in a Configuration point to individual malloc'd NUL-terminated strings.
-// By and large none will have leading or trailing whitespace unless they were defined by
-// quoted strings that include such whitespace.
+// A structure holding a preference value.
+//
+// By and large no strings will have leading or trailing whitespace unless they were
+// defined by quoted strings that include such whitespace.
 
 struct Pref {
   enum Flags {
@@ -155,6 +156,9 @@ struct Pref {
   bool is_cert() { return flags & Cert; }
   bool is_passwd() { return flags & Passwd; }
 };
+
+// A global table of current preferences.  The last entry is a sentinel with
+// long_key==nullptr.
 
 extern Pref prefs[];
 
