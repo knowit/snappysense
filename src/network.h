@@ -26,6 +26,8 @@ WiFiHolder connect_to_wifi();
 // Returns an empty string if we're not connected.
 String local_ip_address();
 
+bool create_wifi_soft_access_point(const char* ssid, const char* password, IPAddress* ip);
+
 #endif // SNAPPY_WIFI
 
 #endif // !network_h_included

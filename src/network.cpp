@@ -145,4 +145,13 @@ String local_ip_address() {
   return WiFi.localIP().toString();
 }
 
+bool create_wifi_soft_access_point(const char* ssid, const char* password, IPAddress* ip) {
+  if (!WiFi.softAP(ssid, password)) {
+    return false;
+  }
+  *ip = WiFi.softAPIP();
+  log("Soft AP SSID %s, IP address: %s\n", ssid, ip->toString().c_str());
+  return true;
+}
+
 #endif // SNAPPY_WIFI
