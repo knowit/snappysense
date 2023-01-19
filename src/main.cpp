@@ -2,16 +2,32 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //
+// SYSTEM ARCHITECTURE.
+//
+// The firmware is based on the Arduino framework.
+//
+// The firmware is constructed around a simple microtask system that sits on top
+// of the Arduino runloop.  Periodic tasks, created in setup(), below, handle polling,
+// sensor reading, and data uploading.  Ad-hoc tasks, created various places,
+// deal with system management needs and aperiodic work.  Only one task can run at
+// a time, and it runs to completion before the next task is run.  No locking is
+// needed at any level.  See microtask.{cpp,h} for more.
+//
+// The system will sleep when there's no work to be done.  If the time to sleep is long
+// enough, it will power down peripherals while it's sleeping.  All of this is managed
+// in loop(), below.
+//
+//
 // MODES and CONFIGURATION.
 //
 // SnappySense can be compile-time configured to several modes, in main.h.  These are:
 //
 //  - SLIDESHOW_MODE, in which the device reads the sensors often, keeps the display on,
 //    and displays the sensor variables on the display in a never-ending loop.
-//    Demo mode is power-hungry.
-//  - !SLIDESHOW_MODE, in which the device reads the sensors much less often and turns
-//    off the display and the peripherals when they are not needed.  This mode
-//    conserves power (relatively).
+//    Slideshow mode is power-hungry.
+//  - Monitoring mode, aka !SLIDESHOW_MODE, in which the device reads the sensors much
+//    less often and turns off the display and the peripherals when they are not needed.
+//    This mode conserves power (relatively).
 //  - DEVELOPER mode, which can be combined with the other two modes and which
 //    allows for interactivity over the serial line, configuration values that are
 //    compiled into the code, more frequent activity, and other things.
@@ -37,14 +53,6 @@
 // serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
 //
 //
-// SYSTEM ARCHITECTURE.
-//
-// The system is constructed around a simple microtask system that currently sits on top
-// of the Arduino runloop.  Periodic tasks handle polling, sensor reading, and data
-// uploading; ad-hoc tasks are created to deal with system management needs.
-//
-// The system will sleep when there's no work to be done.  If the time to sleep is long
-// enough, it will power down peripherals while it's sleeping.
 
 #include "config.h"
 #include "device.h"
@@ -59,18 +67,21 @@
 #include "web_server.h"
 #include "web_upload.h"
 
-// Currently only one copy of sensor data globally but the code's properly parameterized and
-// there could be several of these, useful in a threaded world or when snapshots of the data
-// are useful.
+// Currently we have only one copy of sensor data globally but the code's properly parameterized
+// and there could be several of these (useful in a threaded world or when snapshots of the data
+// are useful).  Hence the `snappy` object is private to main.cpp and is passed around to
+// those that update it and those that consume it.
 
 static SnappySenseData snappy;
 
 void setup() {
+  // Power up the device.
+
   bool do_interactive_configuration = false;
   device_setup(&do_interactive_configuration);
   log("SnappySense ready!\n");
 
-  // Serial port and display are up now.
+  // Serial port and display are up now and can be used for output.
 
   // Always show the splash on startup.  The delay is for aesthetic reasons - it means
   // the display will not immediately be cleared by other operations.

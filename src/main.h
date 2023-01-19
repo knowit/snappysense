@@ -16,12 +16,14 @@
 // - All <filename>.h shall include main.h first.
 // - Do not worry about out-of-memory conditions (OOM) except perhaps for large
 //   allocations (several KB at least).  The Arduino libraries are not reliable
-//   enough to handle OOM reliably anyway.  Basically, just ignore the problem.
+//   enough to handle OOM properly anyway.  Basically, just ignore the problem.
 // - Avoid using libraries that depend on exception handling, or handle exceptions
 //   close to API calls if necessary.
 // - Naming conventions: functions and variables and file names are snake_case,
 //   types are CamelCase, global constants are ALL_UPPER_SNAKE_CASE.
 // - Indent using spaces, not tabs.  Preferably 2 spaces per level.
+// - Try to conform to whatever standard is used in the file you're editing, if
+//   it differs (in reasonable ways) from the above.
 
 ////////////////////////////////////////////////////////////////////////////////
 //

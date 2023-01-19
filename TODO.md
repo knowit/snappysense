@@ -1,1 +1,0 @@
-(All TODO items are moved into github issues, github.com/knowit/snappysense.)

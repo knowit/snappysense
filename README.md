@@ -1,18 +1,43 @@
-# snappysense
+# SnappySense
 
-This is the firmware for KnowIt ObjectNet's "snappysense" environmental sensor device.
+[This repo](https://github.com/knowit/snappysense) holds the hardware designs, firmware source code, and design documents for KnowIt ObjectNet's _SnappySense_ environmental sensor device.
 
-The v1.0.0 device has an esp32 MoC and a number of environmental sensors (temperature, humidity,
-air quality, and other things - see src/sensor.h), as well as a small OLED display.
+The v1.0.0 device has an esp32 MoC and a number of environmental sensors (temperature, humidity, air quality, and other things - see `src/sensor.h`, as well as a small OLED display.
 
-The firmware has FreeRTOS at the base and the Arduino framework layered on top.
+The v1.1.0 device additionally has a small speaker.
 
-We use Visual Studio Code for the development environment.  Before you build the first time, you will need to:
-* install the PlatformIO extension in Visual Studio Code, see platformio.org for pointers.  
-* make a copy of src/client_config_template.txt as src/client_config.h and make modifications in that copy for your local setup.
+The v1 firmware has FreeRTOS at the base and the Arduino framework layered on top and is written in C++.
 
-## Guide to the source code
+## Design documents
 
-Generally, start with src/main.cpp and src/main.h.
+The user experience during setup and use is outlined in `UX.md`.
 
-(More information will appear by and by.)
+Firmware architecture is documented at the beginning of `src/main.cpp`, with pointers to other files.
+
+Device architecture, as seen by software (peripheral addresses, MCU pins, etc), is documented in `src/device.cpp`.
+
+## Device schematics and data sheets
+
+Device schematics and data sheets will appear in this repo eventually (Issue #31).
+
+## Firmware source code and development
+
+We use Visual Studio Code for the development environment.  Before you build the first time, you will need to install the PlatformIO extension in Visual Studio Code, see platformio.org for pointers.
+
+Coding standards are documented at the beginning of `src/main.h`.
+
+### Developer builds
+
+Source code is in `src/`, start with `src/main.cpp` and `src/main.h`.
+
+Enable `DEVELOPER` in `src/main.h` to make it easier to develop and test.
+
+Make a copy of `src/development_config_template.txt` as `src/development_config.h` and make modifications in that copy for your local setup, as this file is required to provide default settings.
+
+### Release builds
+
+To make a release build:
+* Be sure to disable `DEVELOPMENT` in `src/main.h`.
+* Adjust any other switches in `src/main.h` that might feel like development-only.
+* Pay attention to warnings during build, as some switches that should not be on during release cause warnings to be printed if they are enabled.
+
