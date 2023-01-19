@@ -7,7 +7,7 @@
 
 #include "main.h"
 #include "microtask.h"
-#include "serial_server.h"
+#include "serial_input.h"
 #include "util.h"
 
 // Frequency of sensor readings.
@@ -99,12 +99,12 @@ const char* mqtt_device_private_key();
 unsigned long slideshow_update_interval_s();
 #endif
 
-#ifdef SNAPPY_SERIAL_LINE
+#ifdef SNAPPY_SERIAL_INPUT
 // How long to wait between looking for input on the serial channel.
 // This is typically a pretty low value.
 //
 // Note, SNAPPY_SERIAL_LINE services will keep the device continually on.
-unsigned long serial_line_poll_interval_s();
+unsigned long serial_input_poll_interval_s();
 #endif
 
 #ifdef WEB_SERVER

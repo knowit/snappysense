@@ -27,7 +27,7 @@
 //   Configuration and preferences management, in config.{cpp,h}
 //   Tasking system, in microtask.{cpp,h}
 //   WiFi connection management, in network.{cpp,h}
-//   Serial line management, in serial_server.{cpp,h}
+//   Serial line input, in serial_input.{cpp,h}
 //   Time management, in snappytime.{cpp,h}
 //   Utility functions, in util.{cpp,h}
 //   Logging, in log.{cpp,h}
@@ -36,7 +36,7 @@
 //   Sensor data model, in sensor.{cpp,h}
 //   MQTT sensor reading upload, in mqtt_upload.{cpp,h}
 //   HTTP sensor reading upload (for development), in web_upload.{cpp,h}
-//   Serial line command processing, in command.{cpp,h}
+//   Interactive command processing, in command.{cpp,h}
 //   HTTP command processing, in web_server.{cpp,h}
 //
 // UI layer:
@@ -123,7 +123,7 @@ void setup() {
     render_text("Configuration mode");
     Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
     Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
-    sched_microtask_periodically(new ReadSerialConfigInputTask, serial_line_poll_interval_s() * 1000);
+    sched_microtask_periodically(new ReadSerialConfigInputTask, serial_input_poll_interval_s() * 1000);
     sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
     log("Configuration is running!\n");
     return;
@@ -145,7 +145,7 @@ void setup() {
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_SERVER
-  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_line_poll_interval_s() * 1000);
+  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_input_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);

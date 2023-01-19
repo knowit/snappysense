@@ -191,8 +191,8 @@ static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
 # endif
 #endif
 
-#ifdef SNAPPY_SERIAL_LINE
-static const unsigned long SERIAL_LINE_POLL_INTERVAL_S = 1;
+#ifdef SNAPPY_SERIAL_INPUT
+static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
 #endif
 
 static struct {
@@ -343,9 +343,9 @@ unsigned long web_command_poll_interval_s() {
 }
 #endif
 
-#ifdef SNAPPY_SERIAL_LINE
-unsigned long serial_line_poll_interval_s() {
-  return SERIAL_LINE_POLL_INTERVAL_S;
+#ifdef SNAPPY_SERIAL_INPUT
+unsigned long serial_input_poll_interval_s() {
+  return SERIAL_INPUT_POLL_INTERVAL_S;
 }
 #endif
 

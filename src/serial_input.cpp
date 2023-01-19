@@ -1,8 +1,8 @@
 // An interactive server that reads from the serial port.
 
-#include "serial_server.h"
+#include "serial_input.h"
 
-#ifdef SNAPPY_SERIAL_LINE
+#ifdef SNAPPY_SERIAL_INPUT
 
 #include "command.h"
 

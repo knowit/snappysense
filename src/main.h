@@ -120,7 +120,7 @@
 #endif
 
 #if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
-# define SNAPPY_SERIAL_LINE
+# define SNAPPY_SERIAL_INPUT
 #endif
 
 #if !defined(DEVELOPMENT)
