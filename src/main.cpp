@@ -22,28 +22,30 @@
 //
 // The system layers are roughly as follows:
 //
-// Device layer, pretty clean:
-//   Microcontroller and peripheral management, in device.{cpp,h}
+// Device and tasking layer:
+//   Microcontroller and peripheral management and clock, in device.{cpp,h}
 //   Configuration and preferences management, in config.{cpp,h}
 //   Tasking system, in microtask.{cpp,h}
-//   WiFi connection management, in network.{cpp,h}
 //   Serial line input, in serial_input.{cpp,h}
-//   Time management, in snappytime.{cpp,h}
 //   Utility functions, in util.{cpp,h}
 //   Logging, in log.{cpp,h}
 //
-// Application layer (not quite clean):
+// Connectivity and middleware layer:
+//   WiFi connection management, in network.{cpp,h}
+//   Time configuration service, in snappytime.{cpp,h}
+//   Web server infrastructure for config and commands, in web_server.{cpp,h}
+//
+// Application layer:
 //   Sensor data model, in sensor.{cpp,h}
 //   MQTT sensor reading upload, in mqtt_upload.{cpp,h}
 //   HTTP sensor reading upload (for development), in web_upload.{cpp,h}
 //   Interactive command processing, in command.{cpp,h}
-//   HTTP command processing, in web_server.{cpp,h}
 //
 // UI layer:
 //   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
-//   Configuration user interface, in config_ui.{cpp,h}
-//   Orchestration, in main.cpp
-//   Configuration, in main.h
+//   Configuration user interface (serial and web), in config_ui.{cpp,h}
+//   Orchestration of everything, in main.cpp
+//   Compile-time configuration, in main.h
 //
 //
 // MODES and CONFIGURATION.
@@ -126,7 +128,9 @@ void setup() {
     Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
     Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
     sched_microtask_periodically(new ReadSerialConfigInputTask, serial_input_poll_interval_s() * 1000);
-    sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
+#ifdef WEB_CONFIGURATION
+    sched_microtask_periodically(new WebConfigTask, web_command_poll_interval_s() * 1000);
+#endif
     log("Configuration is running!\n");
     return;
   }
@@ -146,7 +150,7 @@ void setup() {
   // poll as often as PIR needs us to (except in slideshow mode), so PIR needs to become
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
-#ifdef SERIAL_SERVER
+#ifdef SERIAL_COMMAND_SERVER
   sched_microtask_periodically(new ReadSerialCommandInputTask, serial_input_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
@@ -158,7 +162,7 @@ void setup() {
   sched_microtask_periodically(new WebUploadTask, web_upload_interval_s() * 1000);
 #endif
 #ifdef WEB_COMMAND_SERVER
-  sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
+  sched_microtask_periodically(new WebCommandTask, web_command_poll_interval_s() * 1000);
 #endif
 #ifdef SLIDESHOW_MODE
   sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);

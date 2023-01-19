@@ -1,12 +1,19 @@
-// Stuff to obtain the current time from a web server and to obtain timestamps with that adjustment.
+// Stuff to obtain the current time from a web server and configure the clock.
+//
+// The remote server must know how to handle GET to /time; it must respond with a payload that is
+// the decimal encoding of the number of seconds elapsed since the Posix epoch (ie, what time()
+// would return on a properly configured Posix system).  For a simple server that can do this, see
+// `../server`.
 //
 // TODO: Issue 23: This is hacky, it can be integrated with Posix time code by using settimeofday() after
 // obtaining the time base.
 
 #include "snappytime.h"
 #include "config.h"
+#include "device.h"
 #include "log.h"
 #include "network.h"
+#include "util.h"
 
 #ifdef TIMESTAMP
 
@@ -14,9 +21,6 @@
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 
-// The time at startup.  We get this from a server in configureTime(), and use it to
-// adjust the time read from the device when we report new readings.
-static unsigned long timebase;
 static bool time_configured;
 
 static bool configure_time() {
@@ -24,6 +28,7 @@ static bool configure_time() {
     return true;
   }
 
+  // TODO: These error paths must properly spin down the network!
   auto holder = connect_to_wifi();
   if (!holder.is_valid()) {
     return false;
@@ -39,26 +44,15 @@ static bool configure_time() {
   if (retval < 200 || retval > 299) {
     return false;
   }
+  unsigned long timebase;
   if (sscanf(httpClient.getString().c_str(), "%lu", &timebase) != 1) {
     return false;
   }
+  configure_clock(timebase);
   httpClient.end();
   wifiClient.stop();
   time_configured = true;
   return true;
-}
-
-time_t get_time() {
-  configure_time();
-  return time(nullptr) + timebase;
-}
-
-struct tm snappy_local_time() {
-  time_t the_time = get_time();
-  // FIXME: Issue 7: localtime wants a time zone to be set...
-  struct tm the_local_time;
-  localtime_r(&the_time, &the_local_time);
-  return the_local_time;
 }
 
 ConfigureTimeTask* ConfigureTimeTask::handle;

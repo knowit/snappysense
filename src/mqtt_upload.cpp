@@ -31,7 +31,7 @@
 #include "log.h"
 #include "microtask.h"
 #include "network.h"
-#include "snappytime.h"
+#include "device.h"
 
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
@@ -270,7 +270,7 @@ static void mqtt_handle_message(int payload_size) {
     }
   } else if (topic.startsWith("snappy/command/")) {
     if (json.hasOwnProperty("actuator") &&
-        json.hasOwnProperty("reading") && 
+        json.hasOwnProperty("reading") &&
         json.hasOwnProperty("ideal")) {
       const char* key = (const char*)json["actuator"];
       double reading = (double)json["reading"];
@@ -278,7 +278,7 @@ static void mqtt_handle_message(int payload_size) {
       log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
       sched_microtask_after(new RunActuatorTask(String(key), reading, ideal), 0);
     } else {
-      log("Mqtt: invalid command message\n%s\n", buf);      
+      log("Mqtt: invalid command message\n%s\n", buf);
     }
   } else {
     log("Mqtt: unknown incoming message\n%s\n%s\n", topic.c_str(), buf);

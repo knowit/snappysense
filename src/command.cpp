@@ -136,8 +136,57 @@ Command commands[] = {
 
 #endif // SNAPPY_COMMAND_PROCESSOR
 
-#ifdef SERIAL_SERVER
+#ifdef SERIAL_COMMAND_SERVER
 void ReadSerialCommandInputTask::perform() {
   sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
 }
+#endif
+
+#ifdef WEB_COMMAND_SERVER
+// This keeps the client alive until the command task has provided
+// output.
+class ProcessCommandTaskFromWeb : public ProcessCommandTask {
+  WebClient* cl;
+public:
+  ProcessCommandTaskFromWeb(WebClient* cl) : ProcessCommandTask(cl->request, &cl->client), cl(cl) {}
+  ~ProcessCommandTaskFromWeb() {
+    cl->dead = true;
+  }
+};
+
+void WebCommandClient::process_request() {
+  log("Processing %s\n", request.c_str());
+  if (request.startsWith("GET /")) {
+    log("Web server: handling GET\n");
+    String r = request.substring(5);
+    int idx = r.indexOf(' ');
+    if (idx != -1) {
+      r = r.substring(0, idx);
+      // TODO: Issue 24: technically this is url-encoded and needs to be decoded
+    }
+    if (r.isEmpty()) {
+      r = String("help");
+    }
+    // Hack
+    idx = r.indexOf('?');
+    if (idx != -1) {
+      r[idx] = ' ';
+    }
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-type:text/html");
+    client.println();
+    client.println("<pre>");
+    sched_microtask_after(new ProcessCommandTaskFromWeb(this), 0);
+    client.println("</pre>");
+    return;
+  }
+  log("Web server: invalid method or URL\n");
+  client.println("HTTP/1.1 403 Forbidden");
+}
+
+void WebCommandClient::failed_request() {
+  log("Web server: Incomplete request [%s]\n", request.c_str());
+  dead = true;
+}
+
 #endif

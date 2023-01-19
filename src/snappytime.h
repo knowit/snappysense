@@ -1,9 +1,4 @@
-// Stuff to obtain the current time from a web server and to obtain timestamps with that adjustment.
-//
-// The remote server must know how to handle GET to /time; it must respond with a payload that is
-// the decimal encoding of the number of seconds elapsed since the Posix epoch (ie, what time()
-// would return on a properly configured Posix system).  For a simple server that can do this, see
-// `../server`.
+// Stuff to obtain the current time from a web server and configure the clock.
 
 #ifndef snappytime_h_included
 #define snappytime_h_included
@@ -13,21 +8,6 @@
 #ifdef TIMESTAMP
 #include "microtask.h"
 #include "util.h"
-
-// Return the number of seconds since epoch.
-//
-// NOTE: If time configuration has not completed then the device clock will
-// not have been set and the time will be sometime in January, 1970.
-
-time_t get_time();
-
-// Return the local time (based on get_time(), above) broken out into the
-// standard fields.
-//
-// NOTE: If time configuration has not completed then the device clock will
-// not have been set and the time will be sometime in January, 1970.
-
-struct tm snappy_local_time();
 
 // A singleton task that will attempt to contact the time server to obtain the
 // current time.  Once it succeeds it will set the device clock to the obtained time.

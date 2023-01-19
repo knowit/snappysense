@@ -67,7 +67,7 @@
 // The user can connect to this network and request "/".  This will return
 // an HTML page that contains a form that is submitted with "POST /" and
 // can be used to set some simple parameters in the configuration.
-// (Conflicts with WEB_COMMAND_SERVER.)
+// (Conflicts with WEB_COMMAND_SERVER for stupid reasons.)
 #define WEB_CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  The device and
@@ -79,9 +79,9 @@
 // The following are mostly useful during development and would not normally be
 // enabled in production.
 
-// With SERIAL_SERVER, the device listens for commands on the serial line, the
+// With SERIAL_COMMAND_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-#define SERIAL_SERVER
+#define SERIAL_COMMAND_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
@@ -90,7 +90,7 @@
 // Simple web server to send commands to the device, obtain data, etc.  The IP address
 // of the device is printed on the serial line and also on the display.  Just ask
 // for / or /help to see a directory of the possible requests.
-// (Conflicts with WEB_CONFIGURATION.)
+// (Conflicts with WEB_CONFIGURATION for stupid reasons.)
 //#define WEB_COMMAND_SERVER
 
 // (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
@@ -127,7 +127,7 @@
 # ifdef SLIDESHOW_MODE
 #  warning "SLIDESHOW_MODE not usually enabled in production"
 # endif
-# ifdef SERIAL_SERVER
+# ifdef SERIAL_COMMAND_SERVER
 #  warning "SERIAL_SERVER not usually enabled in production"
 # endif
 # ifdef WEB_UPLOAD

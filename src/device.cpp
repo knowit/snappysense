@@ -149,7 +149,7 @@ void power_peripherals_off() {
 int probe_i2c_devices(Stream* stream) {
   byte error, address;
   uint8_t num = 0;
- 
+
   if (!peripherals_powered_on) {
     stream->println("Peripherals are presently powered off");
     return num;
@@ -161,7 +161,7 @@ int probe_i2c_devices(Stream* stream) {
     // a device did acknowledge to the address.
     Wire.beginTransmission(address);
     error = Wire.endTransmission();
- 
+
     if (error == 0)
     {
       ++num;
@@ -289,3 +289,21 @@ void test_mems() {
   delay(10);
 }
 #endif
+
+static unsigned long timebase;
+
+void configure_clock(unsigned long t) {
+  timebase = t;
+}
+
+time_t get_time() {
+  return time(nullptr) + timebase;
+}
+
+struct tm snappy_local_time() {
+  time_t the_time = get_time();
+  // FIXME: Issue 7: localtime wants a time zone to be set...
+  struct tm the_local_time;
+  localtime_r(&the_time, &the_local_time);
+  return the_local_time;
+}

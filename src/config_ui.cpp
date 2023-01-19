@@ -255,3 +255,144 @@ void ReadSerialConfigInputTask::perform() {
   }
 }
 #endif
+
+#ifdef WEB_CONFIGURATION
+// This template has eight fields: message, ssid1, password1, ssid2, password2, ssid3, password3, location,
+// which are filled in before the form is sent.  Since access to this page is currently http: and not
+// https: the fields can be sniffed.  We hope the wifi traffic is encrypted.
+//
+// TODO! Must add enough CSS to make this legible somehow for phone screen.
+static const char config_page[] = R"EOF(
+<html>
+  <head>
+    <style>
+      table { width: 100%%; font-size: 2em }
+      input { font-size: 0.7em }
+      button { font-size: 2em }
+      .status { font-size: 2em }
+    </style>
+    <title>SnappySense configuration</title>
+  </head>
+  <body>
+    <h1>SnappySense configuration</h1>
+    <div class="status">%s&nbsp;</div>
+    <div>&nbsp;</div>
+    <div>
+      <form method="POST" action="/">
+        <table>
+          <tr> <td>SSID1</td> <td><input name=ssid1 type="text" value="%s">&nbsp;</td>
+            <td>Password</td> <td><input name=password1 type="text" value="%s"/></td></tr>
+          <tr> <td>SSID2</td> <td><input name=ssid2 type="text" value="%s"/></td>
+            <td>Password</td> <td><input name=password2 type="text" value="%s"/></td></tr>
+          <tr> <td>SSID3</td> <td><input name=ssid3 type="text" value="%s"/></td>
+            <td>Password</td> <td><input name=password3 type="text" value="%s"/></td></tr>
+          <tr> <td>Location</td> <td><input name=location type="text" value="%s"/></td> <td></td> </tr>
+        </table>
+        <button>Submit</button>
+      </form>
+    </div>
+  </body>
+</html>
+)EOF";
+
+void WebConfigClient::process_request() {
+  if (request.startsWith("GET / ")) {
+    client.println("HTTP/1.1 200 OK");
+    client.println("Content-type:text/html");
+    client.println();
+    client.printf(config_page, "",
+                  access_point_ssid(1), access_point_password(1),
+                  access_point_ssid(2), access_point_password(2),
+                  access_point_ssid(3), access_point_password(3),
+                  location_name());
+    dead = true;
+    return;
+  }
+
+  if (request.startsWith("POST / ")) {
+    int ix = request.indexOf("Content-Length:");
+    int bufsiz = 0;
+    uint8_t* buf = nullptr;
+    size_t bytes_read = 0;
+    bool updated = false;
+    const char* p = nullptr;
+    if (ix == -1) {
+      goto failure;
+    }
+    if (sscanf(request.c_str()+ix+15, "%d", &bufsiz) != 1) {
+      goto failure;
+    }
+    buf = (uint8_t*)malloc(bufsiz+1);
+    if (buf == nullptr) {
+      goto failure;
+    }
+    bytes_read = client.readBytes(buf, bufsiz);
+    buf[bytes_read] = 0;
+    p = (char*)buf;
+    for(;;) {
+      String key, value;
+      int len;
+      char id;
+      if (!get_posted_field(&p, &key, &value)) {
+        break;
+      }
+      log("Field: %s %s\n", key.c_str(), value.c_str());
+      if (sscanf(key.c_str(), "ssid%c%n", &id, &len) == 1 && len == 5) {
+        set_access_point_ssid(id-'0', value.c_str());
+        updated = true;
+        continue;
+      }
+      if (sscanf(key.c_str(), "password%c%n", &id, &len) == 1 && len == 9) {
+        set_access_point_password(id-'0', value.c_str());
+        updated = true;
+        continue;
+      }
+      if (key == "location") {
+        set_location_name(value.c_str());
+        updated = true;
+        continue;
+      }
+      goto failure;
+    }
+    if (*p) {
+      log("Stuff left in buffer: [%s]\n", p);
+      goto failure;
+    }
+    if (updated) {
+      save_configuration();
+    }
+    client.println("HTTP/1.1 202 Accepted");
+    client.println("Content-type:text/html");
+    client.println();
+    client.printf(config_page, "VALUES UPDATED!",
+                  access_point_ssid(1), access_point_password(1),
+                  access_point_ssid(2), access_point_password(2),
+                  access_point_ssid(3), access_point_password(3),
+                  location_name());
+    free(buf);
+    buf = nullptr;
+    dead = true;
+    return;
+
+  failure:
+    log("Web server: bad request\n");
+    if (buf != nullptr) {
+      log(" [%s]\n", buf);
+      free(buf);
+    }
+    client.println("HTTP/1.1 400 Bad request");
+    dead = true;
+    return;
+  }
+
+  log("Web server: invalid method or URL\n");
+  client.println("HTTP/1.1 405 Bad request");
+  dead = true;
+}
+
+void WebConfigClient::failed_request() {
+  log("Web server: Incomplete request [%s]\n", request.c_str());
+  dead = true;
+}
+
+#endif // WEB_CONFIGURATION
