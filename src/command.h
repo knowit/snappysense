@@ -9,6 +9,7 @@
 
 #include "microtask.h"
 #include "sensor.h"
+#include "serial_server.h"
 
 // This class is not `final`, as the web server task subclasses it to handle garbage
 // collection of the output stream.
@@ -28,5 +29,15 @@ public:
 };
 
 #endif // SNAPPY_COMMAND_PROCESSOR
+
+#ifdef SERIAL_SERVER
+class ReadSerialCommandInputTask final : public ReadSerialInputTask {
+public:
+  const char* name() override {
+    return "Serial server command input";
+  }
+  void perform() override;
+};
+#endif
 
 #endif // !command_h_included

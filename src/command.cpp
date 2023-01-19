@@ -2,11 +2,11 @@
 
 #include "command.h"
 
-#ifdef SNAPPY_COMMAND_PROCESSOR
-
 #include "device.h"
 #include "network.h"
 #include "util.h"
+
+#ifdef SNAPPY_COMMAND_PROCESSOR
 
 struct Command {
   const char* command;
@@ -59,7 +59,7 @@ static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) 
   int num = probe_i2c_devices(out);
   out->print("Number of I2C devices found: ");
   out->println(num, DEC);
-  return;  
+  return;
 }
 
 static void cmd_poweron(const String& cmd, const SnappySenseData&, Stream* out) {
@@ -135,3 +135,9 @@ Command commands[] = {
 };
 
 #endif // SNAPPY_COMMAND_PROCESSOR
+
+#ifdef SERIAL_SERVER
+void ReadSerialCommandInputTask::perform() {
+  sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
+}
+#endif

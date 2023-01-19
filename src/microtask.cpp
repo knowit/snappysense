@@ -1,3 +1,5 @@
+// Lightweight non-preemptive tasking system
+
 #include "microtask.h"
 #include "config.h"
 #include "log.h"
@@ -43,8 +45,9 @@ void sched_microtask_periodically(MicroTask* task, unsigned long interval_ms) {
 }
 
 unsigned long run_scheduler(SnappySenseData* data) {
-  // Loop while there are runnable tasks
+  // Loop while there are runnable tasks.
   while (task_queue != nullptr && millis() >= task_queue->deadline_millis) {
+
     // Slice off the runnable tasks to avoid confusing the queue.
     MicroTask* runnable = task_queue;
     MicroTask* curr = runnable;
@@ -89,6 +92,7 @@ unsigned long run_scheduler(SnappySenseData* data) {
     }
   }
 
+  // Compute the sleep time.
   unsigned long next_deadline = ULONG_MAX;
   if (task_queue != nullptr) {
     next_deadline = min(next_deadline, task_queue->deadline_millis);

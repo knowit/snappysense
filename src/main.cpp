@@ -18,6 +18,33 @@
 // in loop(), below.
 //
 //
+// LAYERS.
+//
+// The system layers are roughly as follows (the design is not yet clean):
+//
+// Device layer:
+//   Microcontroller and peripheral management, in device.{cpp,h}
+//   Configuration and preferences management, in config.{cpp,h}
+//   Tasking system, in microtask.{cpp,h}
+//   WiFi connection management, in network.{cpp,h}
+//   Serial line management, in serial_server.{cpp,h}
+//   Time management, in snappytime.{cpp,h}
+//   Utility functions, in util.{cpp,h}
+//   Logging, in log.{cpp,h}
+//
+// Application layer:
+//   Sensor data model, in sensor.{cpp,h}
+//   MQTT sensor reading upload, in mqtt_upload.{cpp,h}
+//   HTTP sensor reading upload (for development), in web_upload.{cpp,h}
+//   Serial line command processing, in command.{cpp,h}
+//   HTTP command processing, in web_server.{cpp,h}
+//
+// UI layer:
+//   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
+//   Orchestration, in main.cpp
+//   Configuration, in main.h
+//
+//
 // MODES and CONFIGURATION.
 //
 // SnappySense can be compile-time configured to several modes, in main.h.  These are:
@@ -51,17 +78,15 @@
 //
 // For development, the device can also listen for interactive commands over the
 // serial line or on an http port, see SERIAL_SERVER and WEB_SERVER in main.h.
-//
-//
 
 #include "config.h"
+#include "command.h"
 #include "device.h"
 #include "icons.h"
 #include "log.h"
 #include "microtask.h"
 #include "mqtt_upload.h"
 #include "sensor.h"
-#include "serial_server.h"
 #include "snappytime.h"
 #include "slideshow.h"
 #include "web_server.h"
@@ -134,8 +159,7 @@ void setup() {
   sched_microtask_periodically(new ReadWebInputTask, web_command_poll_interval_s() * 1000);
 #endif
 #ifdef SLIDESHOW_MODE
-  slideshow_task = new SlideshowTask;
-  sched_microtask_periodically(slideshow_task, slideshow_update_interval_s() * 1000);
+  sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
 #endif // SLIDESHOW_MODE
 
   log("SnappySense running!\n");

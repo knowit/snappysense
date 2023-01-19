@@ -118,8 +118,8 @@ WiFiHolder connect_to_wifi() {
   if (is_connected) {
     WiFiHolder holder(true);
 #ifdef SLIDESHOW_MODE
-    if (slideshow_task) {
-      slideshow_task->setWiFiStatus(true);
+    if (SlideshowTask::handle) {
+      SlideshowTask::handle->setWiFiStatus(true);
     }
 #endif
     log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
@@ -127,8 +127,8 @@ WiFiHolder connect_to_wifi() {
   }
   log("WiFi: Failed to connect to any access point\n");
 #ifdef SLIDESHOW_MODE
-  if (slideshow_task) {
-    slideshow_task->setWiFiStatus(false);
+  if (SlideshowTask::handle) {
+    SlideshowTask::handle->setWiFiStatus(false);
   }
 #else
   render_text("No WiFi\n");

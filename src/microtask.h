@@ -1,3 +1,5 @@
+// Lightweight non-preemptive tasking system
+
 #ifndef microtask_h_included
 #define microtask_h_included
 

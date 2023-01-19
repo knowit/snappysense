@@ -28,14 +28,20 @@ String fmt(const char* format, ...) __attribute__ ((format (printf, 1, 2)));
 
 // Starting at *p, look for `something=something_else` followed by & or end of string (NUL).
 // The `something_else` is url-encoded.  Return true if we found a matching pair, and assign
-// *key and *value (decoded) and update *p.  Otherwise return false and leave *p unchanged.
+// *key and *value (url-decoded) and update *p.  Otherwise return false and leave *p unchanged.
 // Note that `something_else` can be an empty string.
+
 bool get_posted_field(const char** p, String* key, String* value);
 
+// Format the timestamp in a standard way.
+
+String format_time(const struct tm& time);
+
 // Emit message on possible channels and do not return.
+
 void panic(const char* msg) __attribute__ ((noreturn));
 
-// List of stuff.
+// List of T.
 
 template<typename T>
 class List {

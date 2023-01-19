@@ -4,11 +4,9 @@
 #define serial_server_h_included
 
 #include "main.h"
-
-#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
-
 #include "microtask.h"
-#include "sensor.h"
+
+#ifdef SNAPPY_SERIAL_LINE
 
 // Read from the serial port.  This will not block!  If a complete line has been read,
 // a task is spun off to process it by the a suitable processor, which will produce some
@@ -22,16 +20,6 @@ public:
   void execute(SnappySenseData*) override;
 };
 
-#ifdef SERIAL_SERVER
-class ReadSerialCommandInputTask final : public ReadSerialInputTask {
-public:
-  const char* name() override {
-    return "Serial server command input";
-  }
-  void perform() override;
-};
-#endif
-
-#endif // SERIAL_SERVER || INTERACTIVE_CONFIGURATION
+#endif // SNAPPY_SERIAL_LINE
 
 #endif // !serial_server_h_included

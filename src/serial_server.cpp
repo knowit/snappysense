@@ -2,7 +2,7 @@
 
 #include "serial_server.h"
 
-#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
+#ifdef SNAPPY_SERIAL_LINE
 
 #include "command.h"
 
@@ -26,10 +26,4 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
   }
 }
 
-#ifdef SERIAL_SERVER
-void ReadSerialCommandInputTask::perform() {
-  sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
-}
-#endif
-
-#endif // SERIAL_SERVER || INTERACTIVE_CONFIGURATION
+#endif // SNAPPY_SERIAL_LINE

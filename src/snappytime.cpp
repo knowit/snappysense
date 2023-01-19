@@ -61,34 +61,20 @@ struct tm snappy_local_time() {
   return the_local_time;
 }
 
-String format_time(const struct tm& time) {
-  static const char* const weekdays[] = {
-    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
-  };
-  char buf[256];
-  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s",
-           time.tm_year + 1900,     // year number
-           time.tm_mon + 1,         // month, 1-12
-           time.tm_mday,            // day of the month, 1-31
-           time.tm_hour,            // hour, 0-23
-           time.tm_min,             // minute, 0-59
-           weekdays[time.tm_wday]); // day of the week
-  return String(buf);
-}
+ConfigureTimeTask* ConfigureTimeTask::handle;
 
 void ConfigureTimeTask::execute(SnappySenseData*) {
-  static unsigned long backoff = 60000;
-  static int backoffs = 0;
+  static unsigned long backoff = 60*1000;
   if (!configure_time()) {
     log("Failed to configure time - connection or protocol error.  Will try later.\n");
     sched_microtask_after(this, backoff);
-    if (backoffs < 8) {
+    if (backoff < 60*60*1000) {
       backoff *= 2;
-      backoffs++;
     }
     return;
   }
   log("Successfully configured time\n");
+  handle = nullptr;
 }
 
 #endif // TIMESTAMP

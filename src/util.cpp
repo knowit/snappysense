@@ -87,6 +87,21 @@ String fmt(const char* format, ...) {
   return String(buf);
 }
 
+String format_time(const struct tm& time) {
+  static const char* const weekdays[] = {
+    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
+  };
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s",
+           time.tm_year + 1900,     // year number
+           time.tm_mon + 1,         // month, 1-12
+           time.tm_mday,            // day of the month, 1-31
+           time.tm_hour,            // hour, 0-23
+           time.tm_min,             // minute, 0-59
+           weekdays[time.tm_wday]); // day of the week
+  return String(buf);
+}
+
 void panic(const char* msg) {
   log("Panic: %s\n", msg);
   enter_end_state(msg, true);

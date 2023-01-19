@@ -4,7 +4,7 @@
 
 #include "device.h"
 
-SlideshowTask* slideshow_task;
+SlideshowTask* SlideshowTask::handle;
 
 // This state machine is a little messy since -1 is special and pending_error
 // is special.  The idea, anyway, is that after the splash screen we can
