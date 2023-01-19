@@ -122,12 +122,12 @@ void setup() {
 
   // We are up.  Choose between config mode and normal mode.
 
-#ifdef INTERACTIVE_CONFIGURATION
+#ifdef SNAPPY_INTERACTIVE_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
     Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
     Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
-    sched_microtask_periodically(new ReadSerialConfigInputTask, serial_input_poll_interval_s() * 1000);
+    sched_microtask_periodically(new SerialConfigTask, serial_input_poll_interval_s() * 1000);
 #ifdef WEB_CONFIGURATION
     sched_microtask_periodically(new WebConfigTask, web_command_poll_interval_s() * 1000);
 #endif
@@ -151,7 +151,7 @@ void setup() {
   // interrupt driven.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_COMMAND_SERVER
-  sched_microtask_periodically(new ReadSerialCommandInputTask, serial_input_poll_interval_s() * 1000);
+  sched_microtask_periodically(new SerialCommandTask, serial_input_poll_interval_s() * 1000);
 #endif
 #ifdef MQTT_UPLOAD
   sched_microtask_after(new StartMqttTask, 0);

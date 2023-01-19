@@ -2,9 +2,11 @@
 
 #include "command.h"
 
+#include "config.h"
 #include "device.h"
 #include "network.h"
 #include "util.h"
+#include "web_server.h"
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
 
@@ -137,18 +139,35 @@ Command commands[] = {
 #endif // SNAPPY_COMMAND_PROCESSOR
 
 #ifdef SERIAL_COMMAND_SERVER
-void ReadSerialCommandInputTask::perform() {
+void SerialCommandTask::perform() {
   sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
 }
 #endif
 
 #ifdef WEB_COMMAND_SERVER
+
+// TODO: Clean up doc
+
+// Command processing:
+//
+// The device is connected to an external access point, and the device has an IP
+// address provided by that AP.  It listens on a port, default 8086, for GET
+// requests that ...
+//
+// TODO: The IP must be shown on the device screen, not just on the serial port.
+// It can be shown by the slideshow if the slideshow is running, otherwise whenever
+// the device wakes up to read the sensors.
+//
+// Parameters are passed using the usual syntax, so <http://.../get?temperature> to
+// return the temperature reading.  The parameter handling is ad-hoc and works only
+// for these simple cases.
+
 // This keeps the client alive until the command task has provided
 // output.
 class ProcessCommandTaskFromWeb : public ProcessCommandTask {
-  WebClient* cl;
+  WebRequestHandler* cl;
 public:
-  ProcessCommandTaskFromWeb(WebClient* cl) : ProcessCommandTask(cl->request, &cl->client), cl(cl) {}
+  ProcessCommandTaskFromWeb(WebRequestHandler* cl) : ProcessCommandTask(cl->request, &cl->client), cl(cl) {}
   ~ProcessCommandTaskFromWeb() {
     cl->dead = true;
   }
@@ -187,6 +206,27 @@ void WebCommandClient::process_request() {
 void WebCommandClient::failed_request() {
   log("Web server: Incomplete request [%s]\n", request.c_str());
   dead = true;
+}
+
+struct WebCommandServer : public WebServer {
+  WiFiHolder server_holder;
+  WebCommandServer(int port) : WebServer(port) {}
+};
+
+bool WebCommandTask::start() {
+  int port = web_server_listen_port();
+  auto* state = new WebCommandServer(port);
+  state->server_holder = connect_to_wifi();
+  if (!state->server_holder.is_valid()) {
+    // TODO: Does somebody need to know?
+    log("Failed to bring up web server\n");
+    delete state;
+    return false;
+  }
+  state->server.begin();
+  log("Web server: listening on port %d\n", port);
+  this->web_server = state;
+  return true;
 }
 
 #endif

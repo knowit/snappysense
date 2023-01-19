@@ -32,7 +32,7 @@ public:
 #endif // SNAPPY_COMMAND_PROCESSOR
 
 #ifdef SERIAL_COMMAND_SERVER
-class ReadSerialCommandInputTask final : public ReadSerialInputTask {
+class SerialCommandTask final : public ReadSerialInputTask {
 public:
   const char* name() override {
     return "Serial server command input";
@@ -42,22 +42,24 @@ public:
 #endif
 
 #ifdef WEB_COMMAND_SERVER
-class WebCommandClient final : public WebClient {
+class WebCommandClient final : public WebRequestHandler {
 public:
-  WebCommandClient(WiFiClient&& client) : WebClient(std::move(client)) {}
+  WebCommandClient(WiFiClient&& client) : WebRequestHandler(std::move(client)) {}
   virtual void process_request() override;
   virtual void failed_request() override;
 };
 
 class WebCommandTask final : public WebInputTask {
 public:
-  WebClient* create_client(WiFiClient&& client) override {
+  WebRequestHandler* create_request_handler(WiFiClient&& client) override {
     return new WebCommandClient(std::move(client));
   }
 
   const char* name() override {
     return "Web server config input";
   }
+
+  bool start() override;
 };
 #endif // WEB_COMMAND_SERVER
 

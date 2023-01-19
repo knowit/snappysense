@@ -1,8 +1,10 @@
 #include "config_ui.h"
 #include "config.h"
 #include "device.h"
+#include "network.h"
+#include "web_server.h"
 
-#ifdef INTERACTIVE_CONFIGURATION
+#ifdef SERIAL_CONFIGURATION
 
 // Configuration file format version, see the 'config' statement help text further down.
 // This is intended to be used in a proper "semantic versioning" way.
@@ -215,7 +217,7 @@ static void show_cmd(Stream* io) {
   }
 }
 
-void ReadSerialConfigInputTask::perform() {
+void SerialConfigTask::perform() {
   auto *io = &Serial;
   if (state == COLLECTING) {
     // collecting input for the "config" command in `config_lines`, ending when we've seen
@@ -257,6 +259,15 @@ void ReadSerialConfigInputTask::perform() {
 #endif
 
 #ifdef WEB_CONFIGURATION
+// Configuration / provisioning:
+//
+// The device acts as an access point, and its SSID and IP address are displayed on the
+// device screen when the device is in configuration mode.  The user's device connects
+// to this SSID, and loads the top-level page from the IP / port 80 - that is, just typing
+// the IP address into the browser address bar is enough, no port or path is needed.
+// This action brings up a configuration form, which can be filled in and submitted to store
+// the values; the process can be repeated.
+
 // This template has eight fields: message, ssid1, password1, ssid2, password2, ssid3, password3, location,
 // which are filled in before the form is sent.  Since access to this page is currently http: and not
 // https: the fields can be sniffed.  We hope the wifi traffic is encrypted.
@@ -295,7 +306,7 @@ static const char config_page[] = R"EOF(
 </html>
 )EOF";
 
-void WebConfigClient::process_request() {
+void WebConfigRequestHandler::process_request() {
   if (request.startsWith("GET / ")) {
     client.println("HTTP/1.1 200 OK");
     client.println("Content-type:text/html");
@@ -390,9 +401,31 @@ void WebConfigClient::process_request() {
   dead = true;
 }
 
-void WebConfigClient::failed_request() {
+void WebConfigRequestHandler::failed_request() {
   log("Web server: Incomplete request [%s]\n", request.c_str());
   dead = true;
 }
 
+bool WebConfigTask::start() {
+  const char* ssid = web_config_access_point();
+  if (*ssid == 0) {
+    render_text("Configuration mode\nNo cfg access point");
+    return false;
+  }
+  // TODO: Handle return code better!  If we fail to bring up the AP then we probably
+  // should not try again, as we're wasting energy.  On the other hand, if we fail
+  // to bring up the AP then there's probably a serious error, so maybe a panic is
+  // the appropriate response...
+  IPAddress ip;
+  if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
+    return false;
+  }
+  String msg = fmt("Configuration mode\n%s\n%s", ssid, ip.toString().c_str());
+  render_text(msg.c_str());
+  int port = 80;
+  web_server = new WebServer(port);
+  web_server->server.begin();
+  log("Web server: listening on port %d\n", port);
+  return true;
+}
 #endif // WEB_CONFIGURATION

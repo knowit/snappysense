@@ -23,13 +23,14 @@ enum class RequestParseState {
   CRLFCRLF,
 };
 
-// One object for each client that has connected to the server.
-class WebClient {
+// One request handler object for each connection created to a server.
+
+class WebRequestHandler {
 public:
   // These fields are PRIVATE to the web server framework
 
   // List of clients attached to some server
-  WebClient* next = nullptr;
+  WebRequestHandler* next = nullptr;
 
   // Input parsing state
   RequestParseState state = RequestParseState::TEXT;
@@ -40,8 +41,8 @@ public:
 public:
   // These properties and methods are for the client.
 
-  WebClient(WiFiClient&& client) : client(std::move(client)) {}
-  virtual ~WebClient() {}
+  WebRequestHandler(WiFiClient&& client) : client(std::move(client)) {}
+  virtual ~WebRequestHandler() {}
 
   // This is the request that has been collected for processing.
   String request;
@@ -56,13 +57,38 @@ public:
   virtual void failed_request() = 0;
 };
 
+// This holds an active server and a list of its clients.  It can be subclassed to add
+// data specific to the connection (for example, for the command server the wifi connection
+// is kept alive by this object).
+
+struct WebServer {
+  // FIXME: These are private to the server framework
+  WebRequestHandler* request_handlers = nullptr;
+  WiFiServer server;
+
+  WebServer(int port) : server(port) {}
+  virtual ~WebServer() {}
+};
+
+// An abstract web server task, not a great abstraction.
+
 class WebInputTask : public MicroTask {
-  WebServerState* state = nullptr;
-  bool start();
-  void poll(WebClient*);
+  void poll(WebRequestHandler*);
 
 public:
-  virtual WebClient* create_client(WiFiClient&& client) = 0;
+  virtual ~WebInputTask() {}
+
+  // This member is managed by the concrete class, not by this class.  Specifically,
+  // if it needs to be deleted, somebody else needs to do it.
+  WebServer* web_server = nullptr;
+
+  // Create a WebRequestHandler of the appropriate type on behalf of the input task type.
+  virtual WebRequestHandler* create_request_handler(WiFiClient&& client) = 0;
+
+  // Create the necessary web server and other connections.  (For example, a task
+  // can connect to a network and listen on a port; or can create a soft AP and
+  // listen on a port on that AP.)
+  virtual bool start() = 0;
 
   void execute(SnappySenseData*) override;
 };

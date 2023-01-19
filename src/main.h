@@ -52,22 +52,18 @@
 // connected then log messages will appear there, otherwise they will be discarded.
 #define LOGGING
 
-// To enter interactive configuration mode:
-//  - connect the device to USB and open a serial console
-//  - press and hold the wake pin and then press and release the reset button
-//  - there will be a message INTERACTIVE CONFIGURATION MODE in the console
-//    and if there's a display there will be a message CONFIGURATION
-//    on it
-//  - there will be a menu system for configuring the device
-#define INTERACTIVE_CONFIGURATION
+// SERIAL_CONFIGURATION causes the device to listen on the serial input line for
+// configuration commands when the device comes up in config mode (see
+// SNAPPY_INTERACTIVE_CONFIGURATION below).  The user enters commands through the
+// terminal to configure all aspects of the device.
+#define SERIAL_CONFIGURATION
 
 // WEB_CONFIGURATION causes a WiFi access point to be created with an SSID
 // printed on the display when the device comes up in config mode (see
-// INTERACTIVE_CONFIGURATION, which is required by WEB_CONFIGURATION).
-// The user can connect to this network and request "/".  This will return
-// an HTML page that contains a form that is submitted with "POST /" and
-// can be used to set some simple parameters in the configuration.
-// (Conflicts with WEB_COMMAND_SERVER for stupid reasons.)
+// SNAPPY_INTERACTIVE_CONFIGURATION below).  The user can connect to this network and
+// request "/".  This will return an HTML page that contains a form that is
+// submitted with "POST /" and can be used to set some simple parameters
+// in the configuration.
 #define WEB_CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  The device and
@@ -90,8 +86,7 @@
 // Simple web server to send commands to the device, obtain data, etc.  The IP address
 // of the device is printed on the serial line and also on the display.  Just ask
 // for / or /help to see a directory of the possible requests.
-// (Conflicts with WEB_CONFIGURATION for stupid reasons.)
-//#define WEB_COMMAND_SERVER
+#define WEB_COMMAND_SERVER
 
 // (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
 // what you're looking at.
@@ -107,11 +102,26 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+// To enter interactive configuration mode:
+//  - connect the device to USB and open a serial console
+//  - press and hold the wake pin and then press and release the reset button
+//  - there will be a message INTERACTIVE CONFIGURATION MODE in the console
+//    and if there's a display there will be a message CONFIGURATION
+//    on it
+//  - there will be a menu system for configuring the device
+//
+// Depending on parameters above, the device supports full configuration over
+// the serial line and/or limited configuration over a web connection.
+
+#if defined(SERIAL_CONFIGURATION) || defined(WEB_CONFIGURATION)
+# define SNAPPY_INTERACTIVE_CONFIGURATION
+#endif
+
 #if defined(WEB_CONFIGURATION) || defined(WEB_COMMAND_SERVER)
 # define WEB_SERVER
 #endif
 
-#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(INTERACTIVE_CONFIGURATION)
+#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(WEB_CONFIGURATION)
 # define SNAPPY_WIFI
 #endif
 
@@ -119,7 +129,7 @@
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
-#if defined(SERIAL_SERVER) || defined(INTERACTIVE_CONFIGURATION)
+#if defined(SERIAL_SERVER) || defined(SERIAL_CONFIGURATION)
 # define SNAPPY_SERIAL_INPUT
 #endif
 
@@ -146,10 +156,6 @@
                                        defined(SNAPPY_SERIAL_LINE) || \
                                        defined(SNAPPY_WEB_SERVER))
 # error "Power management test won't work when the device is mostly busy"
-#endif
-
-#if defined(WEB_CONFIGURATION) && !defined(INTERACTIVE_CONFIGURATION)
-# error "WEB_CONFIGURATION requires INTERACTIVE_CONFIGURATION."
 #endif
 
 #ifdef HARDWARE_1_0_0

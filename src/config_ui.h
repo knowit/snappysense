@@ -7,8 +7,8 @@
 #include "util.h"
 #include "web_server.h"
 
-#ifdef INTERACTIVE_CONFIGURATION
-class ReadSerialConfigInputTask final : public ReadSerialInputTask {
+#ifdef SERIAL_CONFIGURATION
+class SerialConfigTask final : public ReadSerialInputTask {
   enum {
     RUNNING,
     COLLECTING,
@@ -23,18 +23,20 @@ public:
 #endif
 
 #ifdef WEB_CONFIGURATION
-class WebConfigClient final : public WebClient {
+class WebConfigRequestHandler final : public WebRequestHandler {
 public:
-  WebConfigClient(WiFiClient&& client) : WebClient(std::move(client)) {}
+  WebConfigRequestHandler(WiFiClient&& client) : WebRequestHandler(std::move(client)) {}
   virtual void process_request() override;
   virtual void failed_request() override;
 };
 
 class WebConfigTask final : public WebInputTask {
 public:
-  WebClient* create_client(WiFiClient&& client) override {
-    return new WebConfigClient(std::move(client));
+  WebRequestHandler* create_request_handler(WiFiClient&& client) override {
+    return new WebConfigRequestHandler(std::move(client));
   }
+
+  bool start() override;
 
   const char* name() override {
     return "Web server config input";

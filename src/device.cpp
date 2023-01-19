@@ -106,7 +106,7 @@ void device_setup(bool* do_interactive_configuration) {
 
   log("Device initialized\n");
 
-#ifdef INTERACTIVE_CONFIGURATION
+#ifdef SNAPPY_INTERACTIVE_CONFIGURATION
   // To enter configuration mode, press and hold the wake pin and then press and release
   // the reset button.
   if (digitalRead(WAKEUP_PIN)) {
