@@ -1,6 +1,6 @@
 # SnappySense
 
-[This repo](https://github.com/knowit/snappysense) holds the hardware designs, firmware source code, and design documents for KnowIt ObjectNet's _SnappySense_ environmental sensor device.
+[This repo](https://github.com/knowit/snappysense) holds the hardware designs, firmware source code, and design documents for KnowIt ObjectNet's _SnappySense_ environmental sensor device.  See `BACKGROUND.md` for background, requirements, and that type of discussion.
 
 The v1.0.0 device has an esp32 MoC and a number of environmental sensors (temperature, humidity, air quality, and other things - see `src/sensor.h`, as well as a small OLED display.
 
