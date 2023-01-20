@@ -22,14 +22,19 @@
 //
 // The system layers are roughly as follows, from lowest to highest:
 //
-// Device and tasking layer:
+// OS and framework layer:
+//   Arduino, FreeRTOS and HAL
+//
+// Device layer:
 //   Microcontroller and peripheral management and clock, in device.{cpp,h}
 //   Configuration and preferences management, in config.{cpp,h}
 //   Utility functions, in util.{cpp,h}
 //   Serial line logging, in log.{cpp,h}
 //
-// Connectivity and tasking layer:
+// Tasking layer:
 //   Tasking system, in microtask.{cpp,h}
+//
+// Connectivity layer:
 //   Serial line input, in serial_input.{cpp,h}
 //   WiFi connection management, in network.{cpp,h}
 //   Web server infrastructure, in web_server.{cpp,h}
@@ -46,6 +51,11 @@
 //   Configuration user interface (serial and web), in config_ui.{cpp,h}
 //   Orchestration of everything, in main.cpp
 //   Compile-time configuration, in main.h
+//
+// Note that in some cases, lower layers do call higher layers.  For example, the
+// tasking system deletes ad-hoc tasks when they're done and have not been rescheduled.
+// The task destructor is a virtual that may have been overridden by the task class,
+// which is managed by a higher level.
 //
 //
 // MODES and CONFIGURATION.
@@ -147,9 +157,8 @@ void setup() {
 
   // Configure tasks.
 
-  // TODO: Issue 9: This task works for most sensors but not for PIR.  We don't want to
-  // poll as often as PIR needs us to (except in slideshow mode), so PIR needs to become
-  // interrupt driven.
+  // TODO: Issue 9 / Issue 33: This task works for most sensors but not for
+  // noise and motion.
   sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
 #ifdef SERIAL_COMMAND_SERVER
   sched_microtask_periodically(new SerialCommandTask, serial_input_poll_interval_s() * 1000);
