@@ -52,6 +52,13 @@
 //   Orchestration of everything, in main.cpp
 //   Compile-time configuration, in main.h
 //
+// TODO: The sensor data model is really more than one thing.  There's the model
+// for sensor readings, which really belongs with the device.  And then there's the
+// sensor metadata, which handle things like formatting and so on; these are part of
+// the application logic and UI, properly.  (Formatting for MQTT is part of the
+// application logic, formatting for display part of the UI.  But it's probably
+// OK not to worry overmuch about that.)
+//
 // Note that in some cases, lower layers do call higher layers.  For example, the
 // tasking system deletes ad-hoc tasks when they're done and have not been rescheduled.
 // The task destructor is a virtual that may have been overridden by the task class,
