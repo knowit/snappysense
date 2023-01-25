@@ -1,6 +1,6 @@
 // Interface to actual hardware device
 
-// Hardware v1.0.0:
+// Hardware v1.0.0 and v1.1.0:
 //
 // Adafruit feather esp32 "HUZZAH32" (https://www.adafruit.com/product/3406)
 //   esp32-wroom-32 MoC, https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_datasheet_en.pdf
@@ -10,7 +10,7 @@
 //   onboard configured i2c for communication with peripherals
 //   onboard connectivity to external rechargeable LiPoly battery, charging from onboard usb
 //
-// Integrated wake button connected to pin A1 of the esp32
+// Integrated button connected to pin A1 of the esp32
 //
 // 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
 //   eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
@@ -27,16 +27,18 @@
 //   https://www.dfrobot.com/product-1140.html
 //   https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
 //
-// DFRobot SKU:SEN0487 MEMS microphone, analog signal @ pin A5, unit and range of signal
+// DFRobot SKU:SEN0487 MEMS microphone, analog signal (see below), unit and range of signal
 //   not documented beyond analogRead() returning an uint16_t.  From testing, it looks
 //   like it returns a reading mostly in the range 1500-2500, corresponding to 1.5V-2.5V,
 //   presumably the actual upper limit is around 3V somewhere.
 //   https://www.dfrobot.com/product-2357.html
 //   https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
 //
-// HW 1.0.0 has a bug in that the ADC2 configured for the microphone conflicts with its
-// hardwired use for WiFi, as a consequence, they can't be used at the same time.  In
-// practice the Mic functionality is unavailable.
+//   HW 1.1.0: The MEMS is connected to pin A3.
+//
+//   HW 1.0.0: The MEMS is connected to pin A5, but this is a bug because the ADC2 configured
+//   for the MEMS conflicts with its hardwired use for WiFi, as a consequence, they can't be
+//   used at the same time.  In practice the Mic functionality is unavailable in this rev.
 
 #include "device.h"
 
@@ -51,19 +53,20 @@
 #include <DFRobot_ENS160.h>
 #include <DFRobot_EnvironmentalSensor.h>
 
-#if !defined(HARDWARE_1_0_0)
-#  error "Update your pin definitions below"
-#endif
-
-// SnappySense 1.0.0 device definition
+// SnappySense 1.x.y device definition
 
 // Pin definitions
 #define POWER_ENABLE_PIN A0
-#define WAKEUP_PIN A1
+#define BUTTON_PIN A1  // WAKE on 1.0.0, BTN1 on 1.1.0
 #define PIR_SENSOR_PIN A4
-#define MIC_PIN A5
+#if defined(HARDWARE_1_0_0)
+# define MIC_PIN A5
+#elif defined(HARDWARE_1_1_0)
+# define MIC_PIN A3
+#endif
 #define I2C_SDA SDA
 #define I2C_SCL SCL
+#define PWM_PIN T8  // Tentative: ADC1 CH5, pin IO33 aka pin T8
 
 // I2C addresses
 #define I2C_OLED_ADDRESS 0x3C
@@ -99,7 +102,7 @@ void device_setup(bool* do_interactive_configuration) {
   pinMode(POWER_ENABLE_PIN, OUTPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
   pinMode(MIC_PIN, INPUT);
-  pinMode(WAKEUP_PIN, INPUT);
+  pinMode(BUTTON_PIN, INPUT);
 
   // Bring up all peripherals
   power_peripherals_on();
@@ -107,11 +110,11 @@ void device_setup(bool* do_interactive_configuration) {
   log("Device initialized\n");
 
 #ifdef SNAPPY_INTERACTIVE_CONFIGURATION
-  // To enter configuration mode, press and hold the wake pin and then press and release
+  // To enter configuration mode, press and hold the WAKE/BTN1 button and then press and release
   // the reset button.
-  if (digitalRead(WAKEUP_PIN)) {
+  if (digitalRead(BUTTON_PIN)) {
     delay(1000);
-    if (digitalRead(WAKEUP_PIN)) {
+    if (digitalRead(BUTTON_PIN)) {
       *do_interactive_configuration = true;
     }
   }

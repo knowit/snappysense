@@ -81,7 +81,7 @@
 //
 // When the device is powered on it can also be brought up in a "provisioning" mode,
 // to set configuration variables.  To do this, connect a terminal over USB, press
-// and hold the "wake" button on the device, then press and release the "reset"
+// and hold the WAKE/BTN1 button on the device, then press and release the "reset"
 // button on the CPU.  The device will enter an interactive mode over the USB line.
 // There is on-line help for how to use that mode.
 //

@@ -30,8 +30,8 @@
 // FUNCTIONAL CONFIGURATION
 
 // Hardware version you're compiling for.  Pick one.  See device.cpp for more.
-#define HARDWARE_1_0_0
-//#define HARDWARE_1_1_0
+//#define HARDWARE_1_0_0
+#define HARDWARE_1_1_0
 
 // Set this to make config.cpp include development_config.h with compiled-in values
 // and short time intervals for many things (to speed up testing).
@@ -104,7 +104,7 @@
 
 // To enter interactive configuration mode:
 //  - connect the device to USB and open a serial console
-//  - press and hold the wake pin and then press and release the reset button
+//  - press and hold the WAKE/BTN1 button and then press and release the reset button
 //  - there will be a message INTERACTIVE CONFIGURATION MODE in the console
 //    and if there's a display there will be a message CONFIGURATION
 //    on it
@@ -163,6 +163,8 @@
 # if !defined(SNAPPY_WIFI)
 #  define READ_NOISE
 # endif
-#endif // HARDWARE_1_0_0
+#else
+# define READ_NOISE
+#endif // HARDWARE type
 
 #endif // !main_h_included

@@ -17,7 +17,7 @@ void power_peripherals_on();
 
 // Bring the signal on the periperal power line low UNCONDITIONALLY.  This has the effect
 // of disabling the I2C devices (mic, gas, environment, and display in HW v1.0.0) as well
-// as the PIR.  Note that the WAKE button and serial lines are not affected.
+// as the PIR.  Note that the WAKE/BTN1 button and serial lines are not affected.
 void power_peripherals_off();
 
 // The following methods will have limited or no functionality if the peripherals have been
