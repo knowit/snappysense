@@ -280,6 +280,7 @@ static bool get_note(int* frequency, int* duration_ms) {
 }
 
 static void vPlayerTask(void* arg) {
+  int prev_frequency = -1;
   for(;;) {
     PlayerCommand cmd;
     // If a command is pending, it takes precedence.  We're between notes now, so it's OK
@@ -298,6 +299,7 @@ static void vPlayerTask(void* arg) {
             is_playing = false;
           }
           start_playing(cmd.melody);
+          prev_frequency = -1;
           is_playing = true;
           break;
         default:
@@ -311,7 +313,15 @@ static void vPlayerTask(void* arg) {
     if (is_playing) {
       int frequency, duration_ms;
       if (get_note(&frequency, &duration_ms)) {
+        if (prev_frequency == frequency) {
+          // A bit of a hack.  Avoid running the notes together if they are the same.  This works
+          // well for some tunes and less well for some others, and the delay probably ought to
+          // be relative to the bpm of the song.
+          stop_note();
+          delay(10);
+        }
         start_note(frequency);
+        prev_frequency = frequency;
         delay(duration_ms);
       } else {
         stop_note();
