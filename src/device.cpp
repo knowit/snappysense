@@ -198,12 +198,24 @@ void get_sensor_values(SnappySenseData* data) {
   data->time = snappy_local_time();
 #endif
 
+#ifdef SENSE_TEMPERATURE
   data->temperature = environment.getTemperature(TEMP_C);
+#endif
+#ifdef SENSE_HUMIDITY
   data->humidity = environment.getHumidity();
+#endif
+#ifdef SENSE_UV
   data->uv = environment.getUltravioletIntensity();
+#endif
+#ifdef SENSE_LIGHT
   data->lux = environment.getLuminousIntensity();
+#endif
+#ifdef SENSE_PRESSURE
   data->hpa = environment.getAtmospherePressure(HPA);
+#endif
+#ifdef SENSE_ALTITUDE
   data->elevation = environment.getElevation();
+#endif
 
   // The gas sensor does not appear to like repeated initialization, so do it only
   // once.  Do it only when the environment values have stabilized (the first reading
@@ -223,14 +235,22 @@ void get_sensor_values(SnappySenseData* data) {
     // after initializing.
     if (sequence_number > 2) {
       data->air_sensor_status = ENS160.getENS160Status();
+#ifdef SENSE_AIR_QUALITY_INDEX
       data->aqi = ENS160.getAQI();
+#endif
+#ifdef SENSE_TVOC
       data->tvoc = ENS160.getTVOC();
+#endif
+#ifdef SENSE_CO2
       data->eco2 = ENS160.getECO2();
+#endif
     }
   }
 
+#ifdef SENSE_MOTION
   data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
-#ifdef READ_NOISE
+#endif
+#ifdef SENSE_NOISE
   data->noise = analogRead(MIC_PIN);
 #endif
 }

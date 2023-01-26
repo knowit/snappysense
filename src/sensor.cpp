@@ -12,7 +12,7 @@
 // if the buffer is too small, but the operation is guaranteed not to write beyond
 // the end of the buffer.
 
-static void format_sequenceno(const SnappySenseData& data, char* buf, char* buflim) { 
+static void format_sequenceno(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%u", data.sequence_number);
 }
 
@@ -22,52 +22,72 @@ static void format_time(const SnappySenseData& data, char* buf, char* buflim) {
 }
 #endif
 
-static void format_temp(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_TEMPERATURE
+static void format_temp(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%f", data.temperature);
 }
+#endif
 
-static void format_humidity(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_HUMIDITY
+static void format_humidity(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%f", data.humidity);
 }
+#endif
 
-static void format_uv(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_UV
+static void format_uv(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%f", data.uv);
 }
+#endif
 
-static void format_light(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_LIGHT
+static void format_light(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%f", data.lux);
 }
+#endif
 
-static void format_pressure(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_PRESSURE
+static void format_pressure(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%u", data.hpa);
 }
+#endif
 
-void format_altitude(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_ALTITUDE
+void format_altitude(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%f", data.elevation);
 }
+#endif
 
-void format_air_sensor_status(const SnappySenseData& data, char* buf, char* buflim) { 
+void format_air_sensor_status(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.air_sensor_status);
 }
 
-static void format_air_quality(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_AIR_QUALITY_INDEX
+static void format_air_quality(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.aqi);
 }
+#endif
 
-static void format_tvoc(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_TVOC
+static void format_tvoc(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.tvoc);
 }
+#endif
 
-static void format_co2(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_CO2
+static void format_co2(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.eco2);
 }
+#endif
 
-static void format_motion(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_MOTION
+static void format_motion(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.motion_detected);
 }
+#endif
 
-#ifdef READ_NOISE
-static void format_noise(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_NOISE
+static void format_noise(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", data.noise);
 }
 #endif
@@ -78,21 +98,29 @@ static void format_noise(const SnappySenseData& data, char* buf, char* buflim) {
 // "Displayers" display for SLIDESHOW_MODE use, if the "formatted" display has too much
 // information.
 
-static void display_temp(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_TEMPERATURE
+static void display_temp(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%3.1f", data.temperature);
 }
+#endif
 
-static void display_humidity(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_HUMIDITY
+static void display_humidity(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%3.1f", data.humidity);
 }
+#endif
 
-static void display_light(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_LIGHT
+static void display_light(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", (int)data.lux);
 }
+#endif
 
-static void display_altitude(const SnappySenseData& data, char* buf, char* buflim) { 
+#ifdef SENSE_ALTITUDE
+static void display_altitude(const SnappySenseData& data, char* buf, char* buflim) {
   snprintf(buf, buflim - buf, "%d", (int)data.elevation);
 }
+#endif
 
 #ifdef SLIDESHOW_MODE
 #define ICON(x) x
@@ -105,20 +133,40 @@ SnappyMetaDatum snappy_metadata[] = {
 #ifdef TIMESTAMP
   {"time",        "Local time of reading", "",    "",        nullptr,                nullptr,             format_time},
 #endif
+#ifdef SENSE_TEMPERATURE
   {"temperature", "Temperature",           "C",   "C",       ICON(temperature_icon), display_temp,        format_temp},
+#endif
+#ifdef SENSE_HUMIDITY
   {"humidity",    "Humidity",              "%",   "%",       ICON(humidity_icon),    display_humidity,    format_humidity},
+#endif
+#ifdef SENSE_UV
   {"uv",          "Ultraviolet intensity", "",    "mW/cm^2", ICON(uv_icon),          format_uv,           format_uv},
+#endif
+#ifdef SENSE_LIGHT
   {"light",       "Luminous intensity",    "lx",  "lx",      ICON(lux_icon),         display_light,       format_light},
+#endif
+#ifdef SENSE_PRESSURE
   {"pressure",    "Atmospheric pressure",  "hpa", "hpa",     ICON(hpa_icon),         format_pressure,     format_pressure},
+#endif
+#ifdef SENSE_ALTITUDE
   {"altitude",    "Altitude",              "m",   "m",       ICON(elevation_icon),   display_altitude,    format_altitude},
+#endif
   {"airsensor",   "Air sensor status",     "",    "",        nullptr,                nullptr,             format_air_sensor_status},
+#ifdef SENSE_AIR_QUALITY_INDEX
   {"airquality",  "Air quality index",     "",    "",        ICON(aqi_icon),         format_air_quality,  format_air_quality},
+#endif
+#ifdef SENSE_TVOC
   {"tvoc",        "Concentration of total volatile organic compounds",
                                            "ppb", "ppb",     ICON(aqi_icon),         format_tvoc,         format_tvoc},
+#endif
+#ifdef SENSE_CO2
   {"co2",         "Carbon dioxide equivalent concentration",
                                            "ppm", "ppm",     ICON(co2_icon),         format_co2,          format_co2},
+#endif
+#ifdef SENSE_MOTION
   { "motion",     "Motion detected",       "",    "",        ICON(motion_icon),      format_motion,       format_motion},
-#ifdef READ_NOISE
+#endif
+#ifdef SENSE_NOISE
   {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       format_noise,        format_noise},
 #endif
   {nullptr,       nullptr,                 "",    "",        nullptr,                nullptr,             nullptr}
@@ -142,7 +190,7 @@ String format_readings_as_json(const SnappySenseData& data) {
     r->format(data, tmp, tmp+sizeof(tmp));
     buf += tmp;
   }
-  buf += '}';  
+  buf += '}';
   return buf;
 }
 

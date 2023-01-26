@@ -71,6 +71,21 @@
 // production only when we can count on a non-battery power source.
 #define SLIDESHOW_MODE
 
+// Control the various sensors
+#define SENSE_TEMPERATURE
+#define SENSE_HUMIDITY
+#define SENSE_UV
+#define SENSE_LIGHT
+#define SENSE_PRESSURE
+// Altitude is broken on HW 1.x.y: it's a crude formula wrapped around the pressure sensor,
+// this simply can't be right.
+//#define SENSE_ALTITUDE
+#define SENSE_AIR_QUALITY_INDEX
+#define SENSE_TVOC
+#define SENSE_CO2
+#define SENSE_MOTION
+#define SENSE_NOISE
+
 // ----------------------------------------------------------------------------
 // The following are mostly useful during development and would not normally be
 // enabled in production.
@@ -162,13 +177,9 @@
 # error "Power management test won't work when the device is mostly busy"
 #endif
 
-#ifdef HARDWARE_1_0_0
 // In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
-# if !defined(SNAPPY_WIFI)
-#  define READ_NOISE
-# endif
-#else
-# define READ_NOISE
-#endif // HARDWARE type
+#if defined(HARDWARE_1_0_0) && defined(SNAPPY_WIFI)
+# undef SENSE_NOISE
+#endif
 
 #endif // !main_h_included

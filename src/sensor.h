@@ -19,39 +19,57 @@ struct SnappySenseData {
   struct tm time;
 #endif
 
+#ifdef SENSE_ALTITUDE
   // Altitude of device, meters above (below) sea level
   float elevation;
+#endif
 
+#ifdef SENSE_HUMIDITY
   // Relative humidity, percent
   float humidity;
+#endif
 
+#ifdef SENSE_TEMPERATURE
   // Degrees Celsius
   float temperature;
+#endif
 
+#ifdef SENSE_PRESSURE
   // Air pressure, in 10^2 Pascal
   uint16_t hpa;
+#endif
 
+#ifdef SENSE_LIGHT
   // Illumninance, in lux
   float lux;
+#endif
 
+#ifdef SENSE_UV
   // Ultraviolet radiation, in mW / cm^2
   float uv;
+#endif
 
   // Status code from the device: 0=normal, 1=warmup, 2=startup, 3=invalid
   uint8_t air_sensor_status;
 
+#ifdef SENSE_AIR_QUALITY_INDEX
   // AQI: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy
   uint8_t aqi;
+#endif
 
+#ifdef SENSE_TVOC
   // Total volatile organic compounds, 0–65000, ppb
   uint16_t tvoc;
+#endif
 
+#ifdef SENSE_CO2
   // CO2, 400–65000, ppm
-  // Five levels: Excellent(400 - 600), Good(600 - 800), Moderate(800 - 1000), 
+  // Five levels: Excellent(400 - 600), Good(600 - 800), Moderate(800 - 1000),
   //              Poor(1000 - 1500), Unhealthy(> 1500)
   uint16_t eco2;
+#endif
 
-#ifdef READ_NOISE
+#ifdef SENSE_NOISE
   // The value looks like it's the voltage reading times 1000: the lower limit is
   // about 1500, which is what the data sheet says corresponds to the quiescent
   // state at 1.5V.  As the environment becomes noisier, the numbers become
@@ -60,8 +78,10 @@ struct SnappySenseData {
   uint16_t noise;
 #endif
 
+#ifdef SENSE_MOTION
   // Passive motion sensor.  Unit: no movement / movement.
   bool motion_detected;
+#endif
 };
 
 // Sensor metadata.  There is one row in the metadata table for each field in the model
