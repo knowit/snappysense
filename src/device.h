@@ -73,4 +73,10 @@ time_t get_time();
 struct tm snappy_local_time();
 #endif
 
+#ifdef SNAPPY_PIEZO
+void setup_sound();
+void start_note(int frequency);
+void stop_note();
+#endif
+
 #endif // !device_h_included

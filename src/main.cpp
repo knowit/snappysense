@@ -108,6 +108,7 @@
 #include "log.h"
 #include "microtask.h"
 #include "mqtt_upload.h"
+#include "piezo.h"
 #include "sensor.h"
 #include "snappytime.h"
 #include "slideshow.h"
@@ -120,6 +121,9 @@
 // those that update it and those that consume it.
 
 static SnappySenseData snappy;
+
+const char melody[] = "StarWars:d=4,o=5,b=38:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
+//const char melody[] = "Test:d=4,o=5,b=60:c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c";
 
 void setup() {
   // Power up the device.
@@ -186,6 +190,9 @@ void setup() {
 #endif // SLIDESHOW_MODE
 
   log("SnappySense running!\n");
+#ifdef SNAPPY_PIEZO
+  play_song(melody);
+#endif
 }
 
 void loop() {

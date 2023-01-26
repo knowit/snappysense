@@ -39,6 +39,10 @@
 //   HW 1.0.0: The MEMS is connected to pin A5, but this is a bug because the ADC2 configured
 //   for the MEMS conflicts with its hardwired use for WiFi, as a consequence, they can't be
 //   used at the same time.  In practice the Mic functionality is unavailable in this rev.
+//
+// Hardware v1.1.0:
+//
+// TODO: Piezo element
 
 #include "device.h"
 
@@ -48,10 +52,12 @@
 #include "sensor.h"
 #include "snappytime.h"
 #include "Wire.h"
+#include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DFRobot_ENS160.h>
 #include <DFRobot_EnvironmentalSensor.h>
+#include <esp32-hal-ledc.h>
 
 // SnappySense 1.x.y device definition
 
@@ -67,6 +73,7 @@
 #define I2C_SDA SDA
 #define I2C_SCL SCL
 #define PWM_PIN T8  // Tentative: ADC1 CH5, pin IO33 aka pin T8
+#define PWM_CHAN 5
 
 // I2C addresses
 #define I2C_OLED_ADDRESS 0x3C
@@ -293,6 +300,7 @@ void test_mems() {
 }
 #endif
 
+#ifdef TIMESTAMP
 static unsigned long timebase;
 
 void configure_clock(unsigned long t) {
@@ -310,3 +318,18 @@ struct tm snappy_local_time() {
   localtime_r(&the_time, &the_local_time);
   return the_local_time;
 }
+#endif // TIMESTAMP
+
+#ifdef SNAPPY_PIEZO
+void setup_sound() {
+  ledcAttachPin(PWM_PIN, PWM_CHAN);
+}
+
+void start_note(int frequency) {
+  ledcWriteTone(PWM_CHAN, frequency);
+}
+
+void stop_note() {
+  ledcWrite(PWM_CHAN, 0);
+}
+#endif // SNAPPY_PIEZO

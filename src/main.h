@@ -133,6 +133,10 @@
 # define SNAPPY_SERIAL_INPUT
 #endif
 
+#if !defined(HARDWARE_1_0_0)
+# define SNAPPY_PIEZO
+#endif
+
 #if !defined(DEVELOPMENT)
 # ifdef SLIDESHOW_MODE
 #  warning "SLIDESHOW_MODE not usually enabled in production"
