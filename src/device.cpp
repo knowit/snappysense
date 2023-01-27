@@ -1,4 +1,4 @@
-// Interface to actual hardware device
+// Interface to SnappySense hardware device (see the hardware/ subdirectory)
 
 // Hardware v1.0.0 and v1.1.0:
 //
@@ -15,15 +15,21 @@
 // 0.91" 128x32 OLED display @ I2C 0x3C (hardwired)
 //   eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
 //
+//   TODO: Document API?
+//
 // DFRobot SKU:SEN0514 air/gas sensor @ I2C 0x53 (alternate 0x52, supposedly)
 //   https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
+//
+//   TODO: Document API?
 //
 // DFRobot SKU:SEN0500 environmental sensor @ I2C 0x22 (undocumented)
 //   https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
 //
+//   TODO: Document API?
+//
 // DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal reads analog
 //   high after / while movement is detected, low when no movement is detected, no buffering
-//   of value, see issue #9.
+//   of value, see issue #9.  Reading it digital would be fine too.
 //   https://www.dfrobot.com/product-1140.html
 //   https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
 //
@@ -34,6 +40,8 @@
 //   https://www.dfrobot.com/product-2357.html
 //   https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
 //
+//   TODO: Document the use of the specific ADC on the ESP32 for this.
+//
 //   HW 1.1.0: The MEMS is connected to pin A3.
 //
 //   HW 1.0.0: The MEMS is connected to pin A5, but this is a bug because the ADC2 configured
@@ -43,6 +51,8 @@
 // Hardware v1.1.0:
 //
 // TODO: Piezo element
+//   The PWM used to drive the element is here:
+//   https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/ledc.html
 
 #include "device.h"
 
@@ -250,6 +260,7 @@ void get_sensor_values(SnappySenseData* data) {
 #ifdef SENSE_MOTION
   data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
 #endif
+
 #ifdef SENSE_NOISE
   data->noise = analogRead(MIC_PIN);
 #endif
@@ -342,6 +353,9 @@ struct tm snappy_local_time() {
 
 #ifdef SNAPPY_PIEZO
 void setup_sound() {
+  // TODO: Justify these choices, which are wrong.  Probably 1 bit of resolution is fine?
+  // And the question is whether ledcSetup should be before or after ledcAttachPin.
+  ledcSetup(PWM_CHAN, 4000, 16);
   ledcAttachPin(PWM_PIN, PWM_CHAN);
 }
 
