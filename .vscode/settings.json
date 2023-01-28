@@ -48,5 +48,6 @@
         "stdexcept": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": true
 }

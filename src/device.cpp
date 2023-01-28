@@ -27,11 +27,15 @@
 //
 //   TODO: Document API?
 //
-// DFRobot SKU:SEN0171 Digital passive IR sensor @ pin A4, signal reads analog
+// DFRobot SKU:SEN0171 Digital passive IR sensor @ pin (see below), signal reads analog
 //   high after / while movement is detected, low when no movement is detected, no buffering
 //   of value, see issue #9.  Reading it digital would be fine too.
 //   https://www.dfrobot.com/product-1140.html
 //   https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
+//
+//   HW 1.1.0: The PIR is connected to pin A2.
+//
+//   HW 1.0.0: The PIR is connected to pin A4.
 //
 // DFRobot SKU:SEN0487 MEMS microphone, analog signal (see below), unit and range of signal
 //   not documented beyond analogRead() returning an uint16_t.  From testing, it looks
@@ -74,11 +78,14 @@
 // Pin definitions
 #define POWER_ENABLE_PIN A0
 #define BUTTON_PIN A1  // WAKE on 1.0.0, BTN1 on 1.1.0
-#define PIR_SENSOR_PIN A4
 #if defined(HARDWARE_1_0_0)
+# define PIR_SENSOR_PIN A4
 # define MIC_PIN A5
 #elif defined(HARDWARE_1_1_0)
+# define PIR_SENSOR_PIN A2
 # define MIC_PIN A3
+#else
+# error "Fix your hardware definitions"
 #endif
 #define I2C_SDA SDA
 #define I2C_SCL SCL
