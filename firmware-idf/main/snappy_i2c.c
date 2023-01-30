@@ -2,16 +2,17 @@
 
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
+#include "driver/i2c.h"
 
-bool i2cbus_probe(unsigned i2c_bus, unsigned address) {
+bool snappy_i2c_probe(unsigned i2c_bus, unsigned address) {
   uint8_t dummy = 0;
-  return i2cbus_write_master(i2c_bus, address,
-			     &dummy, /* nbytes= */ 0,
-			     /* timeoutMs= */ 200) == ESP_OK;
+  return snappy_i2c_write(i2c_bus, address,
+			  &dummy, /* nbytes= */ 0,
+			  /* timeoutMs= */ 200);
 }
 
-esp_err_t i2cbus_write_master(unsigned i2c_bus, unsigned address, const void* buffer, size_t nbytes,
-			      unsigned timeoutMs) {
+bool snappy_i2c_write(unsigned i2c_bus, unsigned address, const void* buffer, size_t nbytes,
+		      unsigned timeoutMs) {
   /* Body of this mostly copied from Arduino code (i2cWrite), Apache license */
   uint8_t cmd_buff[I2C_LINK_RECOMMENDED_SIZE(1)] = { 0 };
   i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(cmd_buff, I2C_LINK_RECOMMENDED_SIZE(1));
@@ -39,11 +40,11 @@ esp_err_t i2cbus_write_master(unsigned i2c_bus, unsigned address, const void* bu
   if(cmd != NULL){
     i2c_cmd_link_delete_static(cmd);
   }
-  return ret;
+  return ret == ESP_OK;
 }
 
-esp_err_t i2cbus_read_master(unsigned i2c_bus, unsigned address, uint8_t* buff, size_t size,
-			     unsigned timeOutMillis, size_t *readCount) {
+bool snappy_i2c_read(unsigned i2c_bus, unsigned address, uint8_t* buff, size_t size,
+		     unsigned timeOutMillis, size_t *readCount) {
   /* Body of this mostly copied from Arduino code (i2cWrite), Apache license */
   esp_err_t ret = ESP_FAIL;
   ret = i2c_master_read_from_device((i2c_port_t)i2c_bus, address, buff, size, timeOutMillis / portTICK_PERIOD_MS);
@@ -52,6 +53,5 @@ esp_err_t i2cbus_read_master(unsigned i2c_bus, unsigned address, uint8_t* buff, 
   } else {
     *readCount = 0;
   }
-  return ret;
+  return ret == ESP_OK;
 }
-

@@ -148,7 +148,7 @@ void app_main(void)
    * are being probed further below.
    */
   for ( int address=1 ; address < 127; address++ ) {
-    if (i2cbus_probe(i2c_master_port, address)) {
+    if (snappy_i2c_probe(i2c_master_port, address)) {
 #ifdef I2C_OLED_ADDRESS
       have_oled = have_oled || (address == I2C_OLED_ADDRESS);
 #endif
@@ -207,8 +207,12 @@ void app_main(void)
 	break;
       }
       case EV_CLOCK: {
-	float t = dfrobot_sen0500_get_temperature(&dht, TEMP_C);
-	printf("CLOCK.  Temp = %f\n", t);
+	float temp = 0.0f;
+	if (dfrobot_sen0500_get_temperature(&dht, DFROBOT_SEN0500_TEMP_C, &temp)) {
+	  printf("CLOCK.  Temp = %f\n", temp);
+	} else {
+	  printf("CLOCK.  Failed to read temperature.\n");
+	}
 	break;
       }
       default:

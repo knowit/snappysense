@@ -13,14 +13,16 @@ typedef struct {
 } dfrobot_sen0500_t;
 
 typedef enum {
-  TEMP_F,
-  TEMP_C
-} temp_type_t;
+  DFROBOT_SEN0500_TEMP_F,
+  DFROBOT_SEN0500_TEMP_C
+} dfrobot_sen0500_temp_t;
 
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr);
 
-/* Read the temperature register of the initialized device */
-float dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, temp_type_t tt);
+/* Read the temperature register of the initialized device and return
+   true on success, updating *result; otherwise false.
+ */
+bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt, float* result);
 
 #endif /* !dfrobot_sen0500_h_included */

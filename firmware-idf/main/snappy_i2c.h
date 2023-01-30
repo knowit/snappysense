@@ -2,17 +2,18 @@
 #define snappy_i2c_h_included
 
 #include <stdbool.h>
-#include "driver/i2c.h"
+#include <stdlib.h>
 
 /* Returns true if there is a device at the given address. */
-bool i2cbus_probe(unsigned i2c_bus, unsigned address);
+bool snappy_i2c_probe(unsigned i2c_bus, unsigned address);
 
-/* DOCUMENTME */
-esp_err_t i2cbus_write_master(unsigned bus, unsigned address, const void* buffer, size_t nbytes,
-			      unsigned timeoutMs);
+/* Returns true if the write succeeded.  The address is unshifted. */
+bool snappy_i2c_write(unsigned bus, unsigned address, const void* buffer, size_t nbytes,
+		      unsigned timeoutMs);
 
-/* DOCUMENTME */
-esp_err_t i2cbus_read_master(unsigned i2c_bus, unsigned address, uint8_t* buff, size_t size,
-			     unsigned timeOutMillis, size_t *readCount);
+/* Returns true if the read succeeded, and updates *readCount if so.
+   The address is unshifted. */
+bool snappy_i2c_read(unsigned i2c_bus, unsigned address, uint8_t* buff, size_t size,
+		     unsigned timeOutMillis, size_t *readCount);
 
 #endif /* !snappy_i2c_h_included */

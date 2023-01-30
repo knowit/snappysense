@@ -24,19 +24,23 @@
 #define REG_ATMOSPHERIC_PRESSURE  0x000C ///< Register for protocol transition adapter
 //#define REG_ELEVATION             0x000D ///< Register for protocol transition adapter
 
-static void read_register(dfrobot_sen0500_t* self, unsigned reg, void *buffer, size_t nbytes) {
+static bool read_register(dfrobot_sen0500_t* self, unsigned reg, void *buffer, size_t nbytes) {
   /* A register read command writes the register number shifted left and then reads data */
   uint8_t operation = reg << 1;
-  i2cbus_write_master(self->bus, self->addr, &operation, 1, self->timeout_ms);
-  /* TODO: Check that the number of bytes read is correct */
+  if (!snappy_i2c_write(self->bus, self->addr, &operation, 1, self->timeout_ms)) {
+    return false;
+  }
   size_t bytes_read;
-  i2cbus_read_master(self->bus, self->addr, buffer, nbytes, self->timeout_ms, &bytes_read);
+  return snappy_i2c_read(self->bus, self->addr, buffer, nbytes, self->timeout_ms, &bytes_read) && bytes_read == nbytes;
 }
 
-static uint16_t read_register_u16(dfrobot_sen0500_t* self, unsigned reg) {
+static bool read_register_u16(dfrobot_sen0500_t* self, unsigned reg, unsigned* result) {
   uint8_t buf[2];
-  read_register(self, reg, buf, 2);
-  return (buf[0] << 8) | buf[1];
+  if (!read_register(self, reg, buf, 2)) {
+    return false;
+  }
+  *result = ((unsigned)buf[0] << 8) | buf[1];
+  return true;
 }
   
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr) {
@@ -46,19 +50,27 @@ bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i
   self->timeout_ms = 200;
   self->bus = i2c_bus;
   self->addr = i2c_addr;
-  unsigned response = read_register_u16(self, REG_DEVICE_ADDR) & 0xFF;
-  if ((self->addr << 1) != response) {
+  unsigned response = 0;
+  if (!read_register_u16(self, REG_DEVICE_ADDR, &response)) {
+    return false;
+  }
+  if ((self->addr << 1) != (response & 0xFF)) {
     return false;		/* Invalid i2c address or device response */
   }
   return true;
 }
 
 
-float dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, temp_type_t tt) {
-  int16_t data = (int16_t)read_register_u16(self, REG_TEMP);
-  float temp = (-45) + (data * 175.00) / 1024.00 / 64.00;
-  if(tt == TEMP_F) {
-    temp = temp * 1.8 + 32 ;
+bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt, float* result) {
+  unsigned response = 0;
+  if (!read_register_u16(self, REG_TEMP, &response)) {
+    return false;
   }
-  return temp;
+  float reading = (float)(int16_t)response;
+  reading = -45.0f + (reading * 175.00f) / 1024.0f / 64.0f;
+  if(tt == DFROBOT_SEN0500_TEMP_F) {
+    reading = reading * 1.8f + 32.0f;
+  }
+  *result = reading;
+  return true;
 }
