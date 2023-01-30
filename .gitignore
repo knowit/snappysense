@@ -3,6 +3,6 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-src/development_config.h
-src/configuration.cfg
-NOTES
+firmware-arduino/src/development_config.h
+firmware-arduino/src/configuration.cfg
+firmware-idf/build
