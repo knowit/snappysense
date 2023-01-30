@@ -77,9 +77,7 @@
 #define SENSE_UV
 #define SENSE_LIGHT
 #define SENSE_PRESSURE
-// Altitude is broken on HW 1.x.y: it's a crude formula wrapped around the pressure sensor,
-// this simply can't be right.
-//#define SENSE_ALTITUDE
+#define SENSE_ALTITUDE
 #define SENSE_AIR_QUALITY_INDEX
 #define SENSE_TVOC
 #define SENSE_CO2
@@ -89,6 +87,9 @@
 // ----------------------------------------------------------------------------
 // The following are mostly useful during development and would not normally be
 // enabled in production.
+
+// Play a tune when starting the device
+//#define STARTUP_SONG
 
 // With SERIAL_COMMAND_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
@@ -180,6 +181,12 @@
 // In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
 #if defined(HARDWARE_1_0_0) && defined(SNAPPY_WIFI)
 # undef SENSE_NOISE
+#endif
+
+// Altitude is broken on HW 1.x.y: it's a crude formula wrapped around the pressure sensor,
+// this simply can't be right.
+#if defined(HARDWARE_1_0_0) || defined(HARDWARE_1_1_0)
+# undef SENSE_ALTITUDE
 #endif
 
 #endif // !main_h_included

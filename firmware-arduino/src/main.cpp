@@ -190,7 +190,7 @@ void setup() {
 #endif // SLIDESHOW_MODE
 
   log("SnappySense running!\n");
-#ifdef SNAPPY_PIEZO
+#if defined(SNAPPY_PIEZO) && defined(STARTUP_SONG)
   play_song(melody);
 #endif
 }
