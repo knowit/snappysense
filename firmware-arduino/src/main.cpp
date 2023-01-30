@@ -122,9 +122,6 @@
 
 static SnappySenseData snappy;
 
-const char melody[] = "StarWars:d=4,o=5,b=38:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
-//const char melody[] = "Test:d=4,o=5,b=60:c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c,c";
-
 void setup() {
   // Power up the device.
 
@@ -190,7 +187,12 @@ void setup() {
 #endif // SLIDESHOW_MODE
 
   log("SnappySense running!\n");
-#if defined(SNAPPY_PIEZO) && defined(STARTUP_SONG)
+#if defined(SNAPPY_PIEZO)
+# if defined(STARTUP_SONG)
+  static const char melody[] = "StarWars:d=4,o=5,b=38:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
+# else
+  static const char melody[] = "Beep:d=4,o=5,b=38:16p,16c";
+# endif
   play_song(melody);
 #endif
 }
