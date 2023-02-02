@@ -21,7 +21,6 @@
 #include "esp_flash.h"
 
 #include "main.h"
-#include "snappy_i2c.h"
 #include "dfrobot_sen0500.h"
 #include "ssd1306.h"
 

@@ -6,11 +6,10 @@
 */
 
 #include "dfrobot_sen0500.h"
-#include "freertos/FreeRTOS.h"
-#include "driver/i2c.h"
 
 #include <stdint.h>
-#include "snappy_i2c.h"
+#include "freertos/FreeRTOS.h"
+#include "driver/i2c.h"
 
 #define REG_PID                   0x0000 ///< Register for protocol transition adapter
 #define REG_VID                   0x0001 ///< Register for protocol transition adapter
