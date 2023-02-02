@@ -11,6 +11,10 @@ bool snappy_i2c_probe(unsigned i2c_bus, unsigned address);
 bool snappy_i2c_write(unsigned bus, unsigned address, const void* buffer, size_t nbytes,
 		      unsigned timeoutMs);
 
+/* Same as above, but `prefix` is a byte that is written before the buffer. */
+bool snappy_i2c_write_prefixed(unsigned i2c_bus, unsigned address, unsigned prefix,
+			       const void* buffer, size_t nbytes, unsigned timeoutMs);
+
 /* Returns true if the read succeeded, and updates *readCount if so.
    The address is unshifted. */
 bool snappy_i2c_read(unsigned i2c_bus, unsigned address, uint8_t* buff, size_t size,

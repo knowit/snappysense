@@ -1,15 +1,19 @@
 #ifndef dfrobot_sen0500_h_included
 #define dfrobot_sen0500_h_included
 
+#include "main.h"
+
+#ifdef SNAPPY_I2C_SEN0500
+
 #include <stdbool.h>
 #include <stddef.h>
 
 /* DFRobot SEN0500 environmental sensor device, on i2c */
 
 typedef struct {
-  unsigned timeout_ms;
-  unsigned bus;
+  unsigned bus;			/* Zero-based bus number */
   unsigned addr;		/* Unshifted address */
+  unsigned timeout_ms;
 } dfrobot_sen0500_t;
 
 typedef enum {
@@ -24,5 +28,7 @@ bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i
    true on success, updating *result; otherwise false.
  */
 bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt, float* result);
+
+#endif /* SNAPPY_I2C_SEN0500 */
 
 #endif /* !dfrobot_sen0500_h_included */

@@ -6,6 +6,8 @@
 */
 
 #include "dfrobot_sen0500.h"
+#include "freertos/FreeRTOS.h"
+#include "driver/i2c.h"
 
 #include <stdint.h>
 #include "snappy_i2c.h"
@@ -25,13 +27,25 @@
 //#define REG_ELEVATION             0x000D ///< Register for protocol transition adapter
 
 static bool read_register(dfrobot_sen0500_t* self, unsigned reg, void *buffer, size_t nbytes) {
+  /* TODO: The correct thing to do here is to use a write_then_read operation if possible,
+     to avoid relinquishing the bus.  This prevents any mishaps with tasks, should we end
+     up having background tasks that access the SEN0500 as well as the main task.  For example,
+     the synchronous `read` command (serial console) along with a background task that gathers
+     sensor readings would create that situation. */
   /* A register read command writes the register number shifted left and then reads data */
   uint8_t operation = reg << 1;
-  if (!snappy_i2c_write(self->bus, self->addr, &operation, 1, self->timeout_ms)) {
+  esp_err_t res;
+  res = i2c_master_write_to_device(self->bus, self->addr, &operation, 1, self->timeout_ms / portTICK_PERIOD_MS);
+  if (res != ESP_OK) {
+    LOG("Byte write to %d @ %02X failed %d with timeout %d\n", self->bus, self->addr, res, self->timeout_ms);
     return false;
   }
-  size_t bytes_read;
-  return snappy_i2c_read(self->bus, self->addr, buffer, nbytes, self->timeout_ms, &bytes_read) && bytes_read == nbytes;
+  res = i2c_master_read_from_device(self->bus, self->addr, buffer, nbytes, self->timeout_ms);
+  if (res != ESP_OK) {
+    LOG("Failed to read response\n");
+    return false;
+  }
+  return true;
 }
 
 static bool read_register_u16(dfrobot_sen0500_t* self, unsigned reg, unsigned* result) {
@@ -45,6 +59,7 @@ static bool read_register_u16(dfrobot_sen0500_t* self, unsigned reg, unsigned* r
   
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr) {
   if (i2c_addr < 1 || i2c_addr > 0x7F) {
+    LOG("Bad address\n");
     return false;		/* Invalid i2c address */
   }
   self->timeout_ms = 200;
@@ -52,9 +67,11 @@ bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i
   self->addr = i2c_addr;
   unsigned response = 0;
   if (!read_register_u16(self, REG_DEVICE_ADDR, &response)) {
+    LOG("Read failed\n");
     return false;
   }
-  if ((self->addr << 1) != (response & 0xFF)) {
+  if (self->addr != (response & 0xFF)) {
+    LOG("Bad response %04X addr %04X\n", response, self->addr);
     return false;		/* Invalid i2c address or device response */
   }
   return true;

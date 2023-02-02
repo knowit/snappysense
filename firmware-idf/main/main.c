@@ -20,8 +20,10 @@
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 
+#include "main.h"
 #include "snappy_i2c.h"
 #include "dfrobot_sen0500.h"
+#include "ssd1306.h"
 
 /* SnappySense hardware version.  Some pins changed from v1.0.0 to v1.1.0 */
 #define HARDWARE_1_1_0
@@ -36,32 +38,30 @@
 /* GPIO34 aka A2: PIR */
 #  define PIR_PIN 34
 
-/* GPIO22 and GPIO23 are the standard I2C pins */
+/* I2C1: GPIO22 and GPIO23 are the standard I2C pins */
 #define I2C_SCL_PIN 22
 #define I2C_SDA_PIN 23
-
-/* I2C devices we know about, see snappysense sources for more info */
-#define I2C_OLED_ADDRESS 0x3C
-#define I2C_AIR_ADDRESS  0x53
-#define I2C_DHT_ADDRESS  0x22
 
 #else
 #  error "Fix your definitions"
 #endif
 
-#ifdef I2C_OLED_ADDRESS
-static bool have_oled = false;
-#endif
-#ifdef I2C_AIR_ADDRESS
-static bool have_air = false;
-#endif
-#ifdef I2C_DHT_ADDRESS
-static bool have_dht = false;
-static dfrobot_sen0500_t dht;
+#ifdef SNAPPY_I2C_SSD1306
+/* On i2c1 */
+static uint8_t ssd1306_mem[SSD1306_DEVICE_SIZE(SSD1306_WIDTH, SSD1306_HEIGHT)];
+static SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
 #endif
 
-/* Signal error and hang */
-void panic(const char* msg) __attribute__ ((noreturn));
+#ifdef SNAPPY_I2C_SEN0514
+/* On i2c1 */
+static bool have_sen0514;
+#endif
+
+#ifdef SNAPPY_I2C_SEN0500
+/* On i2c1 */
+static bool have_sen0500;
+static dfrobot_sen0500_t sen0500; /* Only if have_sen0500 is true */
+#endif
 
 /* Event numbers should stay below 16.  Events have an event number in the
  * low 4 bits and payload in the upper 28. */
@@ -105,13 +105,19 @@ void app_main(void)
   gpio_config(&power_conf);
   gpio_set_level(POWER_PIN, 1);
 
+  /* Give peripheral power the time to stabilize.  */
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+
   /* Enable interrupts.  They will be communicated on the queue from the ISR. */
+#if 0
   gpio_install_isr_service(0);
+#endif
   gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
   /* Setup a PIR interrupt.  Note this is mostly an experiment, making the PIR interrupt-driven
    * conflicts with a hardware bug on the ESP32, if we also want wifi.
    */
+#if 0
   gpio_config_t pir_conf = {
     .intr_type = GPIO_INTR_ANYEDGE,
     .pin_bit_mask = (1ULL << PIR_PIN) | (1ULL << BUTTON_PIN),
@@ -120,7 +126,9 @@ void app_main(void)
   gpio_config(&pir_conf);
   gpio_isr_handler_add(PIR_PIN, gpio_isr_handler, (void*) PIR_PIN);
   gpio_isr_handler_add(BUTTON_PIN, gpio_isr_handler, (void*) BUTTON_PIN);
+#endif
 
+#ifdef SNAPPY_I2C
   /* Initialize I2C master */
   int i2c_master_port = 0; /* I2C bus #1 */
   i2c_config_t i2c_conf = {
@@ -141,32 +149,25 @@ void app_main(void)
 			 /* intr_flags= */ 0) != ESP_OK) {
     panic("failed to install i2c @ 2\n");
   }
-  /* Some of the i2c devices are slow to come up.  200ms may be more than we need. */
-  vTaskDelay(200);
- 
-  /* Look for i2c devices. Technically this is probably not necessary, as the devices
-   * are being probed further below.
-   */
-  for ( int address=1 ; address < 127; address++ ) {
-    if (snappy_i2c_probe(i2c_master_port, address)) {
-#ifdef I2C_OLED_ADDRESS
-      have_oled = have_oled || (address == I2C_OLED_ADDRESS);
-#endif
-#ifdef I2C_AIR_ADDRESS
-      have_air = have_air || (address == I2C_AIR_ADDRESS);
-#endif
-#ifdef I2C_DHT_ADDRESS
-      have_dht = have_dht || (address == I2C_DHT_ADDRESS);
-#endif
-    }
-  }
+  i2c_set_timeout((i2c_port_t)i2c_master_port, 0xFFFFF);
 
-#ifdef I2C_DHT_ADDRESS
+  /* Some of the i2c devices are slow to come up.  200ms may be more than we need. */
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+#endif
+
+#ifdef SNAPPY_I2C_SEN0500
   /* Check the DHT device and initialize it */
-  if (have_dht) {
-    if (!dfrobot_sen0500_begin(&dht, i2c_master_port, I2C_DHT_ADDRESS)) {
-      have_dht = false;
-    }
+  if (dfrobot_sen0500_begin(&sen0500, i2c_master_port, SEN0500_I2C_ADDRESS)) {
+    have_sen0500 = true;
+  } else {
+    LOG("Failed to init dht\n");
+  }
+#endif
+  
+#ifdef SNAPPY_I2C_SSD1306
+  ssd1306 = ssd1306_i2c_init(ssd1306_mem, 0, SSD1306_I2C_ADDRESS, SSD1306_WIDTH, SSD1306_HEIGHT);
+  if (ssd1306) {
+    ssd1306_Init(ssd1306);
   }
 #endif
 
@@ -175,7 +176,14 @@ void app_main(void)
   xTimerStart(t, 0);
 
   /* And we are up! */
-  printf("Snappysense running!\n");
+  LOG("Snappysense running!\n");
+#ifdef SNAPPY_I2C_SSD1306
+  if (ssd1306) {
+    ssd1306_SetCursor(ssd1306, 0, 0);
+    ssd1306_WriteString(ssd1306, "Hello, world!", Font_7x10, SSD1306_WHITE);
+    ssd1306_UpdateScreen(ssd1306);
+  }
+#endif
 
   /* Process events forever */
   struct timeval button_down; /* Time of button press */
@@ -185,20 +193,20 @@ void app_main(void)
     if(xQueueReceive(gpio_evt_queue, &ev, portMAX_DELAY)) {
       switch (ev & 15) {
       case EV_PIR:
-	printf("PIR: %" PRIu32 "\n", ev >> 4);
+	LOG("PIR: %" PRIu32 "\n", ev >> 4);
 	break;
       case EV_BUTTON: {
 	/* Experimentation suggests that it's possible to have spurious button presses of around 10K
 	   us, when the finger nail sort of touches the edge of the button and slides off.  A "real"
 	   press lasts at least 100K us. */
 	uint32_t state = ev >> 4;
-	printf("BUTTON: %" PRIu32 "\n", state);
+	LOG("BUTTON: %" PRIu32 "\n", state);
 	if (!state && was_pressed) {
 	  struct timeval now;
 	  gettimeofday(&now, NULL);
 	  uint64_t t = ((uint64_t)now.tv_sec * 1000000 + (uint64_t)now.tv_usec) -
 	    ((uint64_t)button_down.tv_sec * 1000000 + (uint64_t)button_down.tv_usec);
-	  printf("  Pressed for %" PRIu64 "us\n", t);
+	  LOG("  Pressed for %" PRIu64 "us\n", t);
 	}
 	was_pressed = state == 1;
 	if (state) {
@@ -207,16 +215,34 @@ void app_main(void)
 	break;
       }
       case EV_CLOCK: {
+	LOG("CLOCK\n");
 	float temp = 0.0f;
-	if (dfrobot_sen0500_get_temperature(&dht, DFROBOT_SEN0500_TEMP_C, &temp)) {
-	  printf("CLOCK.  Temp = %f\n", temp);
+#ifdef SNAPPY_I2C_SEN0500
+	if (!have_sen0500) {
+	  LOG("  No temperature sensor\n");
+	} else if (dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temp)) {
+# ifdef SNAPPY_I2C_SSD1306
+	  if (ssd1306) {
+	    ssd1306_Fill(ssd1306, SSD1306_BLACK);
+	    ssd1306_SetCursor(ssd1306, 0, 0);
+	    char buf[32];
+	    LOG(buf, "Temperature: %.1f", temp);
+	    ssd1306_WriteString(ssd1306, buf, Font_7x10, SSD1306_WHITE);
+	    ssd1306_UpdateScreen(ssd1306);
+	  } else {
+	    LOG("  Temperature = %f\n", temp);
+	  }
+#else
+	  LOG("  Temperature = %f\n", temp);
+# endif
 	} else {
-	  printf("CLOCK.  Failed to read temperature.\n");
+	  LOG("  Failed to read temperature.\n");
 	}
+#endif
 	break;
       }
       default:
-	printf("Unknown event: %" PRIu32 "\n", ev);
+	LOG("Unknown event: %" PRIu32 "\n", ev);
 	break;
       }
     }
@@ -224,7 +250,63 @@ void app_main(void)
 }
 
 void panic(const char* msg) {
-  puts("PANIC\n");
-  puts(msg);
+  LOG("PANIC: %s\n", msg);
   for(;;) {}
 }
+
+#ifdef SNAPPY_I2C_SSD1306
+
+void ssd1306_Delay(unsigned ms) {
+  vTaskDelay(ms / portTICK_PERIOD_MS);
+}
+
+void ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned mem_address,
+			    uint8_t* write_buffer, size_t write_size) {
+  /* Based on i2c_master_write_to_device() */
+  /*
+   * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+   *
+   * SPDX-License-Identifier: Apache-2.0
+   */
+
+  esp_err_t err = ESP_OK;
+  uint8_t buffer[I2C_LINK_RECOMMENDED_SIZE(2)] = { 0 };
+
+  i2c_cmd_handle_t handle = i2c_cmd_link_create_static(buffer, sizeof(buffer));
+  assert (handle != NULL);
+
+  err = i2c_master_start(handle);
+  if (err != ESP_OK) {
+    LOG("Fail OLED @ 1\n");
+    goto end;
+  }
+
+  err = i2c_master_write_byte(handle, device_address << 1 | I2C_MASTER_WRITE, true);
+  if (err != ESP_OK) {
+    LOG("Fail OLED @ 2\n");
+    goto end;
+  }
+
+  err = i2c_master_write_byte(handle, mem_address, true);
+  if (err != ESP_OK) {
+    LOG("Fail OLED @ 3\n");
+    goto end;
+  }
+  
+  err = i2c_master_write(handle, write_buffer, write_size, true);
+  if (err != ESP_OK) {
+    LOG("Fail OLED @ 4\n");
+    goto end;
+  }
+
+  i2c_master_stop(handle);
+  err = i2c_master_cmd_begin(i2c_num, handle, portMAX_DELAY);
+  if (err != ESP_OK) {
+    LOG("Fail OLED @ 5\n");
+  }
+
+ end:
+  i2c_cmd_link_delete_static(handle);
+}
+
+#endif
