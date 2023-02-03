@@ -1,3 +1,9 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
+/* Driver for environment sensor: DFRobot SEN0500
+ * https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
+ */
+
 #ifndef dfrobot_sen0500_h_included
 #define dfrobot_sen0500_h_included
 
@@ -5,29 +11,55 @@
 
 #ifdef SNAPPY_I2C_SEN0500
 
-#include <stdbool.h>
-#include <stddef.h>
-
-/* DFRobot SEN0500 environmental sensor device, on i2c */
-
+/* Device representation */
 typedef struct {
-  unsigned bus;			/* Zero-based bus number */
-  unsigned addr;		/* Unshifted address */
+  unsigned bus;			/* Zero-based i2c bus number */
+  unsigned addr;		/* Unshifted i2c device address */
   unsigned timeout_ms;
 } dfrobot_sen0500_t;
-
-typedef enum {
-  DFROBOT_SEN0500_TEMP_F,
-  DFROBOT_SEN0500_TEMP_C
-} dfrobot_sen0500_temp_t;
 
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr);
 
-/* Read the temperature register of the initialized device and return
-   true on success, updating *result; otherwise false.
+/* Temperature representation */
+typedef enum {
+  DFROBOT_SEN0500_TEMP_F,	/* Fahrenheit */
+  DFROBOT_SEN0500_TEMP_C	/* Celsius */
+} dfrobot_sen0500_temp_t;
+
+/* Read the temperature register of the initialized device and return true on success, updating
+ * *result; otherwise false.
  */
-bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt, float* result);
+bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt,
+				     float* result);
+
+/* Read the humidity register of the initialized device and return true on success, updating
+ * *result; otherwise false.  The unit of the output is relative humidity in percent; 50.0 is the
+ * middle of the range.
+ */
+bool dfrobot_sen0500_get_humidity(dfrobot_sen0500_t* self, float* result);
+
+/* Pressure representation */
+typedef enum {
+  DFROBOT_SEN0500_PRESSURE_KPA,	/* Kilopascal */
+  DFROBOT_SEN0500_PRESSURE_HPA,	/* Hectopascal */
+} dfrobot_sen0500_pressure_t;
+
+/* Read the pressure register of the initialized device and return true on success, updating
+ * *result; otherwise false.
+ */
+bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_sen0500_pressure_t pt,
+					      unsigned* result);
+
+/* Read the uv intensity register of the initialized device and return true on success, updating
+ * *result; otherwise false.  The unit of the output is mW / cm^2.
+ */
+bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* result);
+
+/* Read the light intensity register of the initialized device and return true on success, updating
+ * *result; otherwise false.  The unit of the output is lux.
+ */
+bool dfrobot_sen0500_get_luminous_intensity(dfrobot_sen0500_t* self, float* result);
 
 #endif /* SNAPPY_I2C_SEN0500 */
 

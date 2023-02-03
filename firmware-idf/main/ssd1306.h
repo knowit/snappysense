@@ -1,3 +1,9 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
+/* Driver for SSD1306-based OLED display
+ * https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
+ */
+
 /*
 MIT License
 
@@ -40,7 +46,6 @@ SOFTWARE.
 #ifndef __SSD1306_H__
 #define __SSD1306_H__
 
-#include <stddef.h>
 #include <_ansi.h>
 
 _BEGIN_STD_C
@@ -82,6 +87,7 @@ typedef struct {
   unsigned width;
   unsigned height;
   unsigned buffer_size;
+  bool i2c_failure;		/* Set to true if low-level i2c write commands fail */
   SSD1306_t screen;
   uint8_t buffer[1];		/* Will be larger */
 } SSD1306_Device_t;
@@ -94,7 +100,7 @@ typedef struct {
 /* This will initialize the device struct using the provided memory, which must be large enough to
  * hold the struct and the memory for the buffer.
  */
-SSD1306_Device_t* ssd1306_i2c_init(uint8_t* mem, unsigned bus, unsigned i2c_addr, unsigned width, unsigned height);
+SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr, unsigned width, unsigned height);
 
 typedef struct {
   uint8_t x;
@@ -143,8 +149,8 @@ void ssd1306_SetDisplayOn(SSD1306_Device_t* device, const uint8_t on);
 uint8_t ssd1306_GetDisplayOn(SSD1306_Device_t* device);
 
 /* Low-level procedures */
-void ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte);
-void ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size);
+bool ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte);
+bool ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size);
 SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint32_t len);
 
 
@@ -161,9 +167,9 @@ void ssd1306_Delay(unsigned ms);
  * If any locking is required for bus access this function will have to perform that locking, as the
  * ssd1306 library will not.
  *
- * TODO: Probably useful for this to return a status code.
+ * Returns true if the write succeeded, false otherwise.
  */
-void ssd1306_Write_Blocking(unsigned bus, unsigned address, unsigned mem_address,
+bool ssd1306_Write_Blocking(unsigned bus, unsigned address, unsigned mem_address,
 			    uint8_t* buffer, size_t buffer_size);
 
 _END_STD_C

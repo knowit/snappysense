@@ -1,3 +1,9 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
+/* Driver for SSD1306-based OLED display
+ * https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
+ */
+
 /*
 MIT License
 
@@ -37,33 +43,43 @@ SOFTWARE.
 #include "ssd1306.h"
 
 #include <math.h>
-#include <stdlib.h>
 #include <string.h>
 
-SSD1306_Device_t* ssd1306_i2c_init(uint8_t* mem, unsigned bus, unsigned i2c_addr,
-				   unsigned width, unsigned height) {
-    SSD1306_Device_t* device = (SSD1306_Device_t*)mem;
-    device->bus = bus;
-    device->addr = i2c_addr;
-    device->width = width;
-    device->height = height;
-    device->buffer_size = (width * height) / 8;
-    device->screen.CurrentX = 0;
-    device->screen.CurrentY = 0;
-    device->screen.Initialized = 0;
-    device->screen.DisplayOn = 0;
-    memset(device->buffer, 0, device->buffer_size);
-    return device;
+SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr,
+				 unsigned width, unsigned height) {
+  SSD1306_Device_t* device = (SSD1306_Device_t*)mem;
+  device->bus = bus;
+  device->addr = i2c_addr;
+  device->width = width;
+  device->height = height;
+  device->buffer_size = (width * height) / 8;
+  device->screen.CurrentX = 0;
+  device->screen.CurrentY = 0;
+  device->screen.Initialized = 0;
+  device->screen.DisplayOn = 0;
+  memset(device->buffer, 0, device->buffer_size);
+
+  device->i2c_failure = false;
+  ssd1306_Init(device);
+  return device->i2c_failure ? NULL : device;
 }
 
 /* Send a byte to the command register */
-void ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
-  ssd1306_Write_Blocking(device->bus, device->addr, 0x00, &byte, 1);
+bool ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
+  if (!ssd1306_Write_Blocking(device->bus, device->addr, 0x00, &byte, 1)) {
+    device->i2c_failure = true;
+    return false;
+  }
+  return true;
 }
 
 /* Send data */
-void ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size) {
-  ssd1306_Write_Blocking(device->bus, device->addr, 0x40, buffer, buff_size);
+bool ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size) {
+  if (!ssd1306_Write_Blocking(device->bus, device->addr, 0x40, buffer, buff_size)) {
+    device->i2c_failure = true;
+    return false;
+  }
+  return true;
 }
 
 /* Fills the Screenbuffer with values from a given buffer of a fixed length */
