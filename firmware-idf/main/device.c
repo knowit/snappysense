@@ -1,7 +1,6 @@
 #include "device.h"
 
 #include <stdarg.h>
-#include <sdkconfig.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
