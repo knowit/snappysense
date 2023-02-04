@@ -23,7 +23,7 @@
  * (Supposedly it can also be at 0x52)
  * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
  */
-#define SNAPPY_I2C_SEN0514
+//#define SNAPPY_I2C_SEN0514
 #ifdef SNAPPY_I2C_SEN0514
 # define SEN0514_I2C_ADDRESS 0x53
 #endif
@@ -31,12 +31,12 @@
 /* Sound sensor: DFRobot SEN0487 MEMS microphone, analog via ADC
  * https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
  */
-#define SNAPPY_ADC_SEN0487
+//#define SNAPPY_ADC_SEN0487
 
 /* Movement sensor: DFRobot SEN0171 passive IR sensor, digital directly from GPIO
  * https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
  */
-#define SNAPPY_GPIO_SEN0171
+//#define SNAPPY_GPIO_SEN0171
 
 /* OLED: SSD1306-based 128x32 pixel display, hardwired to i2c 0x3C
  * Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
@@ -51,7 +51,7 @@
 #endif
 
 // TODO: DOCUMENTME
-#define SNAPPY_GPIO_PIEZO
+//#define SNAPPY_GPIO_PIEZO
 
 #if defined(SNAPPY_I2C_SEN0500) || defined(SNAPPY_I2C_SEN0514) || defined(SNAPPY_I2C_SSD1306)
 # define SNAPPY_I2C
@@ -65,5 +65,17 @@
 
 /* Signal error and hang */
 void panic(const char* msg) __attribute__ ((noreturn));
+
+/* Events are uint32_t values sent from ISRs and monitoring tasks to
+ * the main task, on a queue owned by the main task.  Numbers should
+ * stay below 16.  Events have an event number in the low 4 bits and
+ * payload in the upper 28.
+ */
+enum {
+  EV_NONE,
+  EV_PIR,	 /* Payload: pin level, 0 (no motion) or 1 (motion) */
+  EV_BTN1,	 /* Payload: button level, 0 (up) or 1 (down) */
+  EV_CLOCK,	 /* Payload: nothing */
+};
 
 #endif /* !main_h_included */

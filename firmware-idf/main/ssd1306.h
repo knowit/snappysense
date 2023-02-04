@@ -154,10 +154,7 @@ bool ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_si
 SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint32_t len);
 
 
-/* These two functions are free within the library; they must be provided by the application. */
-
-/* Block the calling task for `ms` milliseconds */
-void ssd1306_Delay(unsigned ms);
+/* This function is free within the library; it must be provided by the application. */
 
 /* Write the bytes to the device, blocking until the write's done. `bus` is the 0-based i2c bus
  * number.  `address` is the *unshifted* device address on that bus.  `mem_address` is a memory

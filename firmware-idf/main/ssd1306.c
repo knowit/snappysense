@@ -92,11 +92,10 @@ SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint3
   return ret;
 }
 
-/* Initialize the oled screen */
+/* Initialize the oled screen.  The caller must wait for a bit after bringing up the i2c
+ * bus before calling this, typically 100ms.
+ */
 void ssd1306_Init(SSD1306_Device_t* device) {
-  /* Wait for the screen to boot */
-  ssd1306_Delay(100);
-
   /* Init OLED - turn display off */
   ssd1306_SetDisplayOn(device, 0);
 
