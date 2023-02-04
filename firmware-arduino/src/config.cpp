@@ -162,9 +162,13 @@ static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
 #endif
 
 static struct {
+#ifdef MQTT_UPLOAD
   unsigned long mqtt_capture_interval_s;
+#endif
 } builtin_cfg = {
+#ifdef MQTT_UPLOAD
   .mqtt_capture_interval_s = MQTT_CAPTURE_INTERVAL_S
+#endif
 };
 
 // Preference accessors

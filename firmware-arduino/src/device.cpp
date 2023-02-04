@@ -234,6 +234,11 @@ void get_sensor_values(SnappySenseData* data) {
   data->elevation = environment.getElevation();
 #endif
 
+#if defined(SENSE_AIR_QUALITY_INDEX) || defined(SENSE_TVOC) || defined(SENSE_CO2)
+# if !defined(SENSE_HUMIDITY) || !defined(SENSE_TEMPERATURE)
+#  error "Humidity and temperature required for air quality"
+# endif
+
   // The gas sensor does not appear to like repeated initialization, so do it only
   // once.  Do it only when the environment values have stabilized (the first reading
   // is usually bogus).
@@ -263,6 +268,7 @@ void get_sensor_values(SnappySenseData* data) {
 #endif
     }
   }
+#endif
 
 #ifdef SENSE_MOTION
   data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
