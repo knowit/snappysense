@@ -44,8 +44,8 @@
 
 #ifdef SNAPPY_I2C_SSD1306
 /* On i2c1 */
-static uint8_t ssd1306_mem[SSD1306_DEVICE_SIZE(SSD1306_WIDTH, SSD1306_HEIGHT)];
-static SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
+uint8_t ssd1306_mem[SSD1306_DEVICE_SIZE(SSD1306_WIDTH, SSD1306_HEIGHT)];
+SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
@@ -55,8 +55,8 @@ static bool have_sen0514;
 
 #ifdef SNAPPY_I2C_SEN0500
 /* On i2c1 */
-static bool have_sen0500;
-static dfrobot_sen0500_t sen0500; /* Only if have_sen0500 is true */
+bool have_sen0500;
+dfrobot_sen0500_t sen0500; /* Only if have_sen0500 is true */
 #endif
 
 void power_up_peripherals() {
@@ -81,15 +81,21 @@ static void IRAM_ATTR gpio_isr_handler(void* arg) {
   case BTN1_PIN:
     ev = EV_BTN1 | (gpio_get_level(BTN1_PIN) << 4);
     break;
+  case PIR_PIN:
+    ev = EV_PIR | (gpio_get_level(PIR_PIN) << 4);
+    break;
   }
   if (ev != EV_NONE) {
     xQueueSendFromISR(evt_queue, &ev, NULL);
   }
 }
 
-void install_interrupts(QueueHandle_t q) {
-  evt_queue = q;
+void install_interrupts(QueueHandle_t evt_queue_) {
+  evt_queue = evt_queue_;
   gpio_install_isr_service(0);
+}
+
+void install_buttons() {
   gpio_config_t btn_conf = {
     .intr_type = GPIO_INTR_ANYEDGE,
     .pin_bit_mask = (1ULL << BTN1_PIN),
@@ -134,14 +140,6 @@ void initialize_i2c_sen0500() {
     LOG("Failed to init SEN0500\n");
   }
 }
-
-bool read_temperature(float* temperature) {
-  return dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, temperature);
-}
-#else
-bool read_temperature(float* temperature) {
-  return false;
-}
 #endif
   
 #ifdef SNAPPY_I2C_SSD1306
@@ -151,22 +149,6 @@ void initialize_i2c_ssd1306() {
   if (!ssd1306) {
     LOG("Failed to init SSD1306");
   }
-}
-
-void show_text(const char* fmt, ...) {
-  if (!ssd1306) {
-    return;
-  }
-
-  va_list args;
-  va_start(args, fmt);
-  char buf[32*4];		/* Largest useful string for this screen and font */
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-  ssd1306_Fill(ssd1306, SSD1306_BLACK);
-  ssd1306_SetCursor(ssd1306, 0, 0);
-  ssd1306_WriteString(ssd1306, buf, Font_7x10, SSD1306_WHITE);
-  ssd1306_UpdateScreen(ssd1306);
 }
 
 bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned mem_address,
@@ -218,23 +200,32 @@ bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned 
   i2c_cmd_link_delete_static(handle);
   return err == ESP_OK;
 }
-
-#else
-void show_text(const char* fmt, ...) {
-}
 #endif
 
 #ifdef SNAPPY_GPIO_SEN0171
 void initialize_gpio_sen0171() {
-  /* Initialize the PIR pin.  We poll the PIR during the monitoring window; it would be sensible to
-   * make it interrupt-driven but there aren't really any advantages to that, plus it appears to
-   * conflict with WiFi due to an ESP32 hardware bug.
-   */
   gpio_config_t pir_conf = {
+    .intr_type = GPIO_INTR_POSEDGE,
     .pin_bit_mask = (1ULL << PIR_PIN),
     .mode = GPIO_MODE_INPUT,
   };
   gpio_config(&pir_conf);
+  /* Handler support has been installed by general GPIO initialization */
+}
+
+void enable_gpio_sen0171() {
+  gpio_isr_handler_add(PIR_PIN, gpio_isr_handler, (void*) PIR_PIN);
+
+  /* If the device has already detected motion we won't get an
+     interrupt, so check specially for this. */
+  if (gpio_get_level(PIR_PIN)) {
+    uint32_t ev = EV_PIR | 1 << 4;
+    xQueueSend(evt_queue, &ev, portMAX_DELAY);
+  }
+}
+
+void disable_gpio_sen0171() {
+  gpio_isr_handler_remove(PIR_PIN);
 }
 #endif
 

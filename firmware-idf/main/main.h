@@ -36,7 +36,7 @@
 /* Movement sensor: DFRobot SEN0171 passive IR sensor, digital directly from GPIO
  * https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
  */
-//#define SNAPPY_GPIO_SEN0171
+#define SNAPPY_GPIO_SEN0171
 
 /* OLED: SSD1306-based 128x32 pixel display, hardwired to i2c 0x3C
  * Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
@@ -75,7 +75,9 @@ enum {
   EV_NONE,
   EV_PIR,	 /* Payload: pin level, 0 (no motion) or 1 (motion) */
   EV_BTN1,	 /* Payload: button level, 0 (up) or 1 (down) */
-  EV_CLOCK,	 /* Payload: nothing */
+  EV_SENSOR_CLOCK,              /* Payload: nothing */
+  EV_SLIDESHOW_CLOCK,            /* Payload: nothing */
+  EV_MONITORING_CLOCK,
 };
 
 #endif /* !main_h_included */
