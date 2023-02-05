@@ -52,7 +52,13 @@ bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_s
 					      unsigned* result);
 
 /* Read the uv intensity register of the initialized device and return true on success, updating
- * *result; otherwise false.  The unit of the output is mW / cm^2.
+ * *result; otherwise false.  The output is in the range [0.0,15.0).
+ *
+ * TODO: The unit of the output is NOT DEFINED.  A standard UV index is an int in the range [0,11],
+ * so it's not that.  The data sheet says the output is mW / m^2 [sic].  This is not a UV index
+ * value, which is more complex, see Wikipedia.
+ *
+ * Most likely, rounding *result to the nearest integer is going to be OK.
  */
 bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* result);
 

@@ -29,13 +29,6 @@ static TimerHandle_t sensor_clock = NULL;
 static TimerHandle_t slideshow_clock = NULL;
 static TimerHandle_t monitoring_clock = NULL;
 
-/* Sensor state */
-static bool have_temperature = false;
-static float temperature;
-static bool have_humidity = false;
-static float humidity;
-static bool motion = false;
-
 static void clock_callback(TimerHandle_t t) {
   uint32_t ev = EV_NONE;
   if (t == sensor_clock) {
@@ -48,6 +41,8 @@ static void clock_callback(TimerHandle_t t) {
   xQueueSend(evt_queue, &ev, portMAX_DELAY);
 }
 
+/* Display abstractions. */
+/* TODO: Handle multiple lines of text, maybe */
 #ifdef SNAPPY_I2C_SSD1306
 void show_text(const char* fmt, ...) {
   if (!ssd1306) {
@@ -64,18 +59,29 @@ void show_text(const char* fmt, ...) {
   ssd1306_UpdateScreen(ssd1306);
 }
 #else
-void show_text(const char* fmt, ...) {}
+#define show_text(...)
 #endif
+
+/* Sensor state */
+static bool have_temperature = false;
+static float temperature;
+static bool have_humidity = false;
+static float humidity;
+static bool have_atmospheric_pressure = false;
+static unsigned atmospheric_pressure;
+static bool have_uv_intensity = false;
+static float uv_intensity;
+static bool have_luminous_intensity = false;
+static float luminous_intensity;
+static bool motion = false;
 
 void app_main(void)
 {
   /* Bring the power line up and wait until it stabilizes */
   power_up_peripherals();
 
-  /* Queue of events from monitoring tasks and ISRs to the main task */
+  /* Queue of events from clocks and ISRs to the main task */
   evt_queue = xQueueCreate(10, sizeof(uint32_t));
-
-  /* Events are communicated by the ISR on the event queue */
   install_interrupts(evt_queue);
 
   /* Initialize peripherals */
@@ -158,7 +164,7 @@ void app_main(void)
 	  LOG("  Pressed for %" PRIu64 "us\n", t);
 	}
 	was_pressed = state == 1;
-	if (state) {
+	if (was_pressed) {
 	  gettimeofday(&button_down, NULL);
 	}
 	break;
@@ -170,25 +176,43 @@ void app_main(void)
         /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple
          * times and average or otherwise integrate; TBD.
          */
-        have_temperature =
-          have_sen0500 &&
-          dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
-          temperature != -45.0;
-        if (have_temperature) {
-          LOG("Temperature = %.2f\n", temperature);
+        if (have_sen0500) {
+          have_temperature =
+            dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
+            temperature != -45.0;
+          if (have_temperature) {
+            LOG("Temperature = %.2f\n", temperature);
+          }
+          have_humidity =
+            dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
+            humidity != 0.0;
+          if (have_humidity) {
+            LOG("Humidity = %.2f\n", humidity);
+          }
+          have_atmospheric_pressure =
+            dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA, &atmospheric_pressure) &&
+            atmospheric_pressure != 0;
+          if (have_atmospheric_pressure) {
+            LOG("Pressure = %u\n", atmospheric_pressure);
+          }
+          have_uv_intensity =
+            dfrobot_sen0500_get_ultraviolet_intensity(&sen0500, &uv_intensity) &&
+            uv_intensity != 0.0;
+          if (have_uv_intensity) {
+            LOG("UV intensity = %.2f\n", uv_intensity);
+          }
+          have_luminous_intensity =
+            dfrobot_sen0500_get_luminous_intensity(&sen0500, &luminous_intensity) &&
+            luminous_intensity != 0.0;
+          if (have_luminous_intensity) {
+            LOG("Luminous intensity = %.2f\n", luminous_intensity);
+          }
         }
-        have_humidity =
-          have_sen0500 &&
-          dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
-          humidity != 0.0;
-        if (have_humidity) {
-          LOG("Humidity = %.2f\n", humidity);
-        }
-        /* And more! */
 #endif
 #ifdef SNAPPY_GPIO_SEN0171
-        /* Motion sensor.  We enable the interrupt for the PIR; then PIR interrupts will simply be
-           recorded.  At the end-of-montoring window we just disable the interrupt again */
+        /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open;
+         * then PIR interrupts will simply be recorded higher up in the switch.
+         */
         motion = false;
         enable_gpio_sen0171();
 #endif
@@ -225,6 +249,27 @@ void app_main(void)
           /* FALLTHROUGH */
         case 2:
           slideshow_next++;
+          if (have_atmospheric_pressure) {
+            show_text("Pressure: %u hpa", atmospheric_pressure);
+            break;
+          }
+          /* FALLTHROUGH */
+        case 3:
+          slideshow_next++;
+          if (have_uv_intensity) {
+            show_text("UV index: %d", (int)roundf(uv_intensity));
+            break;
+          }
+          /* FALLTHROUGH */
+        case 4:
+          slideshow_next++;
+          if (have_luminous_intensity) {
+            show_text("Light: %.1f lux", luminous_intensity);
+            break;
+          }
+          /* FALLTHROUGH */
+        case 5:
+          slideshow_next++;
 #ifdef SNAPPY_GPIO_SEN0171
           show_text("Motion: %s", motion ? "Yes" : "No");
           break;
@@ -248,5 +293,6 @@ void app_main(void)
 
 void panic(const char* msg) {
   LOG("PANIC: %s\n", msg);
+  show_text("PANIC: %s", msg);
   for(;;) {}
 }

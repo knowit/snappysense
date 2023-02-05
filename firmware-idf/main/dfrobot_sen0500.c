@@ -130,7 +130,7 @@ bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* r
   if (!read_register_u16(self, REG_ULTRAVIOLET_INTENSITY, &response)) {
     return false;
   }
-  float outputVoltage = 3.0 * (float)(response / 1024);
+  float outputVoltage = (3.0 * (float)response) / 1024.0f;
   *result = map_float(outputVoltage, 0.99f, 2.9f, 0.0f, 15.0f);
   return true;
 }
