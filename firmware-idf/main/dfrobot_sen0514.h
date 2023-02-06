@@ -1,3 +1,5 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 /* Driver for air/gas sensor: DFRobot SEN0514.
  * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
  */

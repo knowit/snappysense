@@ -1,9 +1,23 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 #include "i2c_common.h"
 
 #ifdef SNAPPY_I2C
 
 #include "freertos/FreeRTOS.h"
 #include "driver/i2c.h"
+
+bool i2c_common_init(i2c_common_t* self, unsigned i2c_bus, unsigned i2c_addr, unsigned timeout) {
+  /* TODO: This could try to run device detection, it would make it more meaningful */
+  if (i2c_addr < 1 || i2c_addr > 0x7F) {
+    LOG("Invalid i2c address\n");
+    return false;		/* Invalid i2c address */
+  }
+  self->bus = i2c_bus;
+  self->address = i2c_addr;
+  self->timeout_ms = timeout;
+  return true;
+}
 
 static bool read_register(i2c_common_t* self, unsigned reg, void *buffer, size_t nbytes) {
   /* TODO: The correct thing to do here is to use the i2c_master_write_read_device operation,

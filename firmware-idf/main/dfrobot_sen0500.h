@@ -13,7 +13,9 @@
 #ifdef SNAPPY_I2C_SEN0500
 
 /* Device representation */
-typedef i2c_common_t dfrobot_sen0500_t;
+typedef struct {
+  i2c_common_t dev;
+} dfrobot_sen0500_t;
 
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr);

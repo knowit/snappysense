@@ -13,6 +13,8 @@ typedef struct {
   unsigned timeout_ms;
 } i2c_common_t;
 
+bool i2c_common_init(i2c_common_t* self, unsigned i2c_bus, unsigned i2c_addr, unsigned timeout);
+bool read_i2c_reg8(i2c_common_t* self, unsigned reg, unsigned* result);
 bool read_i2c_reg16(i2c_common_t* self, unsigned reg, unsigned* result);
 
 #endif

@@ -102,7 +102,7 @@ void install_interrupts(QueueHandle_t evt_queue_) {
   gpio_install_isr_service(0);
 }
 
-void install_buttons() {
+void initialize_onboard_buttons() {
   gpio_config_t btn_conf = {
     .intr_type = GPIO_INTR_ANYEDGE,
     .pin_bit_mask = (1ULL << BTN1_PIN),

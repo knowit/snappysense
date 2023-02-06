@@ -58,6 +58,9 @@ static bool motion = false;
 
 static void advance_slideshow();
 static void show_text(const char* fmt, ...);
+static void open_monitoring_window();
+static void close_monitoring_window();
+static void record_motion();
 
 void app_main(void)
 {
@@ -70,9 +73,10 @@ void app_main(void)
 
   /* Initialize peripherals */
 
-  install_buttons();
+  initialize_onboard_buttons();
 
 #ifdef SNAPPY_GPIO_SEN0171
+  /* Movement sensor */
   initialize_gpio_sen0171();
 #endif
 
@@ -80,14 +84,20 @@ void app_main(void)
   initialize_i2c();
 #endif
 
+  /* TODO: SNAPPY_ADC_SEN0487 microphone */
+
 #ifdef SNAPPY_I2C_SEN0500
+  /* Environment sensor */
   initialize_i2c_sen0500();
 #endif
 
-  /* TODO: SNAPPY_ADC_SEN0487 microphone */
-  /* TODO: SNAPPY_I2C_SEN0514 air/gas sensor */
+#ifdef SNAPPY_I2C_SEN0514
+  /* Air/gas sensor */
+  initialize_i2c_sen0514();
+#endif
 
 #ifdef SNAPPY_I2C_SSD1306
+  /* Display */
   initialize_i2c_ssd1306();
 #endif
 
@@ -129,8 +139,7 @@ void app_main(void)
     if(xQueueReceive(evt_queue, &ev, portMAX_DELAY)) {
       switch (ev & 15) {
       case EV_PIR:
-        LOG("Motion!\n");
-        motion = true;
+        record_motion();
 	break;
 
       case EV_BTN1: {
@@ -153,67 +162,18 @@ void app_main(void)
 	break;
       }
 
-      case EV_SENSOR_CLOCK: {
-        LOG("Monitoring window opens\n");
-#ifdef SNAPPY_I2C_SEN0500
-        /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple
-         * times and average or otherwise integrate; TBD.
-         */
-        if (have_sen0500) {
-          have_temperature =
-            dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
-            temperature != -45.0;
-          if (have_temperature) {
-            LOG("Temperature = %.2f\n", temperature);
-          }
-          have_humidity =
-            dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
-            humidity != 0.0;
-          if (have_humidity) {
-            LOG("Humidity = %.2f\n", humidity);
-          }
-          have_atmospheric_pressure =
-            dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA,
-                                                     &atmospheric_pressure) &&
-            atmospheric_pressure != 0;
-          if (have_atmospheric_pressure) {
-            LOG("Pressure = %u\n", atmospheric_pressure);
-          }
-          have_uv_intensity =
-            dfrobot_sen0500_get_ultraviolet_intensity(&sen0500, &uv_intensity) &&
-            uv_intensity != 0.0;
-          if (have_uv_intensity) {
-            LOG("UV intensity = %.2f\n", uv_intensity);
-          }
-          have_luminous_intensity =
-            dfrobot_sen0500_get_luminous_intensity(&sen0500, &luminous_intensity) &&
-            luminous_intensity != 0.0;
-          if (have_luminous_intensity) {
-            LOG("Luminous intensity = %.2f\n", luminous_intensity);
-          }
-        }
-#endif
-#ifdef SNAPPY_GPIO_SEN0171
-        /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open;
-         * then PIR interrupts will simply be recorded higher up in the switch.
-         */
-        motion = false;
-        enable_gpio_sen0171();
-#endif
-        xTimerStart(monitoring_clock, portMAX_DELAY);
+      case EV_SENSOR_CLOCK:
+        open_monitoring_window();
         break;
-      }
 
       case EV_MONITORING_CLOCK:
-#ifdef SNAPPY_GPIO_SEN0171
-        disable_gpio_sen0171();
-#endif
-        LOG("Monitoring window closed\n");
+        close_monitoring_window();
         break;
 
       case EV_SLIDESHOW_CLOCK:
         advance_slideshow();
         break;
+
       default:
 	LOG("Unknown event: %" PRIu32 "\n", ev);
 	break;
@@ -230,9 +190,71 @@ void panic(const char* msg) {
   for(;;) {}
 }
 
-static int slideshow_next = 0;
+static void open_monitoring_window() {
+  LOG("Monitoring window opens\n");
+#ifdef SNAPPY_I2C_SEN0500
+  /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple
+   * times and average or otherwise integrate; TBD.
+   */
+  if (have_sen0500) {
+    have_temperature =
+      dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
+      temperature != -45.0;
+    if (have_temperature) {
+      LOG("Temperature = %.2f\n", temperature);
+    }
+    have_humidity =
+      dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
+      humidity != 0.0;
+    if (have_humidity) {
+      LOG("Humidity = %.2f\n", humidity);
+    }
+    have_atmospheric_pressure =
+      dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA,
+                                               &atmospheric_pressure) &&
+      atmospheric_pressure != 0;
+    if (have_atmospheric_pressure) {
+      LOG("Pressure = %u\n", atmospheric_pressure);
+    }
+    have_uv_intensity =
+      dfrobot_sen0500_get_ultraviolet_intensity(&sen0500, &uv_intensity) &&
+      uv_intensity != 0.0;
+    if (have_uv_intensity) {
+      LOG("UV intensity = %.2f\n", uv_intensity);
+    }
+    have_luminous_intensity =
+      dfrobot_sen0500_get_luminous_intensity(&sen0500, &luminous_intensity) &&
+      luminous_intensity != 0.0;
+    if (have_luminous_intensity) {
+      LOG("Luminous intensity = %.2f\n", luminous_intensity);
+    }
+  }
+#endif
+#ifdef SNAPPY_GPIO_SEN0171
+  /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open;
+   * then PIR interrupts will simply be recorded higher up in the switch.
+   */
+  motion = false;
+  enable_gpio_sen0171();
+#endif
+  xTimerStart(monitoring_clock, portMAX_DELAY);
+}
+
+static void record_motion() {
+  LOG("Motion!\n");
+  motion = true;
+}
+
+static void close_monitoring_window() {
+#ifdef SNAPPY_GPIO_SEN0171
+  disable_gpio_sen0171();
+#endif
+  LOG("Monitoring window closed\n");
+}
 
 static void advance_slideshow() {
+  static int slideshow_next = 0;
+
   /* TODO: Splash screen */
   /* TODO: For the text display, use bitmaps *or* use a larger font and
      center the text and place the text on two lines, caption above
