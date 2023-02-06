@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+#include <math.h>
 #include <sys/time.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,6 +15,7 @@
 #include "device.h"
 #include "piezo.h"
 
+/* Parameters */
 #define MONITORING_WINDOW_S 10
 #define MONITORING_INTERVAL_S 15
 #define NEXT_SLIDE_INTERVAL_S 4
@@ -41,27 +43,6 @@ static void clock_callback(TimerHandle_t t) {
   xQueueSend(evt_queue, &ev, portMAX_DELAY);
 }
 
-/* Display abstractions. */
-/* TODO: Handle multiple lines of text, maybe */
-#ifdef SNAPPY_I2C_SSD1306
-void show_text(const char* fmt, ...) {
-  if (!ssd1306) {
-    return;
-  }
-  va_list args;
-  va_start(args, fmt);
-  char buf[32*4];		/* Largest useful string for this screen and font */
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-  ssd1306_Fill(ssd1306, SSD1306_BLACK);
-  ssd1306_SetCursor(ssd1306, 0, 0);
-  ssd1306_WriteString(ssd1306, buf, Font_7x10, SSD1306_WHITE);
-  ssd1306_UpdateScreen(ssd1306);
-}
-#else
-#define show_text(...)
-#endif
-
 /* Sensor state */
 static bool have_temperature = false;
 static float temperature;
@@ -74,6 +55,9 @@ static float uv_intensity;
 static bool have_luminous_intensity = false;
 static float luminous_intensity;
 static bool motion = false;
+
+static void advance_slideshow();
+static void show_text(const char* fmt, ...);
 
 void app_main(void)
 {
@@ -140,7 +124,6 @@ void app_main(void)
   struct timeval button_down; /* Time of button press */
   bool was_pressed = false;   /*   if this is true */
 
-  int slideshow_next = 0;
   for(;;) {
     uint32_t ev;
     if(xQueueReceive(evt_queue, &ev, portMAX_DELAY)) {
@@ -190,7 +173,8 @@ void app_main(void)
             LOG("Humidity = %.2f\n", humidity);
           }
           have_atmospheric_pressure =
-            dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA, &atmospheric_pressure) &&
+            dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA,
+                                                     &atmospheric_pressure) &&
             atmospheric_pressure != 0;
           if (have_atmospheric_pressure) {
             LOG("Pressure = %u\n", atmospheric_pressure);
@@ -228,58 +212,7 @@ void app_main(void)
         break;
 
       case EV_SLIDESHOW_CLOCK:
-        /* TODO: Splash screen */
-        /* TODO: For the text display, use bitmaps *or* use a larger font and
-           center the text and place the text on two lines, caption above
-           and reading + units below */
-        switch (slideshow_next) {
-        case 0:
-          slideshow_next++;
-          if (have_temperature) {
-            show_text("Temp: %.1f C", temperature);
-            break;
-          }
-          /* FALLTHROUGH */
-        case 1:
-          slideshow_next++;
-          if (have_humidity) {
-            show_text("Humidity: %.1f %%", humidity);
-            break;
-          }
-          /* FALLTHROUGH */
-        case 2:
-          slideshow_next++;
-          if (have_atmospheric_pressure) {
-            show_text("Pressure: %u hpa", atmospheric_pressure);
-            break;
-          }
-          /* FALLTHROUGH */
-        case 3:
-          slideshow_next++;
-          if (have_uv_intensity) {
-            show_text("UV index: %d", (int)roundf(uv_intensity));
-            break;
-          }
-          /* FALLTHROUGH */
-        case 4:
-          slideshow_next++;
-          if (have_luminous_intensity) {
-            show_text("Light: %.1f lux", luminous_intensity);
-            break;
-          }
-          /* FALLTHROUGH */
-        case 5:
-          slideshow_next++;
-#ifdef SNAPPY_GPIO_SEN0171
-          show_text("Motion: %s", motion ? "Yes" : "No");
-          break;
-#else
-          /* FALLTHROUGH */
-#endif
-        default:
-          slideshow_next = 0;
-          break;
-        }
+        advance_slideshow();
         break;
       default:
 	LOG("Unknown event: %" PRIu32 "\n", ev);
@@ -296,3 +229,82 @@ void panic(const char* msg) {
   show_text("PANIC: %s", msg);
   for(;;) {}
 }
+
+static int slideshow_next = 0;
+
+static void advance_slideshow() {
+  /* TODO: Splash screen */
+  /* TODO: For the text display, use bitmaps *or* use a larger font and
+     center the text and place the text on two lines, caption above
+     and reading + units below */
+  switch (slideshow_next) {
+  case 0:
+    slideshow_next++;
+    if (have_temperature) {
+      show_text("Temp: %.1f C", temperature);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 1:
+    slideshow_next++;
+    if (have_humidity) {
+      show_text("Humidity: %.1f %%", humidity);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 2:
+    slideshow_next++;
+    if (have_atmospheric_pressure) {
+      show_text("Pressure: %u hpa", atmospheric_pressure);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 3:
+    slideshow_next++;
+    if (have_uv_intensity) {
+      show_text("UV index: %d", (int)roundf(uv_intensity));
+      break;
+    }
+    /* FALLTHROUGH */
+  case 4:
+    slideshow_next++;
+    if (have_luminous_intensity) {
+      show_text("Light: %.1f lux", luminous_intensity);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 5:
+    slideshow_next++;
+#ifdef SNAPPY_GPIO_SEN0171
+    show_text("Motion: %s", motion ? "Yes" : "No");
+    break;
+#else
+    /* FALLTHROUGH */
+#endif
+  default:
+    slideshow_next = 0;
+    break;
+  }
+}
+
+
+/* Display abstractions. */
+/* TODO: Handle multiple lines of text, maybe */
+#ifdef SNAPPY_I2C_SSD1306
+void show_text(const char* fmt, ...) {
+  if (!ssd1306) {
+    return;
+  }
+  va_list args;
+  va_start(args, fmt);
+  char buf[32*4];		/* Largest useful string for this screen and font */
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+  ssd1306_Fill(ssd1306, SSD1306_BLACK);
+  ssd1306_SetCursor(ssd1306, 0, 0);
+  ssd1306_WriteString(ssd1306, buf, Font_7x10, SSD1306_WHITE);
+  ssd1306_UpdateScreen(ssd1306);
+}
+#else
+#define show_text(...)
+#endif

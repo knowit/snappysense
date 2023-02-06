@@ -6,29 +6,23 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define SNAPPY_LOGGING
 //#define SNAPPY_HARDWARE_1_0_0
 #define SNAPPY_HARDWARE_1_1_0
 
-/* Environment sensor: DFRobot SEN0500, hardwired to i2c 0x22
+/* Environment sensor: DFRobot SEN0500
  * https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
  */
 #define SNAPPY_I2C_SEN0500
-#ifdef SNAPPY_I2C_SEN0500
-# define SEN0500_I2C_ADDRESS 0x22
-#endif
 
-/* Air/gas sensor: DFRobot SEN0514, hardwired to i2c 0x53
- * (Supposedly it can also be at 0x52)
+/* Air/gas sensor: DFRobot SEN0514
  * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
  */
 //#define SNAPPY_I2C_SEN0514
-#ifdef SNAPPY_I2C_SEN0514
-# define SEN0514_I2C_ADDRESS 0x53
-#endif
 
-/* Sound sensor: DFRobot SEN0487 MEMS microphone, analog via ADC
+/* Sound sensor: DFRobot SEN0487 MEMS microphone
  * https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
  */
 //#define SNAPPY_ADC_SEN0487
@@ -38,12 +32,11 @@
  */
 #define SNAPPY_GPIO_SEN0171
 
-/* OLED: SSD1306-based 128x32 pixel display, hardwired to i2c 0x3C
+/* OLED: SSD1306-based 128x32 pixel display
  * Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
  */
 #define SNAPPY_I2C_SSD1306
 #ifdef SNAPPY_I2C_SSD1306
-# define SSD1306_I2C_ADDRESS 0x3C
 # define SSD1306_WIDTH 128
 # define SSD1306_HEIGHT 32
 # define SSD1306_INCLUDE_FONT_7x10 /* There are others, this is readable */

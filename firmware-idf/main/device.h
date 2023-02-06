@@ -30,6 +30,13 @@ extern dfrobot_sen0500_t sen0500;
 void initialize_i2c_sen0500();
 #endif
 
+#ifdef SNAPPY_I2C_SEN0514
+extern bool have_sen0514;
+
+/* Initialize the device, set have_sen05514 to true iff it succeeds. */
+void initialize_i2c_sen0514();
+#endif
+
 #ifdef SNAPPY_I2C_SSD1306
 extern uint8_t ssd1306_mem[];
 extern SSD1306_Device_t* ssd1306;

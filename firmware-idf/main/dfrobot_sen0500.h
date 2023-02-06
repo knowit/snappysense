@@ -8,15 +8,12 @@
 #define dfrobot_sen0500_h_included
 
 #include "main.h"
+#include "i2c_common.h"
 
 #ifdef SNAPPY_I2C_SEN0500
 
 /* Device representation */
-typedef struct {
-  unsigned bus;			/* Zero-based i2c bus number */
-  unsigned addr;		/* Unshifted i2c device address */
-  unsigned timeout_ms;
-} dfrobot_sen0500_t;
+typedef i2c_common_t dfrobot_sen0500_t;
 
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr);

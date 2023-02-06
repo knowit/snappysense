@@ -9,11 +9,9 @@
 #ifdef SNAPPY_I2C_SEN0500
 # include "dfrobot_sen0500.h"
 #endif
-
 #ifdef SNAPPY_I2C_SEN0514
 # include "dfrobot_sen0514.h"
 #endif
-
 #ifdef SNAPPY_I2C_SSD1306
 # include "ssd1306.h"
 #endif
@@ -30,11 +28,20 @@
 # define POWER_PIN 26		/* GPIO26 aka A0 aka DAC2: peripheral power */
 # define BTN1_PIN 25		/* GPIO25 aka A1 aka DAC1: BTN1 aka WAKE */
 # define PIR_PIN 34		/* GPIO34 aka A2: PIR */
-# define I2C_BUS 0		/* The I2C bus number */
+# define I2C_BUS 0		/* Everything is on I2C bus 0 */
 # define I2C_SCL_PIN 22		/* GPIO22: Standard I2C pin */
 # define I2C_SDA_PIN 23		/* GPIO23: Standard I2C pin */
 # define PWM_PIN T8	        /* Tentative: ADC1 CH5, pin IO33 aka pin T8 */
 # define PWM_CHAN 5
+# ifdef SNAPPY_I2C_SEN0500
+#  define SEN0500_I2C_ADDRESS 0x22 /* Hardwired */
+# endif
+# ifdef SNAPPY_I2C_SEN0514
+#  define SEN0514_I2C_ADDRESS 0x53 /* Hardwired, though 0x52 may be an option */
+# endif
+# ifdef SNAPPY_I2C_SSD1306
+#  define SSD1306_I2C_ADDRESS 0x3C /* Hardwired */
+# endif
 #else
 # error "Unsupported hardware generation"
 #endif
@@ -50,7 +57,7 @@ SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
 
 #ifdef SNAPPY_I2C_SEN0514
 /* On i2c1 */
-static bool have_sen0514;
+bool have_sen0514;
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500
@@ -142,6 +149,14 @@ void initialize_i2c_sen0500() {
 }
 #endif
   
+#ifdef SNAPPY_I2C_SEN0514
+void initialize_i2c_sen0514() {
+  if (!(have_sen0514 = dfrobot_sen0514_begin(&sen0514, I2C_BUS, SEN0514_I2C_ADDRESS))) {
+    LOG("Failed to init SEN0514");
+  }
+}
+#endif
+
 #ifdef SNAPPY_I2C_SSD1306
 void initialize_i2c_ssd1306() {
   /* Check the OLED and initialize it */
