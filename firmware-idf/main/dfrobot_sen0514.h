@@ -11,13 +11,25 @@
 
 #ifdef SNAPPY_I2C_SEN0514
 
-#include "i2c_common.h"
-
 /* Device representation */
-typedef i2c_common_t dfrobot_sen0514_t;
+typedef struct {
+  unsigned bus;			/* Zero-based */
+  unsigned address;		/* Unshifted bus address */
+  unsigned timeout_ms;
+} dfrobot_sen0514_t;
 
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i2c_addr);
+
+/* Make of these what you will, but value 0 at least means we're OK */
+typedef enum {
+  DFROBOT_SEN0514_NORMAL_OPERATION = 0,
+  DFROBOT_SEN0514_WARMUP_PHASE = 1,
+  DFROBOT_SEN0514_INITIAL_STARTUP_PHASE = 2,
+  DFROBOT_SEN0514_INVALID_OUTPUT = 3
+} dfrobot_sen0514_status_t;
+
+bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_status_t* result);
 
 /* Prime the device with temperature and humidity, to ensure readings are sensible.
  * Temperature is degrees celsius, [-273, whatever)

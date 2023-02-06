@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "dfrobot_sen0500.h"
+#include "dfrobot_sen0514.h"
 #include "ssd1306.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -32,6 +33,7 @@ void initialize_i2c_sen0500();
 
 #ifdef SNAPPY_I2C_SEN0514
 extern bool have_sen0514;
+extern dfrobot_sen0514_t sen0514;
 
 /* Initialize the device, set have_sen05514 to true iff it succeeds. */
 void initialize_i2c_sen0514();

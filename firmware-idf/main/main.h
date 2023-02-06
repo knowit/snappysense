@@ -20,7 +20,7 @@
 /* Air/gas sensor: DFRobot SEN0514
  * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
  */
-//#define SNAPPY_I2C_SEN0514
+#define SNAPPY_I2C_SEN0514
 
 /* Sound sensor: DFRobot SEN0487 MEMS microphone
  * https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487

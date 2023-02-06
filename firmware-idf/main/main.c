@@ -54,6 +54,8 @@ static bool have_uv_intensity = false;
 static float uv_intensity;
 static bool have_luminous_intensity = false;
 static float luminous_intensity;
+static bool have_co2 = false;
+static unsigned co2;
 static bool motion = false;
 
 static void advance_slideshow();
@@ -230,6 +232,21 @@ static void open_monitoring_window() {
     }
   }
 #endif
+#ifdef SNAPPY_I2C_SEN0514
+  if (have_sen0514) {
+    dfrobot_sen0514_status_t stat;
+    if (dfrobot_sen0514_get_sensor_status(&sen0514, &stat) &&
+        stat == DFROBOT_SEN0514_NORMAL_OPERATION) {
+      if (have_temperature && have_humidity) {
+        if (dfrobot_sen0514_prime(&sen0514, temperature, humidity)) {
+          have_co2 =
+            dfrobot_sen0514_get_co2(&sen0514, &co2) &&
+            co2 > 400;
+        }
+      }
+    }
+  }
+#endif
 #ifdef SNAPPY_GPIO_SEN0171
   /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open;
    * then PIR interrupts will simply be recorded higher up in the switch.
@@ -296,6 +313,13 @@ static void advance_slideshow() {
     }
     /* FALLTHROUGH */
   case 5:
+    slideshow_next++;
+    if (have_co2) {
+      show_text("CO_2: %u ppm", co2);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 6:
     slideshow_next++;
 #ifdef SNAPPY_GPIO_SEN0171
     show_text("Motion: %s", motion ? "Yes" : "No");

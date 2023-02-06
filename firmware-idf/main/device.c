@@ -58,6 +58,7 @@ SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
 #ifdef SNAPPY_I2C_SEN0514
 /* On i2c1 */
 bool have_sen0514;
+dfrobot_sen0514_t sen0514; /* Only if have_sen0514 is true */
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500
