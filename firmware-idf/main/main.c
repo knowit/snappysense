@@ -2,8 +2,9 @@
 
 /* SnappySense firmware code based on the ESP32-IDF + FreeRTOS framework only (no Arduino). */
 
+#include "main.h"
+
 #include <inttypes.h>
-#include <stdio.h>
 #include <math.h>
 #include <sys/time.h>
 #include "freertos/FreeRTOS.h"
@@ -11,9 +12,9 @@
 #include "freertos/queue.h"
 #include "freertos/timers.h"
 
-#include "main.h"
 #include "device.h"
 #include "piezo.h"
+#include "resources.h"
 
 /* Parameters */
 #define MONITORING_WINDOW_S 10
@@ -129,7 +130,7 @@ void app_main(void)
 
   /* And we are up! */
   LOG("Snappysense running!\n");
-  show_text("Hello, world!");
+  show_text("SnappySense v1.1\nESP32-IDF firmware\nObjectNet 2023");
   //  play_song(&melody);
 
   /* Process events forever */
@@ -238,7 +239,7 @@ static void open_monitoring_window() {
     if (dfrobot_sen0514_get_sensor_status(&sen0514, &stat) &&
         stat == DFROBOT_SEN0514_NORMAL_OPERATION) {
       if (have_temperature && have_humidity) {
-        if (dfrobot_sen0514_prime(&sen0514, temperature, humidity)) {
+        if (dfrobot_sen0514_prime(&sen0514, temperature, humidity/100.0f)) {
           have_co2 =
             dfrobot_sen0514_get_co2(&sen0514, &co2) &&
             co2 > 400;
@@ -269,6 +270,16 @@ static void close_monitoring_window() {
   LOG("Monitoring window closed\n");
 }
 
+#ifdef SNAPPY_I2C_SSD1306
+static void splash_screen() {
+  ssd1306_Fill(ssd1306, SSD1306_BLACK);
+  ssd1306_DrawBitmap(ssd1306, 0, 1,
+                     knowit_logo, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
+                     SSD1306_WHITE);
+  ssd1306_UpdateScreen(ssd1306);
+}
+#endif
+
 static void advance_slideshow() {
   static int slideshow_next = 0;
 
@@ -279,50 +290,59 @@ static void advance_slideshow() {
   switch (slideshow_next) {
   case 0:
     slideshow_next++;
-    if (have_temperature) {
-      show_text("Temp: %.1f C", temperature);
+#ifdef SNAPPY_I2C_SSD1306
+    if (ssd1306) {
+      splash_screen();
       break;
     }
+#endif
     /* FALLTHROUGH */
   case 1:
     slideshow_next++;
-    if (have_humidity) {
-      show_text("Humidity: %.1f %%", humidity);
+    if (have_temperature) {
+      show_text("Temperature\n\n%.1f C", temperature);
       break;
     }
     /* FALLTHROUGH */
   case 2:
     slideshow_next++;
-    if (have_atmospheric_pressure) {
-      show_text("Pressure: %u hpa", atmospheric_pressure);
+    if (have_humidity) {
+      show_text("Humidity\n\n%.1f %%", humidity);
       break;
     }
     /* FALLTHROUGH */
   case 3:
     slideshow_next++;
-    if (have_uv_intensity) {
-      show_text("UV index: %d", (int)roundf(uv_intensity));
+    if (have_atmospheric_pressure) {
+      show_text("Pressure\n\n%u hPa", atmospheric_pressure);
       break;
     }
     /* FALLTHROUGH */
   case 4:
     slideshow_next++;
-    if (have_luminous_intensity) {
-      show_text("Light: %.1f lux", luminous_intensity);
+    if (have_uv_intensity) {
+      show_text("UV index\n\n%d", (int)roundf(uv_intensity));
       break;
     }
     /* FALLTHROUGH */
   case 5:
     slideshow_next++;
-    if (have_co2) {
-      show_text("CO_2: %u ppm", co2);
+    if (have_luminous_intensity) {
+      show_text("Light\n\n%.1f lux", luminous_intensity);
       break;
     }
     /* FALLTHROUGH */
   case 6:
     slideshow_next++;
+    if (have_co2) {
+      show_text("CO_2\n\n%u ppm", co2);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 7:
+    slideshow_next++;
 #ifdef SNAPPY_GPIO_SEN0171
-    show_text("Motion: %s", motion ? "Yes" : "No");
+    show_text("Motion\n\n%s", motion ? "Yes" : "No");
     break;
 #else
     /* FALLTHROUGH */
@@ -333,9 +353,7 @@ static void advance_slideshow() {
   }
 }
 
-
 /* Display abstractions. */
-/* TODO: Handle multiple lines of text, maybe */
 #ifdef SNAPPY_I2C_SSD1306
 void show_text(const char* fmt, ...) {
   if (!ssd1306) {
@@ -347,8 +365,20 @@ void show_text(const char* fmt, ...) {
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
   ssd1306_Fill(ssd1306, SSD1306_BLACK);
-  ssd1306_SetCursor(ssd1306, 0, 0);
-  ssd1306_WriteString(ssd1306, buf, Font_7x10, SSD1306_WHITE);
+  char* p = buf;
+  int y = 0;
+  while (*p) {
+    char* start = p;
+    while (*p && *p != '\n') {
+      p++;
+    }
+    if (*p) {
+      *p++ = 0;
+    }
+    ssd1306_SetCursor(ssd1306, 0, y);
+    ssd1306_WriteString(ssd1306, start, Font_7x10, SSD1306_WHITE);
+    y += Font_7x10.FontHeight + 1;
+  }
   ssd1306_UpdateScreen(ssd1306);
 }
 #else

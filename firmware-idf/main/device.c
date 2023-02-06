@@ -28,20 +28,11 @@
 # define POWER_PIN 26		/* GPIO26 aka A0 aka DAC2: peripheral power */
 # define BTN1_PIN 25		/* GPIO25 aka A1 aka DAC1: BTN1 aka WAKE */
 # define PIR_PIN 34		/* GPIO34 aka A2: PIR */
-# define I2C_BUS 0		/* Everything is on I2C bus 0 */
+# define I2C1_BUS 0		/* Everything is on I2C bus 0 */
 # define I2C_SCL_PIN 22		/* GPIO22: Standard I2C pin */
 # define I2C_SDA_PIN 23		/* GPIO23: Standard I2C pin */
 # define PWM_PIN T8	        /* Tentative: ADC1 CH5, pin IO33 aka pin T8 */
 # define PWM_CHAN 5
-# ifdef SNAPPY_I2C_SEN0500
-#  define SEN0500_I2C_ADDRESS 0x22 /* Hardwired */
-# endif
-# ifdef SNAPPY_I2C_SEN0514
-#  define SEN0514_I2C_ADDRESS 0x53 /* Hardwired, though 0x52 may be an option */
-# endif
-# ifdef SNAPPY_I2C_SSD1306
-#  define SSD1306_I2C_ADDRESS 0x3C /* Hardwired */
-# endif
 #else
 # error "Unsupported hardware generation"
 #endif
@@ -50,19 +41,24 @@
 #define I2C_STABILIZE_MS      1000 /* Wait time, maybe too much */
 
 #ifdef SNAPPY_I2C_SSD1306
-/* On i2c1 */
+# define SSD1306_BUS I2C1_BUS
+# define SSD1306_ADDRESS 0x3C /* Hardwired */
+# define SSD1306_WIDTH 128
+# define SSD1306_HEIGHT 32
 uint8_t ssd1306_mem[SSD1306_DEVICE_SIZE(SSD1306_WIDTH, SSD1306_HEIGHT)];
 SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
-/* On i2c1 */
+# define SEN0514_BUS I2C1_BUS
+# define SEN0514_ADDRESS 0x53 /* Hardwired, though 0x52 may be an option */
 bool have_sen0514;
 dfrobot_sen0514_t sen0514; /* Only if have_sen0514 is true */
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500
-/* On i2c1 */
+# define SEN0500_BUS I2C1_BUS
+# define SEN0500_ADDRESS 0x22 /* Hardwired */
 bool have_sen0500;
 dfrobot_sen0500_t sen0500; /* Only if have_sen0500 is true */
 #endif
@@ -115,7 +111,11 @@ void initialize_onboard_buttons() {
   
 #ifdef SNAPPY_I2C
 void initialize_i2c() {
-  /* Initialize I2C master */
+#if defined(I2C2_BUS) || defined(I2C3_BUS)
+# error "More code needed"
+#endif
+
+  /* Initialize ourselves as master on I2C1 */
   i2c_config_t i2c_conf = {
     .mode = I2C_MODE_MASTER,
     .sda_io_num = I2C_SDA_PIN,
@@ -124,17 +124,17 @@ void initialize_i2c() {
     .scl_pullup_en = GPIO_PULLUP_ENABLE,
     .master.clk_speed = 100000, // 100KHz
   };
-  if (i2c_param_config(I2C_BUS, &i2c_conf) != ESP_OK) {
+  if (i2c_param_config(I2C1_BUS, &i2c_conf) != ESP_OK) {
     panic("failed to install i2c @ 1\n");
   }
-  if (i2c_driver_install(I2C_BUS,
+  if (i2c_driver_install(I2C1_BUS,
 			 i2c_conf.mode,
 			 /* rx_buf_ena= */ 0,
 			 /* tx_buf_ena= */ 0,
 			 /* intr_flags= */ 0) != ESP_OK) {
     panic("failed to install i2c @ 2\n");
   }
-  i2c_set_timeout((i2c_port_t)I2C_BUS, 0xFFFFF);
+  i2c_set_timeout((i2c_port_t)I2C1_BUS, 0xFFFFF);
 
   /* Some of the i2c devices are slow to come up. */
   vTaskDelay(pdMS_TO_TICKS(I2C_STABILIZE_MS));
@@ -144,7 +144,7 @@ void initialize_i2c() {
 #ifdef SNAPPY_I2C_SEN0500
 void initialize_i2c_sen0500() {
   /* Check the environment sensor and initialize it */
-  if (!(have_sen0500 = dfrobot_sen0500_begin(&sen0500, I2C_BUS, SEN0500_I2C_ADDRESS))) {
+  if (!(have_sen0500 = dfrobot_sen0500_begin(&sen0500, SEN0500_BUS, SEN0500_ADDRESS))) {
     LOG("Failed to init SEN0500\n");
   }
 }
@@ -152,7 +152,7 @@ void initialize_i2c_sen0500() {
   
 #ifdef SNAPPY_I2C_SEN0514
 void initialize_i2c_sen0514() {
-  if (!(have_sen0514 = dfrobot_sen0514_begin(&sen0514, I2C_BUS, SEN0514_I2C_ADDRESS))) {
+  if (!(have_sen0514 = dfrobot_sen0514_begin(&sen0514, SEN0514_BUS, SEN0514_ADDRESS))) {
     LOG("Failed to init SEN0514");
   }
 }
@@ -161,7 +161,7 @@ void initialize_i2c_sen0514() {
 #ifdef SNAPPY_I2C_SSD1306
 void initialize_i2c_ssd1306() {
   /* Check the OLED and initialize it */
-  ssd1306 = ssd1306_Create(ssd1306_mem, I2C_BUS, SSD1306_I2C_ADDRESS, SSD1306_WIDTH, SSD1306_HEIGHT);
+  ssd1306 = ssd1306_Create(ssd1306_mem, SSD1306_BUS, SSD1306_ADDRESS, SSD1306_WIDTH, SSD1306_HEIGHT);
   if (!ssd1306) {
     LOG("Failed to init SSD1306");
   }

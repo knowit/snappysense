@@ -37,8 +37,6 @@
  */
 #define SNAPPY_I2C_SSD1306
 #ifdef SNAPPY_I2C_SSD1306
-# define SSD1306_WIDTH 128
-# define SSD1306_HEIGHT 32
 # define SSD1306_INCLUDE_FONT_7x10 /* There are others, this is readable */
 # define SSD1306_GRAPHICS
 #endif
