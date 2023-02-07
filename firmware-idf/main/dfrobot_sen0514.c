@@ -81,7 +81,7 @@ static bool read_reg8(dfrobot_sen0514_t* self, unsigned reg, unsigned* response)
 
 static bool set_power_mode(dfrobot_sen0514_t* self, unsigned mode) {
   if (!write_reg8(self, ENS160_OPMODE_REG, mode)) {
-    LOG("SEN0514: Failed to set power mode\n");
+    LOG("SEN0514: Failed to set power mode");
     return false;
   }
   vTaskDelay(pdMS_TO_TICKS(20)); 
@@ -90,7 +90,7 @@ static bool set_power_mode(dfrobot_sen0514_t* self, unsigned mode) {
 
 static bool set_interrupt_mode(dfrobot_sen0514_t* self, unsigned mode) {
   if (!write_reg8(self, ENS160_CONFIG_REG, mode | INT_DATA_DRDY_EN | INT_GPR_DRDY_DIS)) {
-    LOG("SEN0514: Failed to set interrupt mode\n");
+    LOG("SEN0514: Failed to set interrupt mode");
     return false;
   }
   vTaskDelay(pdMS_TO_TICKS(20)); 
@@ -103,11 +103,11 @@ bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i
   self->timeout_ms = 200;
   unsigned response;
   if (!read_reg16(self, ENS160_PART_ID_REG, &response)) {
-    LOG("SEN0514: Could not read part ID\n");
+    LOG("SEN0514: Could not read part ID");
     return false;
   }
   if (ENS160_PART_ID != response) {
-    LOG("SEN0514: Unexpected part number %u, wanted %u\n", response, ENS160_PART_ID);
+    LOG("SEN0514: Unexpected part number %u, wanted %u", response, ENS160_PART_ID);
     return false;
   }
   set_power_mode(self, ENS160_STANDARD_MODE);
@@ -118,6 +118,7 @@ bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i
 bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_status_t* result) {
   unsigned response;
   if (!read_reg8(self, ENS160_DATA_STATUS_REG, &response)) {
+    LOG("SEN0514: Failed to get sensor status");
     return false;
   }
   *result = (dfrobot_sen0514_status_t)((response >> 2) & 3);
@@ -136,21 +137,37 @@ bool dfrobot_sen0514_prime(dfrobot_sen0514_t* self, float temperature, float hum
   buf[3] = rh & 0xFF;
   rh >>= 8;
   buf[4] = rh & 0xFF;
-  return i2c_master_write_to_device(self->bus, self->address, buf, sizeof(buf),
-				    pdMS_TO_TICKS(self->timeout_ms)) == ESP_OK;
-  /* FIXME: Should we wait 20ms here? */
+  if (i2c_master_write_to_device(self->bus, self->address, buf, sizeof(buf),
+				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+    LOG("SEN0514: Failed to prime device");
+    return false;
+  }
+  /* TODO: Should we wait 20ms here? */
+  return true;
 }
 
 bool dfrobot_sen0514_get_air_quality_index(dfrobot_sen0514_t* self, unsigned* result) {
-  return read_reg8(self, ENS160_DATA_AQI_REG, result);
+  if (!read_reg8(self, ENS160_DATA_AQI_REG, result)) {
+    LOG("SEN0514: Failed to read AQI");
+    return false;
+  }
+  return true;
 }
 
 bool dfrobot_sen0514_get_total_volatile_organic_compounds(dfrobot_sen0514_t* self, unsigned* result) {
-  return read_reg16(self, ENS160_DATA_TVOC_REG, result);
+  if (!read_reg16(self, ENS160_DATA_TVOC_REG, result)) {
+    LOG("SEN0514: Failed to read TVOC");
+    return false;
+  }
+  return true;
 }
 
 bool dfrobot_sen0514_get_co2(dfrobot_sen0514_t* self, unsigned* result) {
-  return read_reg16(self, ENS160_DATA_ECO2_REG, result);
+  if (!read_reg16(self, ENS160_DATA_ECO2_REG, result)) {
+    LOG("SEN0514: Failed to read CO2");
+    return false;
+  }
+  return true;
 }
 
 #endif

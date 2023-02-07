@@ -49,7 +49,8 @@
 #endif
 
 #ifdef SNAPPY_LOGGING
-# define LOG(...) printf(__VA_ARGS__)
+extern void snappy_log(const char* fmt, ...);
+# define LOG(...) snappy_log(__VA_ARGS__)
 #else
 # define LOG(...)
 #endif

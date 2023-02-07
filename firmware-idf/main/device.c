@@ -183,32 +183,32 @@ bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned 
 
   err = i2c_master_start(handle);
   if (err != ESP_OK) {
-    LOG("Fail OLED @ 1\n");
+    LOG("Fail OLED @ 1");
     goto end;
   }
 
   err = i2c_master_write_byte(handle, device_address << 1 | I2C_MASTER_WRITE, true);
   if (err != ESP_OK) {
-    LOG("Fail OLED @ 2\n");
+    LOG("Fail OLED @ 2");
     goto end;
   }
 
   err = i2c_master_write_byte(handle, mem_address, true);
   if (err != ESP_OK) {
-    LOG("Fail OLED @ 3\n");
+    LOG("Fail OLED @ 3");
     goto end;
   }
   
   err = i2c_master_write(handle, write_buffer, write_size, true);
   if (err != ESP_OK) {
-    LOG("Fail OLED @ 4\n");
+    LOG("Fail OLED @ 4");
     goto end;
   }
 
   i2c_master_stop(handle);
   err = i2c_master_cmd_begin(i2c_num, handle, portMAX_DELAY);
   if (err != ESP_OK) {
-    LOG("Fail OLED @ 5\n");
+    LOG("Fail OLED @ 5");
   }
 
  end:

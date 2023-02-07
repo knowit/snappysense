@@ -7,6 +7,8 @@
 #include <inttypes.h>
 #include <math.h>
 #include <sys/time.h>
+#include <stdarg.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -156,7 +158,7 @@ void app_main(void)
 #endif
 
   /* And we are up! */
-  LOG("Snappysense running!\n");
+  LOG("Snappysense running!");
   show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
   //  play_song(&melody);
 
@@ -191,13 +193,13 @@ void app_main(void)
 	   us, when the finger nail sort of touches the edge of the button and slides off.  A "real"
 	   press lasts at least 100K us. */
 	uint32_t state = ev >> 4;
-	LOG("BUTTON: %" PRIu32 "\n", state);
+	LOG("BUTTON: %" PRIu32, state);
 	if (!state && was_pressed) {
 	  struct timeval now;
 	  gettimeofday(&now, NULL);
 	  uint64_t t = ((uint64_t)now.tv_sec * 1000000 + (uint64_t)now.tv_usec) -
 	    ((uint64_t)button_down.tv_sec * 1000000 + (uint64_t)button_down.tv_usec);
-	  LOG("  Pressed for %" PRIu64 "us\n", t);
+	  LOG("  Pressed for %" PRIu64 "us", t);
 	}
 	was_pressed = state == 1;
 	if (was_pressed) {
@@ -219,7 +221,7 @@ void app_main(void)
         break;
 
       default:
-	LOG("Unknown event: %" PRIu32 "\n", ev);
+	LOG("Unknown event: %" PRIu32, ev);
 	break;
       }
     } else {
@@ -229,13 +231,13 @@ void app_main(void)
 }
 
 static void panic(const char* msg) {
-  LOG("PANIC: %s\n", msg);
+  LOG("PANIC: %s", msg);
   show_text("PANIC: %s", msg);
   for(;;) {}
 }
 
 static void open_monitoring_window() {
-  LOG("Monitoring window opens\n");
+  LOG("Monitoring window opens");
 #ifdef SNAPPY_I2C_SEN0500
   /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple
    * times and average or otherwise integrate; TBD.
@@ -245,32 +247,32 @@ static void open_monitoring_window() {
       dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
       temperature != -45.0;
     if (have_temperature) {
-      LOG("Temperature = %.2f\n", temperature);
+      LOG("Temperature = %.2f", temperature);
     }
     have_humidity =
       dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
       humidity != 0.0;
     if (have_humidity) {
-      LOG("Humidity = %.2f\n", humidity);
+      LOG("Humidity = %.2f", humidity);
     }
     have_atmospheric_pressure =
       dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA,
                                                &atmospheric_pressure) &&
       atmospheric_pressure != 0;
     if (have_atmospheric_pressure) {
-      LOG("Pressure = %u\n", atmospheric_pressure);
+      LOG("Pressure = %u", atmospheric_pressure);
     }
     have_uv_intensity =
       dfrobot_sen0500_get_ultraviolet_intensity(&sen0500, &uv_intensity) &&
       uv_intensity != 0.0;
     if (have_uv_intensity) {
-      LOG("UV intensity = %.2f\n", uv_intensity);
+      LOG("UV intensity = %.2f", uv_intensity);
     }
     have_luminous_intensity =
       dfrobot_sen0500_get_luminous_intensity(&sen0500, &luminous_intensity) &&
       luminous_intensity != 0.0;
     if (have_luminous_intensity) {
-      LOG("Luminous intensity = %.2f\n", luminous_intensity);
+      LOG("Luminous intensity = %.2f", luminous_intensity);
     }
   }
 #endif
@@ -293,7 +295,7 @@ static void open_monitoring_window() {
         }
       }
     } else {
-      LOG("SEN0514 not ready: %d\n", stat);
+      LOG("SEN0514 not ready: %d", stat);
     }
   }
 #endif
@@ -308,7 +310,7 @@ static void open_monitoring_window() {
 }
 
 static void record_motion() {
-  LOG("Motion!\n");
+  LOG("Motion!");
   motion = true;
 }
 
@@ -316,7 +318,7 @@ static void close_monitoring_window() {
 #ifdef SNAPPY_GPIO_SEN0171
   disable_gpio_sen0171();
 #endif
-  LOG("Monitoring window closed\n");
+  LOG("Monitoring window closed");
 }
 
 #ifdef SNAPPY_I2C_SSD1306
@@ -439,3 +441,16 @@ static void show_text(const char* fmt, ...) {
   ssd1306_UpdateScreen(ssd1306);
 }
 #endif
+
+#ifdef SNAPPY_LOGGING
+void snappy_log(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vprintf(fmt, args);
+  va_end(args);
+  if (fmt[strlen(fmt)-1] != '\n') {
+    putchar('\n');
+  }
+}
+#endif
+
