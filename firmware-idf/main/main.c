@@ -57,6 +57,7 @@ static bool have_uv_intensity = false;
 static float uv_intensity;
 static bool have_luminous_intensity = false;
 static float luminous_intensity;
+static bool have_calibrated_sen0514 = false;
 static bool have_co2 = false;
 static unsigned co2;
 static bool have_tvoc = false;
@@ -67,6 +68,7 @@ static bool motion = false;
 
 /* Slideshow state */
 static int slideshow_next = 0;
+static bool show_debug = false;
 
 static void advance_slideshow();
 static void open_monitoring_window();
@@ -200,6 +202,9 @@ void app_main(void)
 	  uint64_t t = ((uint64_t)now.tv_sec * 1000000 + (uint64_t)now.tv_usec) -
 	    ((uint64_t)button_down.tv_sec * 1000000 + (uint64_t)button_down.tv_usec);
 	  LOG("  Pressed for %" PRIu64 "us", t);
+          if (t < 1000000) {
+            show_debug = !show_debug;
+          }
 	}
 	was_pressed = state == 1;
 	if (was_pressed) {
@@ -279,20 +284,34 @@ static void open_monitoring_window() {
 #ifdef SNAPPY_I2C_SEN0514
   if (have_sen0514) {
     dfrobot_sen0514_status_t stat;
-    if (dfrobot_sen0514_get_sensor_status(&sen0514, &stat) &&
-        stat == DFROBOT_SEN0514_NORMAL_OPERATION) {
-      if (have_temperature && have_humidity) {
-        if (dfrobot_sen0514_prime(&sen0514, temperature, humidity/100.0f)) {
-          have_co2 =
-            dfrobot_sen0514_get_co2(&sen0514, &co2) &&
-            co2 > 400;
-          have_tvoc =
-            dfrobot_sen0514_get_total_volatile_organic_compounds(&sen0514, &tvoc) &&
-            tvoc > 0;
-          have_aqi =
-            dfrobot_sen0514_get_air_quality_index(&sen0514, &aqi) &&
-            aqi > 0;
-        }
+    /* TODO: It's far from clear *when* this calibration should occur - whether it's every
+       time we want to read the device or just the first time */
+    if (have_temperature && have_humidity && !have_calibrated_sen0514) {
+      if (dfrobot_sen0514_prime(&sen0514, temperature, humidity/100.0f)) {
+        have_calibrated_sen0514 = true;
+      }
+    }
+    if (have_calibrated_sen0514 &&
+        dfrobot_sen0514_get_sensor_status(&sen0514, &stat) &&
+        /* See the header for an explanation of the status codes */
+        stat != DFROBOT_SEN0514_INVALID_OUTPUT) {
+      have_co2 =
+        dfrobot_sen0514_get_co2(&sen0514, &co2) &&
+        co2 > 400;
+      if (have_co2) {
+        LOG("CO2 = %u", co2);
+      }
+      have_tvoc =
+        dfrobot_sen0514_get_total_volatile_organic_compounds(&sen0514, &tvoc) &&
+        tvoc > 0;
+      if (have_tvoc) {
+        LOG("TVOC = %u", tvoc);
+      }
+      have_aqi =
+        dfrobot_sen0514_get_air_quality_index(&sen0514, &aqi) &&
+        aqi > 0;
+      if (have_aqi) {
+        LOG("AQI = %u", aqi);
       }
     } else {
       LOG("SEN0514 not ready: %d", stat);
@@ -380,32 +399,84 @@ static void advance_slideshow() {
   case 6:
     slideshow_next++;
     if (have_co2) {
-      show_text("CO_2\n\n%u ppm", co2);
+      const char* co2_text;
+      /* The scale is from the data sheet */
+      if (co2 <= 600) {
+        co2_text = "excellent";
+      } else if (co2 <= 800) {
+        co2_text = "good";
+      } else if (co2 <= 1000) {
+        co2_text = "adequate";
+      } else if (co2 <= 1500) {
+        co2_text = "bad";
+      } else {
+        co2_text = "terrible";
+      };
+      show_text("CO_2\n\n%uppm - %s", co2, co2_text);
       break;
     }
     /* FALLTHROUGH */
   case 7:
     slideshow_next++;
     if (have_tvoc) {
-      show_text("Volatile organics\n\n%u ppb", tvoc);
+      const char* tvoc_text;
+      /* The scale is partly from the data sheet */
+      if (tvoc < 50) {
+        tvoc_text = "good";
+      } else if (tvoc < 200) {
+        tvoc_text = "adequate";
+      } else if (tvoc < 750) {
+        tvoc_text = "not great";
+      } else if (tvoc < 6000) {
+        tvoc_text = "bad";
+      } else {
+        tvoc_text = "dangerous";
+      }
+      show_text("Volatile organics\n\n%uppb - %s", tvoc, tvoc_text);
       break;
     }
     /* FALLTHROUGH */
   case 8:
     slideshow_next++;
     if (have_aqi) {
-      show_text("Air quality index\n\n%u", aqi);
+      /* The scale is from the data sheet */
+      static const char* aqi_text[] = {
+        "excellent",
+        "good",
+        "adequate",
+        "bad",
+        "terrible" };
+      show_text("Air quality index\n\n%d - %s", aqi, aqi_text[aqi]);
       break;
     }
     /* FALLTHROUGH */
   case 9:
     slideshow_next++;
 #ifdef SNAPPY_GPIO_SEN0171
-    show_text("Motion\n\n%s", motion ? "Yes" : "No");
+    show_text("Movement\n\n%s", motion ? "Yes" : "No");
     break;
 #else
     /* FALLTHROUGH */
 #endif
+  case 10:
+    slideshow_next++;
+    if (show_debug) {
+      char buf[128];
+      *buf = 0;
+#ifdef SNAPPY_I2C_SEN0514
+      if (have_sen0514) {
+        dfrobot_sen0514_status_t stat;
+        if (dfrobot_sen0514_get_sensor_status(&sen0514, &stat)) {
+          sprintf(buf + strlen(buf), "A=%d %c ", (int)stat, have_calibrated_sen0514 ? 'y' : 'n');
+        } else {
+          sprintf(buf + strlen(buf), "A=- %c ", have_calibrated_sen0514 ? 'y' : 'n');
+        }
+      }
+#endif
+      show_text(buf);
+      break;
+    }
+    /* FALLTHROUGH */
   default:
     slideshow_next = 0;
     break;

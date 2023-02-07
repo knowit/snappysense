@@ -40,9 +40,6 @@ coming from the serial line, the network, buttons, the motion sensor, and other 
 **Piezo player**: this needs to use the ledc library directly, not the ledc superstructure for Arduino
 (which is not supported with ESP32-IDF).
 
-**Air sensor**: this has been implemented but is untested as of yet since it requires the v1.1 device to
-run off battery power, and I can't find the batteries...
-
 ### Unstarted high priority
 
 These are all tasks that make use of some novel feature of IDF
@@ -57,7 +54,17 @@ abstraction; under IDF it'll be something else.  Note it is highly desirable tha
 formats be compatible for the two firmware variants, or completely separate.
 
 **Factory configuration**: The Arduino firmware supports a factory configuration setup where a
-config can be uploaded over the serial line, we need something similar.
+config can be uploaded over the serial line, we need something similar.  We don't need to worry
+about power consumption in this mode.  There are a couple of options:
+
+- Use the serial line; this is probably simplest but it does require a PC with the necessary software
+- Connect via i2c from another dedicated "programming" device; this is sort of sexy but complicated
+- Have the device connect to a pre-configured access point and ask for its configuration
+- Upload a file to the device's file system, do not involve application logic.  If the device does not
+  find the file it will show an error and hang.  This reduces the amount of logic on the device.
+  NVRAM settings (for a few things) override or complement the settings in the file.  It looks like
+  this can be accomplished using some combination of spiffsgen.py and parttool.py,
+  https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html#spiffsgen.py
 
 **User configuration**: The Arduino firmware supports the user setting upp wifi (and some other
 things) via a web page hosted by the device; we need something similar.

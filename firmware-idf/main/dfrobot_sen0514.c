@@ -53,15 +53,33 @@
 
 static bool write_reg8(dfrobot_sen0514_t* self, unsigned reg, unsigned val) {
   uint8_t msg[2] = { reg, val };
-  return i2c_master_write_to_device(self->bus, self->address, msg, sizeof(msg),
-				    pdMS_TO_TICKS(self->timeout_ms)) == ESP_OK;
+  if (!i2c_master_write_to_device(self->bus, self->address, msg, sizeof(msg),
+				  pdMS_TO_TICKS(self->timeout_ms)) == ESP_OK) {
+    return false;
+  }
+  vTaskDelay(pdMS_TO_TICKS(20)); 
+  return true;
+}
+
+static bool write_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned val) {
+  uint8_t msg[3] = { reg, val & 255, (val >> 8) & 255 };
+  if (!i2c_master_write_to_device(self->bus, self->address, msg, sizeof(msg),
+				  pdMS_TO_TICKS(self->timeout_ms)) == ESP_OK) {
+    return false;
+  }
+  vTaskDelay(pdMS_TO_TICKS(20)); 
+  return true;
 }
 
 static bool read_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned* response) {
   uint8_t msg = reg;
   uint8_t buf[2];
-  if (i2c_master_write_read_device(self->bus, self->address, &msg, sizeof(msg), buf, sizeof(buf),
-				   pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+  if (i2c_master_write_to_device(self->bus, self->address, &msg, sizeof(msg),
+				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+    return false;
+  }
+  if (i2c_master_read_from_device(self->bus, self->address, buf, sizeof(buf),
+				  pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
     return false;
   }
   *response = (buf[1] << 8) | buf[0];
@@ -71,8 +89,12 @@ static bool read_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned* response
 static bool read_reg8(dfrobot_sen0514_t* self, unsigned reg, unsigned* response) {
   uint8_t msg = reg;
   uint8_t buf;
-  if (i2c_master_write_read_device(self->bus, self->address, &msg, sizeof(msg), &buf, sizeof(buf),
-				   pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+  if (i2c_master_write_to_device(self->bus, self->address, &msg, sizeof(msg),
+				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+    return false;
+  }
+  if (i2c_master_read_from_device(self->bus, self->address, &buf, sizeof(buf),
+				  pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
     return false;
   }
   *response = buf;
@@ -84,7 +106,6 @@ static bool set_power_mode(dfrobot_sen0514_t* self, unsigned mode) {
     LOG("SEN0514: Failed to set power mode");
     return false;
   }
-  vTaskDelay(pdMS_TO_TICKS(20)); 
   return true;
 }
 
@@ -93,7 +114,6 @@ static bool set_interrupt_mode(dfrobot_sen0514_t* self, unsigned mode) {
     LOG("SEN0514: Failed to set interrupt mode");
     return false;
   }
-  vTaskDelay(pdMS_TO_TICKS(20)); 
   return true;
 }
 
@@ -128,21 +148,12 @@ bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_
 bool dfrobot_sen0514_prime(dfrobot_sen0514_t* self, float temperature, float humidity) {
   unsigned t = (unsigned)((temperature + 273.15f) * 64.0f);
   unsigned rh = (unsigned)(humidity * 512.0f);
-  uint8_t buf[5];
-
-  buf[0] = ENS160_TEMP_IN_REG;
-  buf[1] = t & 0xFF;
-  t >>= 8;
-  buf[2] = t & 0xFF;
-  buf[3] = rh & 0xFF;
-  rh >>= 8;
-  buf[4] = rh & 0xFF;
-  if (i2c_master_write_to_device(self->bus, self->address, buf, sizeof(buf),
-				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
-    LOG("SEN0514: Failed to prime device");
-    return false;
+  if (!write_reg16(self, ENS160_TEMP_IN_REG, t)) {
+    LOG("SEN0514: Failed to prime device with temperature");
   }
-  /* TODO: Should we wait 20ms here? */
+  if (!write_reg16(self, ENS160_RH_IN_REG, rh)) {
+    LOG("SEN0514: Failed to prime device with humidity");
+  }
   return true;
 }
 

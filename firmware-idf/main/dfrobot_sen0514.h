@@ -21,7 +21,18 @@ typedef struct {
 /* Initialize the device, filling in the fields of `self`. */
 bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i2c_addr) WARN_UNUSED;
 
-/* Make of these what you will, but value 0 at least means we're OK */
+/* These status codes are a bit tricky, but from the data sheet:
+
+   The value "1" appears only for the first several minutes when the device is powered on *for the
+   first time* (ie during primary burn-in), after that supposedly not at all.
+
+   The value "2" appears for the first hour after the device is powered on (ie during secondary
+   burn-in).  If the device remains on continuously for 24 hours then we will not see "2" again; but
+   if it does not remain on then the "2" will reappear the next time the device is powered on, until
+   there is a 24-window.
+
+   Crucially, "0", "1" and "2" are all fine values for reading the sensors, from what I can tell.
+*/
 typedef enum {
   DFROBOT_SEN0514_NORMAL_OPERATION = 0,
   DFROBOT_SEN0514_WARMUP_PHASE = 1,
