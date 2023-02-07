@@ -1,11 +1,11 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 #include "bitmaps.h"
 
 /* Bitmaps for the device display, 128x32
- *
- * Bitmap data can be created by using the tool at:
- * http://en.radzio.dxp.pl/bitmap_converter/
- * (select a monochrome bitmap, upto 128x32 pixels in size, horizontal style)
- */
+ 
+   Bitmap data can be created by using the tool at: http://en.radzio.dxp.pl/bitmap_converter/
+   (select a monochrome bitmap, upto 128x32 pixels in size, horizontal style) */
 
 const unsigned char knowit_logo_bitmap[] = {
 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00,

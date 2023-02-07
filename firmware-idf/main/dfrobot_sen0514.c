@@ -1,11 +1,9 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-/*
- * This code has been copied and/or adapted from the DFRobot_ENS160.{cpp,h} driver code for Arduino.
- *
- * @copyright  Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
- * @license  The MIT License (MIT)
- */
+/* This code has been copied and/or adapted from the DFRobot_ENS160.{cpp,h} driver code for Arduino.
+  
+   @copyright  Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
+   @license  The MIT License (MIT) */
 
 #include "dfrobot_sen0514.h"
 
@@ -181,4 +179,5 @@ bool dfrobot_sen0514_get_co2(dfrobot_sen0514_t* self, unsigned* result) {
   return true;
 }
 
-#endif
+#endif /* SNAPPY_I2C_SEN0514 */
+

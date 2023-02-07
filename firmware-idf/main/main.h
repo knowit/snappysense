@@ -13,28 +13,23 @@
 #define SNAPPY_HARDWARE_1_1_0
 
 /* Environment sensor: DFRobot SEN0500
- * https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor
- */
+   https://wiki.dfrobot.com/SKU_SEN0500_Fermion_Multifunctional_Environmental_Sensor */
 #define SNAPPY_I2C_SEN0500
 
 /* Air/gas sensor: DFRobot SEN0514
- * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
- */
+   https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor */
 #define SNAPPY_I2C_SEN0514
 
 /* Sound sensor: DFRobot SEN0487 MEMS microphone
- * https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487
- */
+   https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487 */
 //#define SNAPPY_ADC_SEN0487
 
 /* Movement sensor: DFRobot SEN0171 passive IR sensor, digital directly from GPIO
- * https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171
- */
+   https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171 */
 #define SNAPPY_GPIO_SEN0171
 
 /* OLED: SSD1306-based 128x32 pixel display
- * Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
- */
+   Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
 #define SNAPPY_I2C_SSD1306
 #ifdef SNAPPY_I2C_SSD1306
 # define SSD1306_INCLUDE_FONT_7x10 /* There are others, this is readable */
@@ -55,11 +50,9 @@ extern void snappy_log(const char* fmt, ...);
 # define LOG(...)
 #endif
 
-/* Events are uint32_t values sent from ISRs and monitoring tasks to
- * the main task, on a queue owned by the main task.  Numbers should
- * stay below 16.  Events have an event number in the low 4 bits and
- * payload in the upper 28.
- */
+/* Events are uint32_t values sent from ISRs and monitoring tasks to the main task, on a queue owned
+   by the main task.  Numbers should stay below 16.  Events have an event number in the low 4 bits
+   and payload in the upper 28. */
 enum {
   EV_NONE,
   EV_PIR,	 /* Payload: pin level, 0 (no motion) or 1 (motion) */

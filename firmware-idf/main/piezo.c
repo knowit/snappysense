@@ -46,8 +46,7 @@ static void vPlayerTask(void* arg) {
   for(;;) {
     PlayerCommand cmd;
     /* If a command is pending, it takes precedence.  We're between notes now, so it's OK both to
-     * stop the song and to start a new one, and to.
-     */
+       stop the song and to start a new one, and to. */
     if (xQueueReceive(command_queue, &cmd, 0)) {
       switch (cmd.op) {
         case STOP:
@@ -72,17 +71,15 @@ static void vPlayerTask(void* arg) {
       continue;
     }
     /* If we're playing, get a note to play and play it, and then wait until it has finished
-     * playing before doing something else.
-     */
+       playing before doing something else. */
     if (is_playing) {
       int frequency, duration_ms;
       if (get_note(&frequency, &duration_ms)) {
         if (prev_frequency == frequency) {
           /* A bit of a hack.  Avoid running the notes together if they are the same.  This works
-           * well for some tunes and less well for some others, and the delay probably ought to be
-           * relative to the bpm of the song.  It's possible the music compiler should instead
-	   * embed this in the song directly.
-	   */
+             well for some tunes and less well for some others, and the delay probably ought to be
+             relative to the bpm of the song.  It's possible the music compiler should instead embed
+             this in the song directly. */
           stop_note();
           vTaskDelay(pdMS_TO_TICKS(10));
         }

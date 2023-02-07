@@ -1,3 +1,5 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 #ifndef bitmaps_h_included
 #define bitmaps_h_included
 

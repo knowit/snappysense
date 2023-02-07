@@ -165,20 +165,20 @@ void app_main(void)
   //  play_song(&melody);
 
   /* Process events forever.
-   *
-   * This is mainly a state machine with a cycle of sleep-monitoring-reporting-sleep-... states.
-   * Within the monitoring and reporting states there may be minor cycles.  Right now the machine is
-   * driven by a clock that starts the monitoring state and there is no reporting state, but this
-   * will change.
-   *
-   * Overlapping that state machine is one that drives the slide show, if enabled.  The two state
-   * machines are independent but are handled by the same switch for practical reasons.  Thus some
-   * display work can happen during monitoring, but this should not adversely affect anything.
-   *
-   * Finally, some events can interrupt the state machine.  PIR interrupts are seen during
-   * monitoring and are simply recorded.  Button interrupts are seen anytime and are currently
-   * ignored but may cause the device operation to change.
-   */
+
+     This is mainly a state machine with a cycle of sleep-monitoring-reporting-sleep-... states.
+     Within the monitoring and reporting states there may be minor cycles.  Right now the machine is
+     driven by a clock that starts the monitoring state and there is no reporting state, but this
+     will change.
+   
+     Overlapping that state machine is one that drives the slide show, if enabled.  The two state
+     machines are independent but are handled by the same switch for practical reasons.  Thus some
+     display work can happen during monitoring, but this should not adversely affect anything.
+   
+     Finally, some events can interrupt the state machine.  PIR interrupts are seen during
+     monitoring and are simply recorded.  Button interrupts are seen anytime and are currently
+     ignored but may cause the device operation to change. */
+
   struct timeval button_down; /* Time of button press */
   bool was_pressed = false;   /*   if this is true */
 
@@ -244,9 +244,8 @@ static void panic(const char* msg) {
 static void open_monitoring_window() {
   LOG("Monitoring window opens");
 #ifdef SNAPPY_I2C_SEN0500
-  /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple
-   * times and average or otherwise integrate; TBD.
-   */
+  /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple times
+     and average or otherwise integrate; TBD. */
   if (have_sen0500) {
     have_temperature =
       dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
@@ -284,8 +283,8 @@ static void open_monitoring_window() {
 #ifdef SNAPPY_I2C_SEN0514
   if (have_sen0514) {
     dfrobot_sen0514_status_t stat;
-    /* TODO: It's far from clear *when* this calibration should occur - whether it's every
-       time we want to read the device or just the first time */
+    /* TODO: It's far from clear *when* this calibration should occur - whether it's every time we
+       want to read the device or just the first time, or when temp and humidity change "a lot".  */
     if (have_temperature && have_humidity && !have_calibrated_sen0514) {
       if (dfrobot_sen0514_prime(&sen0514, temperature, humidity/100.0f)) {
         have_calibrated_sen0514 = true;
@@ -319,9 +318,8 @@ static void open_monitoring_window() {
   }
 #endif
 #ifdef SNAPPY_GPIO_SEN0171
-  /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open;
-   * then PIR interrupts will simply be recorded higher up in the switch.
-   */
+  /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open; then
+     PIR interrupts will simply be recorded higher up in the switch. */
   motion = false;
   enable_gpio_sen0171();
 #endif

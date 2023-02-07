@@ -1,8 +1,7 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* Driver for air/gas sensor: DFRobot SEN0514.
- * https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor
- */
+   https://wiki.dfrobot.com/SKU_SEN0514_Gravity_ENS160_Air_Quality_Sensor */
 
 #ifndef dfrobot_sen0514_h_included
 #define dfrobot_sen0514_h_included
@@ -31,8 +30,7 @@ bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i
    if it does not remain on then the "2" will reappear the next time the device is powered on, until
    there is a 24-window.
 
-   Crucially, "0", "1" and "2" are all fine values for reading the sensors, from what I can tell.
-*/
+   Crucially, "0", "1" and "2" are all fine values for reading the sensors, from what I can tell. */
 typedef enum {
   DFROBOT_SEN0514_NORMAL_OPERATION = 0,
   DFROBOT_SEN0514_WARMUP_PHASE = 1,
@@ -43,11 +41,10 @@ typedef enum {
 bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_status_t* result) WARN_UNUSED;
 
 /* Prime the device with temperature and humidity, to ensure readings are sensible.
- * Temperature is degrees celsius, [-273, whatever)
- * Humidity is relative humidity, [0,1]
- *
- * TODO: How often can/must we do this?
- */
+   Temperature is degrees celsius, [-273, whatever)
+   Humidity is relative humidity, [0,1]
+  
+   TODO: How often can/must we do this? */
 bool dfrobot_sen0514_prime(dfrobot_sen0514_t* self, float temperature, float humidity) WARN_UNUSED;
 
 /* Range 1-5: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy */

@@ -1,8 +1,7 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* Driver for SSD1306-based OLED display
- * https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
- */
+   https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
 
 /*
 MIT License
@@ -28,20 +27,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/**
- * Origin: https://github.com/afiskon/stm32-ssd1306
- *
- * This Library was originally written by Olivier Van den Eede (4ilo) in 2016.
- * Some refactoring was done and SPI support was added by Aleksander Alekseev (afiskon) in 2018.
- *
- * SPI support was removed by Lars T Hansen in 2023 and the library was generalized to support
- * multiple I2C devices (on separate busses, since the device address is hardcoded) simultaneously.
- *
- * Dependence on stm32*hal was removed by Lars T Hansen in 2023 in favor of a generic i2c library,
- * see the bottom of this file for signatures of free functions that must be provided.  This code is
- * free of dependencies on specific platforms (apart from needing to be able to do blocking delays
- * and blocking i2c writes).
- */
+/* Origin: https://github.com/afiskon/stm32-ssd1306
+ 
+   This Library was originally written by Olivier Van den Eede (4ilo) in 2016.
+   Some refactoring was done and SPI support was added by Aleksander Alekseev (afiskon) in 2018.
+  
+   SPI support was removed by Lars T Hansen in 2023 and the library was generalized to support
+   multiple I2C devices (on separate busses, since the device address is hardcoded) simultaneously.
+ 
+   Dependence on stm32*hal was removed by Lars T Hansen in 2023 in favor of a generic i2c library,
+   see the bottom of this file for signatures of free functions that must be provided.  This code is
+   free of dependencies on specific platforms (apart from needing to be able to do blocking delays
+   and blocking i2c writes). */
 
 #ifndef __SSD1306_H__
 #define __SSD1306_H__
@@ -93,13 +90,11 @@ typedef struct {
 } SSD1306_Device_t;
 
 /* Width and height should be constants, in which case this is also constant and can
- * be used to allocate memory statically
- */
+   be used to allocate memory statically. */
 #define SSD1306_DEVICE_SIZE(width, height) (sizeof(SSD1306_Device_t) + (((width) * (height)) / 8) - 1)
 
 /* This will initialize the device struct using the provided memory, which must be large enough to
- * hold the struct and the memory for the buffer.
- */
+   hold the struct and the memory for the buffer. */
 SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr, unsigned width, unsigned height);
 
 typedef struct {
@@ -157,15 +152,14 @@ SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint3
 /* This function is free within the library; it must be provided by the application. */
 
 /* Write the bytes to the device, blocking until the write's done. `bus` is the 0-based i2c bus
- * number.  `address` is the *unshifted* device address on that bus.  `mem_address` is a memory
- * address on the device to which data is written.  `buffer` is the data to write, and `buffer_size`
- * the number of bytes to be written from `buffer`.
- * 
- * If any locking is required for bus access this function will have to perform that locking, as the
- * ssd1306 library will not.
- *
- * Returns true if the write succeeded, false otherwise.
- */
+   number.  `address` is the *unshifted* device address on that bus.  `mem_address` is a memory
+   address on the device to which data is written.  `buffer` is the data to write, and `buffer_size`
+   the number of bytes to be written from `buffer`.
+   
+   If any locking is required for bus access this function will have to perform that locking, as the
+   ssd1306 library will not.
+  
+   Returns true if the write succeeded, false otherwise. */
 bool ssd1306_Write_Blocking(unsigned bus, unsigned address, unsigned mem_address,
 			    uint8_t* buffer, size_t buffer_size);
 

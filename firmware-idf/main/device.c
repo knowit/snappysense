@@ -169,11 +169,9 @@ void initialize_i2c_ssd1306() {
 bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned mem_address,
 			    uint8_t* write_buffer, size_t write_size) {
   /* Based on i2c_master_write_to_device() */
-  /*
-   * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
-   *
-   * SPDX-License-Identifier: Apache-2.0
-   */
+
+  /* SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+     SPDX-License-Identifier: Apache-2.0 */
 
   esp_err_t err = ESP_OK;
   uint8_t buffer[I2C_LINK_RECOMMENDED_SIZE(2)] = { 0 };

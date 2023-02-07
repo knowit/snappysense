@@ -1,8 +1,7 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* Driver for SSD1306-based OLED display
- * https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
- */
+   https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
 
 /*
 MIT License
@@ -28,17 +27,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/**
- * This Library was originally written by Olivier Van den Eede (4ilo) in 2016.
- * Some refactoring was done and SPI support was added by Aleksander Alekseev (afiskon) in 2018.
- * Origin: https://github.com/afiskon/stm32-ssd1306
- *
- * SPI support was removed by Lars T Hansen in 2023 and the library was generalized to support
- * multiple I2C devices simultaneously.
- *
- * Dependence on stm32*hal was removed by Lars T Hansen in 2023 in favor of a generic i2c library,
- * see header file.
- */
+/* This Library was originally written by Olivier Van den Eede (4ilo) in 2016.
+   Some refactoring was done and SPI support was added by Aleksander Alekseev (afiskon) in 2018.
+   Origin: https://github.com/afiskon/stm32-ssd1306
+  
+   SPI support was removed by Lars T Hansen in 2023 and the library was generalized to support
+   multiple I2C devices simultaneously.
+  
+   Dependence on stm32*hal was removed by Lars T Hansen in 2023 in favor of a generic i2c library,
+   see header file. */
 
 #include "ssd1306.h"
 
@@ -93,8 +90,7 @@ SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint3
 }
 
 /* Initialize the oled screen.  The caller must wait for a bit after bringing up the i2c
- * bus before calling this, typically 100ms.
- */
+   bus before calling this, typically 100ms.  */
 void ssd1306_Init(SSD1306_Device_t* device) {
   /* Init OLED - turn display off */
   ssd1306_SetDisplayOn(device, 0);

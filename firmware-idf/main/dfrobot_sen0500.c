@@ -1,13 +1,12 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* Driver for environment sensor: DFRobot SEN0500
- *
- * Much of the following is taken from the Arduino DFRobot_EnvironmentalSensor.{cpp,h} files,
- * covered by the following copyright:
- *
- * @copyright Copyright (c) 2021 DFRobot Co.Ltd (http://www.dfrobot.com)
- * @license   The MIT License (MIT)
- */
+ 
+   Much of the following is taken from the Arduino DFRobot_EnvironmentalSensor.{cpp,h} files,
+   covered by the following copyright:
+ 
+   @copyright Copyright (c) 2021 DFRobot Co.Ltd (http://www.dfrobot.com)
+   @license   The MIT License (MIT) */
 
 #include "dfrobot_sen0500.h"
 
@@ -95,8 +94,7 @@ bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_s
 }
 
 /* Map x that is within the interval [in_min,in_max) to its appropriate point in the interval
- * [out_min,out_max).
- */
+   [out_min,out_max).  */
 static float map_float(float x, float in_min, float in_max, float out_min, float out_max) {
   return out_min + ((x - in_min) * (out_max - out_min) / (in_max - in_min));
 }
