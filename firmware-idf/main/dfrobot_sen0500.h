@@ -19,7 +19,7 @@ typedef struct {
 } dfrobot_sen0500_t;
 
 /* Initialize the device, filling in the fields of `self`. */
-bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr);
+bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr) WARN_UNUSED;
 
 /* Temperature representation */
 typedef enum {
@@ -31,13 +31,13 @@ typedef enum {
  * *result; otherwise false.
  */
 bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_temp_t tt,
-				     float* result);
+				     float* result) WARN_UNUSED;
 
 /* Read the humidity register of the initialized device and return true on success, updating
  * *result; otherwise false.  The unit of the output is relative humidity in percent; 50.0 is the
  * middle of the range.
  */
-bool dfrobot_sen0500_get_humidity(dfrobot_sen0500_t* self, float* result);
+bool dfrobot_sen0500_get_humidity(dfrobot_sen0500_t* self, float* result) WARN_UNUSED;
 
 /* Pressure representation */
 typedef enum {
@@ -49,7 +49,7 @@ typedef enum {
  * *result; otherwise false.
  */
 bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_sen0500_pressure_t pt,
-					      unsigned* result);
+					      unsigned* result) WARN_UNUSED;
 
 /* Read the uv intensity register of the initialized device and return true on success, updating
  * *result; otherwise false.  The output is in the range [0.0,15.0).
@@ -60,12 +60,12 @@ bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_s
  *
  * Most likely, rounding *result to the nearest integer is going to be OK.
  */
-bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* result);
+bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* result) WARN_UNUSED;
 
 /* Read the light intensity register of the initialized device and return true on success, updating
  * *result; otherwise false.  The unit of the output is lux.
  */
-bool dfrobot_sen0500_get_luminous_intensity(dfrobot_sen0500_t* self, float* result);
+bool dfrobot_sen0500_get_luminous_intensity(dfrobot_sen0500_t* self, float* result) WARN_UNUSED;
 
 #endif /* SNAPPY_I2C_SEN0500 */
 

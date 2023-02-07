@@ -1,9 +1,5 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-// Simple music player.  It plays a song on the piezo-element speaker until the song ends,
-// it is told to stop, or it is told to play a different song.  The player runs on a separate
-// FreeRTOS task, which sleeps if there's nothing to do.
-
 #ifndef piezo_h_included
 #define piezo_h_included
 
@@ -13,12 +9,21 @@ struct tone {
   uint16_t frequency;
   uint16_t duration_ms;
 };
+
 struct music {
   unsigned length;
   const struct tone* tones;
 };
 
-void play_song(const struct music* song);
-void stop_song();
+/* Initialize the music subsystem.  Call from main task during system initialization.  This will
+   create a music player task. */
+bool piezo_begin() WARN_UNUSED;
+
+/* Start the song.  This can be called from any task.  It will stop whatever song was playing, if
+   any. */
+void piezo_play(const struct music* song);
+
+/* Stop the song playing, if any.  This can be called from any task. */
+void piezo_stop();
 
 #endif // !piezo_h_included

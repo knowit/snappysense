@@ -23,7 +23,7 @@
    the pulse in the same way that the arduino library does.  Some inspiration for this may be taken
    from the way Gunnar did it in his prototype. */
 
-#include "esp32-hal-ledc.h"
+//#include "esp32-hal-ledc.h"
 #endif
 
 #ifdef SNAPPY_HARDWARE_1_1_0
@@ -112,7 +112,7 @@ void initialize_onboard_buttons() {
 }
   
 #ifdef SNAPPY_I2C
-void initialize_i2c() {
+bool initialize_i2c() {
 #if defined(I2C2_BUS) || defined(I2C3_BUS)
 # error "More code needed"
 #endif
@@ -127,36 +127,33 @@ void initialize_i2c() {
     .master.clk_speed = 100000, // 100KHz
   };
   if (i2c_param_config(I2C1_BUS, &i2c_conf) != ESP_OK) {
-    panic("failed to install i2c @ 1\n");
+    return false;
   }
   if (i2c_driver_install(I2C1_BUS,
 			 i2c_conf.mode,
 			 /* rx_buf_ena= */ 0,
 			 /* tx_buf_ena= */ 0,
 			 /* intr_flags= */ 0) != ESP_OK) {
-    panic("failed to install i2c @ 2\n");
+    return false;
   }
   i2c_set_timeout((i2c_port_t)I2C1_BUS, 0xFFFFF);
 
   /* Some of the i2c devices are slow to come up. */
   vTaskDelay(pdMS_TO_TICKS(I2C_STABILIZE_MS));
+  return true;
 }
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500
-void initialize_i2c_sen0500() {
+bool initialize_i2c_sen0500() {
   /* Check the environment sensor and initialize it */
-  if (!(have_sen0500 = dfrobot_sen0500_begin(&sen0500, SEN0500_BUS, SEN0500_ADDRESS))) {
-    LOG("Failed to init SEN0500\n");
-  }
+  return (have_sen0500 = dfrobot_sen0500_begin(&sen0500, SEN0500_BUS, SEN0500_ADDRESS));
 }
 #endif
   
 #ifdef SNAPPY_I2C_SEN0514
-void initialize_i2c_sen0514() {
-  if (!(have_sen0514 = dfrobot_sen0514_begin(&sen0514, SEN0514_BUS, SEN0514_ADDRESS))) {
-    LOG("Failed to init SEN0514");
-  }
+bool initialize_i2c_sen0514() {
+  return (have_sen0514 = dfrobot_sen0514_begin(&sen0514, SEN0514_BUS, SEN0514_ADDRESS));
 }
 #endif
 
@@ -221,7 +218,7 @@ bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned 
 #endif
 
 #ifdef SNAPPY_GPIO_SEN0171
-void initialize_gpio_sen0171() {
+bool initialize_gpio_sen0171() {
   gpio_config_t pir_conf = {
     .intr_type = GPIO_INTR_POSEDGE,
     .pin_bit_mask = (1ULL << PIR_PIN),
@@ -229,6 +226,7 @@ void initialize_gpio_sen0171() {
   };
   gpio_config(&pir_conf);
   /* Handler support has been installed by general GPIO initialization */
+  return true;
 }
 
 void enable_gpio_sen0171() {
@@ -248,18 +246,19 @@ void disable_gpio_sen0171() {
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
-void setup_sound() {
+bool initialize_gpio_piezo() {
   // TODO: Justify these choices, which are wrong.  Probably 1 bit of resolution is fine?
   // And the question is whether ledcSetup should be before or after ledcAttachPin.
   //ledcSetup(PWM_CHAN, 4000, 16);
-  ledcAttachPin(PWM_PIN, PWM_CHAN);
+  //  ledcAttachPin(PWM_PIN, PWM_CHAN);
+  return true;
 }
 
-static void start_note(int frequency) {
-  ledcWriteTone(PWM_CHAN, frequency);
+void start_note(int frequency) {
+  //  ledcWriteTone(PWM_CHAN, frequency);
 }
 
-static void stop_note() {
-  ledcWrite(PWM_CHAN, 0);
+void stop_note() {
+  //  ledcWrite(PWM_CHAN, 0);
 }
 #endif

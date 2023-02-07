@@ -42,7 +42,7 @@
 #endif
 
 // TODO: DOCUMENTME
-//#define SNAPPY_GPIO_PIEZO
+#define SNAPPY_GPIO_PIEZO
 
 #if defined(SNAPPY_I2C_SEN0500) || defined(SNAPPY_I2C_SEN0514) || defined(SNAPPY_I2C_SSD1306)
 # define SNAPPY_I2C
@@ -53,9 +53,6 @@
 #else
 # define LOG(...)
 #endif
-
-/* Signal error and hang */
-void panic(const char* msg) __attribute__ ((noreturn));
 
 /* Events are uint32_t values sent from ISRs and monitoring tasks to
  * the main task, on a queue owned by the main task.  Numbers should
@@ -70,5 +67,7 @@ enum {
   EV_SLIDESHOW_CLOCK,            /* Payload: nothing */
   EV_MONITORING_CLOCK,
 };
+
+#define WARN_UNUSED __attribute__((warn_unused_result))
 
 #endif /* !main_h_included */

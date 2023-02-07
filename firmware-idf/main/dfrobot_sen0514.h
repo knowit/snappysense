@@ -19,7 +19,7 @@ typedef struct {
 } dfrobot_sen0514_t;
 
 /* Initialize the device, filling in the fields of `self`. */
-bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i2c_addr);
+bool dfrobot_sen0514_begin(dfrobot_sen0514_t* self, unsigned i2c_bus, unsigned i2c_addr) WARN_UNUSED;
 
 /* Make of these what you will, but value 0 at least means we're OK */
 typedef enum {
@@ -29,7 +29,7 @@ typedef enum {
   DFROBOT_SEN0514_INVALID_OUTPUT = 3
 } dfrobot_sen0514_status_t;
 
-bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_status_t* result);
+bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_status_t* result) WARN_UNUSED;
 
 /* Prime the device with temperature and humidity, to ensure readings are sensible.
  * Temperature is degrees celsius, [-273, whatever)
@@ -37,16 +37,16 @@ bool dfrobot_sen0514_get_sensor_status(dfrobot_sen0514_t* self, dfrobot_sen0514_
  *
  * TODO: How often can/must we do this?
  */
-bool dfrobot_sen0514_prime(dfrobot_sen0514_t* self, float temperature, float humidity);
+bool dfrobot_sen0514_prime(dfrobot_sen0514_t* self, float temperature, float humidity) WARN_UNUSED;
 
 /* Range 1-5: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy */
-bool dfrobot_sen0514_get_air_quality_index(dfrobot_sen0514_t* self, unsigned* result);
+bool dfrobot_sen0514_get_air_quality_index(dfrobot_sen0514_t* self, unsigned* result) WARN_UNUSED;
 
 /* Range 0–65000: Parts per billion */
-bool dfrobot_sen0514_get_total_volatile_organic_compounds(dfrobot_sen0514_t* self, unsigned* result);
+bool dfrobot_sen0514_get_total_volatile_organic_compounds(dfrobot_sen0514_t* self, unsigned* result) WARN_UNUSED;
 
 /* Range 400–65000: Parts per million. */
-bool dfrobot_sen0514_get_co2(dfrobot_sen0514_t* self, unsigned* result);
+bool dfrobot_sen0514_get_co2(dfrobot_sen0514_t* self, unsigned* result) WARN_UNUSED;
 
 #endif
 

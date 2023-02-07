@@ -64,6 +64,7 @@ static void show_text(const char* fmt, ...);
 static void open_monitoring_window();
 static void close_monitoring_window();
 static void record_motion();
+static void panic(const char* msg) __attribute__ ((noreturn));
 
 void app_main(void)
 {
@@ -80,28 +81,42 @@ void app_main(void)
 
 #ifdef SNAPPY_GPIO_SEN0171
   /* Movement sensor */
-  initialize_gpio_sen0171();
+  if (!initialize_gpio_sen0171()) {
+    LOG("Movement sensor inoperable");
+  }
 #endif
 
 #ifdef SNAPPY_I2C
-  initialize_i2c();
+  if (!initialize_i2c()) {
+    panic("i2c system inoperable; nothing will work");
+  }
 #endif
 
   /* TODO: SNAPPY_ADC_SEN0487 microphone */
 
 #ifdef SNAPPY_I2C_SEN0500
   /* Environment sensor */
-  initialize_i2c_sen0500();
+  if (!initialize_i2c_sen0500()) {
+    LOG("Environment sensor inoperable");
+  }
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
   /* Air/gas sensor */
-  initialize_i2c_sen0514();
+  if (!initialize_i2c_sen0514()) {
+    LOG("Air/gas sensor inoperable");
+  }
 #endif
 
 #ifdef SNAPPY_I2C_SSD1306
   /* Display */
   initialize_i2c_ssd1306();
+#endif
+
+#ifdef SNAPPY_GPIO_PIEZO
+  if (!initialize_gpio_piezo() || !piezo_begin()) {
+    LOG("Piezo speaker inoperable");
+  }
 #endif
 
   /* Create a clock tick used to drive device readings */
@@ -130,10 +145,24 @@ void app_main(void)
 
   /* And we are up! */
   LOG("Snappysense running!\n");
-  show_text("SnappySense v1.1\nESP32-IDF firmware\nObjectNet 2023");
+  show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
   //  play_song(&melody);
 
-  /* Process events forever */
+  /* Process events forever.
+   *
+   * This is mainly a state machine with a cycle of sleep-monitoring-reporting-sleep-... states.
+   * Within the monitoring and reporting states there may be minor cycles.  Right now the machine is
+   * driven by a clock that starts the monitoring state and there is no reporting state, but this
+   * will change.
+   *
+   * Overlapping that state machine is one that drives the slide show, if enabled.  The two state
+   * machines are independent but are handled by the same switch for practical reasons.  Thus some
+   * display work can happen during monitoring, but this should not adversely affect anything.
+   *
+   * Finally, some events can interrupt the state machine.  PIR interrupts are seen during
+   * monitoring and are simply recorded.  Button interrupts are seen anytime and are currently
+   * ignored but may cause the device operation to change.
+   */
   struct timeval button_down; /* Time of button press */
   bool was_pressed = false;   /*   if this is true */
 
@@ -187,7 +216,7 @@ void app_main(void)
   }
 }
 
-void panic(const char* msg) {
+static void panic(const char* msg) {
   LOG("PANIC: %s\n", msg);
   show_text("PANIC: %s", msg);
   for(;;) {}
@@ -243,8 +272,14 @@ static void open_monitoring_window() {
           have_co2 =
             dfrobot_sen0514_get_co2(&sen0514, &co2) &&
             co2 > 400;
+        } else {
+          LOG("Priming failed\n");
         }
+      } else {
+        LOG("No temperature or humidity\n");
       }
+    } else {
+      LOG("SEN0514 not ready: %d\n", stat);
     }
   }
 #endif

@@ -16,13 +16,13 @@ void install_interrupts(QueueHandle_t evt_queue);
 void initialize_onboard_buttons();
 
 #ifdef SNAPPY_GPIO_SEN0171
-void initialize_gpio_sen0171();
+bool initialize_gpio_sen0171() WARN_UNUSED;
 void enable_gpio_sen0171();
 void disable_gpio_sen0171();
 #endif
 
 #ifdef SNAPPY_I2C
-void initialize_i2c();
+bool initialize_i2c() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500
@@ -30,7 +30,7 @@ extern bool have_sen0500;
 extern dfrobot_sen0500_t sen0500;
 
 /* Initialize the device, set have_sen0500 to true iff it succeeds. */
-void initialize_i2c_sen0500();
+bool initialize_i2c_sen0500() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
@@ -38,7 +38,7 @@ extern bool have_sen0514;
 extern dfrobot_sen0514_t sen0514;
 
 /* Initialize the device, set have_sen05514 to true iff it succeeds. */
-void initialize_i2c_sen0514();
+bool initialize_i2c_sen0514() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_I2C_SSD1306
@@ -50,7 +50,7 @@ void initialize_i2c_ssd1306();
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
-void setup_sound();
+bool initialize_gpio_piezo() WARN_UNUSED;
 void start_note(int frequency);
 void stop_note();
 #endif
