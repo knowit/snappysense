@@ -44,11 +44,11 @@ bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i
   self->timeout_ms = 200;
   unsigned response = 0;
   if (!read_reg16(self, REG_DEVICE_ADDR, &response)) {
-    LOG("Read failed\n");
+    LOG("SEN0500: Device init read failed\n");
     return false;
   }
   if (self->address != (response & 0xFF)) {
-    LOG("Bad response %04X addr %04X\n", response, self->address);
+    LOG("SEN0500: Device init bad response %04X want %04X\n", response, self->address);
     return false;		/* Invalid i2c address or device response */
   }
   return true;
@@ -58,6 +58,7 @@ bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_te
 				     float* result) {
   unsigned response = 0;
   if (!read_reg16(self, REG_TEMP, &response)) {
+    LOG("SEN0500: Temperature read failed\n");
     return false;
   }
   float reading = (float)(int16_t)response;
@@ -72,6 +73,7 @@ bool dfrobot_sen0500_get_temperature(dfrobot_sen0500_t* self, dfrobot_sen0500_te
 bool dfrobot_sen0500_get_humidity(dfrobot_sen0500_t* self, float* result) {
   unsigned response = 0;
   if (!read_reg16(self, REG_HUMIDITY, &response)) {
+    LOG("SEN0500: Humidity read failed\n");
     return false;
   }
   *result = (float)response * 100.0f / 65536.0f;
@@ -82,6 +84,7 @@ bool dfrobot_sen0500_get_atmospheric_pressure(dfrobot_sen0500_t* self, dfrobot_s
 					      unsigned* result) {
   unsigned response;
   if (!read_reg16(self, REG_ATMOSPHERIC_PRESSURE, &response)) {
+    LOG("SEN0500: Pressure read failed\n");
     return false;
   }
   if (pt == DFROBOT_SEN0500_PRESSURE_KPA) {
@@ -101,6 +104,7 @@ static float map_float(float x, float in_min, float in_max, float out_min, float
 bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* result) {
   unsigned response;
   if (!read_reg16(self, REG_ULTRAVIOLET_INTENSITY, &response)) {
+    LOG("SEN0500: UV read failed\n");
     return false;
   }
   float outputVoltage = (3.0f * (float)response) / 1024.0f;
@@ -111,6 +115,7 @@ bool dfrobot_sen0500_get_ultraviolet_intensity(dfrobot_sen0500_t* self, float* r
 bool dfrobot_sen0500_get_luminous_intensity(dfrobot_sen0500_t* self, float* result) {
   unsigned response;
   if (!read_reg16(self, REG_LUMINOUS_INTENSITY, &response)) {
+    LOG("SEN0500: Lux read failed\n");
     return false;
   }
   float luminous = (float)response;

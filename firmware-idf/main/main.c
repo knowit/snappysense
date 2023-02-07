@@ -57,14 +57,26 @@ static bool have_luminous_intensity = false;
 static float luminous_intensity;
 static bool have_co2 = false;
 static unsigned co2;
+static bool have_tvoc = false;
+static unsigned tvoc;
+static bool have_aqi = false;
+static unsigned aqi;
 static bool motion = false;
 
+/* Slideshow state */
+static int slideshow_next = 0;
+
 static void advance_slideshow();
-static void show_text(const char* fmt, ...);
 static void open_monitoring_window();
 static void close_monitoring_window();
 static void record_motion();
 static void panic(const char* msg) __attribute__ ((noreturn));
+
+#ifdef SNAPPY_I2C_SSD1306
+static void show_text(const char* fmt, ...);
+#else
+#define show_text(...) do {} while(0)
+#endif
 
 void app_main(void)
 {
@@ -272,11 +284,13 @@ static void open_monitoring_window() {
           have_co2 =
             dfrobot_sen0514_get_co2(&sen0514, &co2) &&
             co2 > 400;
-        } else {
-          LOG("Priming failed\n");
+          have_tvoc =
+            dfrobot_sen0514_get_total_volatile_organic_compounds(&sen0514, &tvoc) &&
+            tvoc > 0;
+          have_aqi =
+            dfrobot_sen0514_get_air_quality_index(&sen0514, &aqi) &&
+            aqi > 0;
         }
-      } else {
-        LOG("No temperature or humidity\n");
       }
     } else {
       LOG("SEN0514 not ready: %d\n", stat);
@@ -316,12 +330,6 @@ static void splash_screen() {
 #endif
 
 static void advance_slideshow() {
-  static int slideshow_next = 0;
-
-  /* TODO: Splash screen */
-  /* TODO: For the text display, use bitmaps *or* use a larger font and
-     center the text and place the text on two lines, caption above
-     and reading + units below */
   switch (slideshow_next) {
   case 0:
     slideshow_next++;
@@ -376,6 +384,20 @@ static void advance_slideshow() {
     /* FALLTHROUGH */
   case 7:
     slideshow_next++;
+    if (have_tvoc) {
+      show_text("Volatile organics\n\n%u ppb", tvoc);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 8:
+    slideshow_next++;
+    if (have_aqi) {
+      show_text("Air quality index\n\n%u", aqi);
+      break;
+    }
+    /* FALLTHROUGH */
+  case 9:
+    slideshow_next++;
 #ifdef SNAPPY_GPIO_SEN0171
     show_text("Motion\n\n%s", motion ? "Yes" : "No");
     break;
@@ -390,7 +412,7 @@ static void advance_slideshow() {
 
 /* Display abstractions. */
 #ifdef SNAPPY_I2C_SSD1306
-void show_text(const char* fmt, ...) {
+static void show_text(const char* fmt, ...) {
   if (!ssd1306) {
     return;
   }
@@ -416,6 +438,4 @@ void show_text(const char* fmt, ...) {
   }
   ssd1306_UpdateScreen(ssd1306);
 }
-#else
-#define show_text(...)
 #endif
