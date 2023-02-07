@@ -1,3 +1,5 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 // Simple music player.  It plays a song on the piezo-element speaker until the song ends,
 // it is told to stop, or it is told to play a different song.  The player runs on a separate
 // FreeRTOS task, which sleeps if there's nothing to do.

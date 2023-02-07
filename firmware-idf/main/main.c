@@ -14,7 +14,7 @@
 
 #include "device.h"
 #include "piezo.h"
-#include "resources.h"
+#include "bitmaps.h"
 
 /* Parameters */
 #define MONITORING_WINDOW_S 10
@@ -274,7 +274,7 @@ static void close_monitoring_window() {
 static void splash_screen() {
   ssd1306_Fill(ssd1306, SSD1306_BLACK);
   ssd1306_DrawBitmap(ssd1306, 0, 1,
-                     knowit_logo, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
+                     knowit_logo_bitmap, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
                      SSD1306_WHITE);
   ssd1306_UpdateScreen(ssd1306);
 }

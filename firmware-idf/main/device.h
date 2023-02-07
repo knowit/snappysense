@@ -1,3 +1,5 @@
+/* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+
 #ifndef device_h_included
 #define device_h_included
 
