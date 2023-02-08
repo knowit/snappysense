@@ -1,11 +1,6 @@
-config
 version 1.1.0
 
-# Normally a file like this is just pasted from the clipboard into the terminal
-# when the device is in interactive configuration mode and connected to the terminal.
-# The `config` command above starts the command processor; the `save` before `end`
-# stores the configuration in the device.  All you need to do is reset the device
-# afterwards.
+# See CONFIG.md for full documentation about what it means and how it's used.
 
 # If a network is passwordless then just don't define any password values.
 # There are at most three networks.  All are optional, especially if the device will
