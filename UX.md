@@ -1,5 +1,7 @@
 # User experience, configuration, etc
 
+(This is for the Arduino-based firmware only, for the time being.  The IDF-based firmware has its own documentation.)
+
 ## Day-to-day use
 
 The SnappySense device has two modes, selectable at end-user configuration time: _slideshow_ mode and _monitoring_ mode.
