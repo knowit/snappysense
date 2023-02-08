@@ -119,7 +119,7 @@
 # define SNAPPY_WIFI
 #endif
 
-#if defined(SERIAL_COMMAND_SERVER) || defined(WEB_SERVER)
+#if defined(SERIAL_COMMAND_SERVER) || defined(WEB_COMMAND_SERVER)
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
