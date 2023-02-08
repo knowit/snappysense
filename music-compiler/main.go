@@ -1,13 +1,14 @@
-// Compiles a melody in the syntax below into a simple C data structure.
+// -*- fill-column: 100; tab-width: 2; indent-tabs-mode: t -*-
+
+// Compiles a melody in the syntax below into a simple C data structure.  Adapted from rtttl.cpp in
+// the Arduino version of the SnappySense firmware.
 //
-// The input is a single line on stdin.
-// See samples.txt for some examples of the input.
+// The input is a single line on stdin.  See samples.txt for some examples of the input.
 //
-// The output is some code on stdout.  The output assumes the existence of these
-// type definitions:
+// The output is source code on stdout.  The output assumes the existence of these type definitions:
 //    struct tone { uint16_t frequency; uint16_t duration_ms; };
 //    struct music { unsigned length; const struct tone* tones; };
-// and defines a const variable `melody` of type music_t with an initializer.
+// and defines a const variable `melody` of type `struct music` with an appropriate initializer.
 //
 // Syntax:
 //  Melody ::= Preamble Defaults Notes?
@@ -23,6 +24,13 @@
 //           \3 is the optional # mark
 //           \4 is the optional duration lengthening mark
 //           \5 is the optional octave (default 6)
+//
+// TODO: The music player in the firmware has a hack where it pauses between two consecutive notes
+// that are at the same frequency, to make the music sound better.  Instead of pushing that hack
+// into the player, the compiler should insert the pause.  That way it can also take into account eg
+// the BPM to choose an appropriate pause.
+//
+// TODO: Given that the syntax is defined by a regex, we could more easily parse by regex.
 
 package main
 
@@ -139,7 +147,7 @@ var notes = []int{PAUSE, NOTE_C4, NOTE_CS4, NOTE_D4, NOTE_DS4, NOTE_E4, NOTE_F4,
 	NOTE_D7, NOTE_DS7, NOTE_E7, NOTE_F7, NOTE_FS7, NOTE_G7, NOTE_GS7, NOTE_A7,
 	NOTE_AS7, NOTE_B7, NOTE_C8, NOTE_CS8, NOTE_D8, NOTE_DS8}
 
-// Read a line of text from stdin, write output to stdout, errors on stderr
+// Read a line of text from stdin, write output to stdout, errors on stderr.
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 	text, _ := reader.ReadString('\n')
@@ -215,8 +223,7 @@ func main() {
 		}
 		idx++
 
-		// BPM usually expresses the number of quarter notes per minute
-		// calculate time for whole note (in milliseconds)
+		// BPM expresses the number of quarter notes per minute.  Calculate time (ms) for whole note.
 		wholenote := (60 * 1000 / bpm) << 2
 
 		type Tone struct {
