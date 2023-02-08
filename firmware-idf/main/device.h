@@ -14,6 +14,8 @@ void power_up_peripherals();
 void install_interrupts(QueueHandle_t evt_queue);
 
 void initialize_onboard_buttons();
+void enable_onboard_buttons();
+bool btn1_is_pressed();
 
 #ifdef SNAPPY_GPIO_SEN0171
 bool initialize_gpio_sen0171() WARN_UNUSED;

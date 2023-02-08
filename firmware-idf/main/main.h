@@ -64,4 +64,10 @@ enum {
 
 #define WARN_UNUSED __attribute__((warn_unused_result))
 
+#ifdef SNAPPY_I2C_SSD1306
+void show_text(const char* fmt, ...);
+#else
+#define show_text(...) do {} while(0)
+#endif
+
 #endif /* !main_h_included */

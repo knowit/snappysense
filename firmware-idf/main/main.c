@@ -14,6 +14,7 @@
 #include "freertos/queue.h"
 #include "freertos/timers.h"
 
+#include "factory_config.h"
 #include "device.h"
 #include "piezo.h"
 #include "bitmaps.h"
@@ -76,12 +77,6 @@ static void close_monitoring_window();
 static void record_motion();
 static void panic(const char* msg) __attribute__ ((noreturn));
 
-#ifdef SNAPPY_I2C_SSD1306
-static void show_text(const char* fmt, ...);
-#else
-#define show_text(...) do {} while(0)
-#endif
-
 void app_main(void)
 {
   /* Bring the power line up and wait until it stabilizes */
@@ -93,18 +88,39 @@ void app_main(void)
 
   /* Initialize peripherals */
 
+  /* Set up buttons but do not make them send events yet */
   initialize_onboard_buttons();
+
+#ifdef SNAPPY_I2C
+  if (!initialize_i2c()) {
+    panic("i2c system inoperable; nothing will work");
+  }
+#endif
+
+#ifdef SNAPPY_I2C_SSD1306
+  /* Display */
+  initialize_i2c_ssd1306();
+#endif
+
+  /* We're far enough along that we can talk to the screen */
+  LOG("Snappysense active!");
+
+  /* Look for factory config signal */
+  if (btn1_is_pressed()) {
+    for ( int i=0 ; i < 10 && btn1_is_pressed(); i++ ) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    if (btn1_is_pressed()) {
+      show_text("SnappySense v1.1\nUSB config");
+      factory_configuration();
+      esp_restart();
+    }
+  }
 
 #ifdef SNAPPY_GPIO_SEN0171
   /* Movement sensor */
   if (!initialize_gpio_sen0171()) {
     LOG("Movement sensor inoperable");
-  }
-#endif
-
-#ifdef SNAPPY_I2C
-  if (!initialize_i2c()) {
-    panic("i2c system inoperable; nothing will work");
   }
 #endif
 
@@ -122,11 +138,6 @@ void app_main(void)
   if (!initialize_i2c_sen0514()) {
     LOG("Air/gas sensor inoperable");
   }
-#endif
-
-#ifdef SNAPPY_I2C_SSD1306
-  /* Display */
-  initialize_i2c_ssd1306();
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
@@ -158,6 +169,9 @@ void app_main(void)
     xTimerStart(slideshow_clock, portMAX_DELAY);
   }
 #endif
+
+  /* Buttons will now send events */
+  enable_onboard_buttons();
 
   /* And we are up! */
   LOG("Snappysense running!");
@@ -308,7 +322,7 @@ static void open_monitoring_window() {
       }
       have_aqi =
         dfrobot_sen0514_get_air_quality_index(&sen0514, &aqi) &&
-        aqi > 0;
+        aqi >= 1 && aqi <= 5;
       if (have_aqi) {
         LOG("AQI = %u", aqi);
       }
@@ -439,6 +453,7 @@ static void advance_slideshow() {
     if (have_aqi) {
       /* The scale is from the data sheet */
       static const char* aqi_text[] = {
+        "",
         "excellent",
         "good",
         "adequate",
@@ -483,7 +498,7 @@ static void advance_slideshow() {
 
 /* Display abstractions. */
 #ifdef SNAPPY_I2C_SSD1306
-static void show_text(const char* fmt, ...) {
+void show_text(const char* fmt, ...) {
   if (!ssd1306) {
     return;
   }

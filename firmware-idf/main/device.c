@@ -108,9 +108,16 @@ void initialize_onboard_buttons() {
     .mode = GPIO_MODE_INPUT,
   };
   gpio_config(&btn_conf);
-  gpio_isr_handler_add(BTN1_PIN, gpio_isr_handler, (void*) BTN1_PIN);
 }
   
+void enable_onboard_buttons() {
+  gpio_isr_handler_add(BTN1_PIN, gpio_isr_handler, (void*) BTN1_PIN);
+}
+
+bool btn1_is_pressed() {
+  return gpio_get_level(BTN1_PIN);
+}
+
 #ifdef SNAPPY_I2C
 bool initialize_i2c() {
 #if defined(I2C2_BUS) || defined(I2C3_BUS)

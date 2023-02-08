@@ -60,11 +60,26 @@ about power consumption in this mode.  There are a couple of options:
 - Use the serial line; this is probably simplest but it does require a PC with the necessary software
 - Connect via i2c from another dedicated "programming" device; this is sort of sexy but complicated
 - Have the device connect to a pre-configured access point and ask for its configuration
+- Have the device erect an access point and upload the config via the web, this should not be hard and
+  requires only a web browser or indeed a terminal and curl.
+- As the previous one, but don't even listen for web traffic - just listen on a TCP port and receive
+  some text data.  Now all we need is netcat.
 - Upload a file to the device's file system, do not involve application logic.  If the device does not
   find the file it will show an error and hang.  This reduces the amount of logic on the device.
   NVRAM settings (for a few things) override or complement the settings in the file.  It looks like
   this can be accomplished using some combination of spiffsgen.py and parttool.py,
   https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html#spiffsgen.py
+- NFC, bluetooth
+- SD card
+
+I probably favor the solution where the device either opens an AP or connects to a known AP in
+config mode and then listens on a port for a config file, the necessary information can be displayed
+on the screen.
+
+Of course, *end-user* config also needs some kind of solution and that may be a web server :-/
+
+The preconfigured AP can be provided by another ESP32... but then that one needs to generate data
+and so on, and none of that will work out OK.
 
 **User configuration**: The Arduino firmware supports the user setting upp wifi (and some other
 things) via a web page hosted by the device; we need something similar.
