@@ -4,7 +4,8 @@ version 1.1.0
 # Normally a file like this is just pasted from the clipboard into the terminal
 # when the device is in interactive configuration mode and connected to the terminal.
 # The `config` command above starts the command processor; the `save` before `end`
-# stores the configuration in the device.  All you need to do is reset the device afterwards.
+# stores the configuration in the device.  All you need to do is reset the device
+# afterwards.
 
 # If a network is passwordless then just don't define any password values.
 # There are at most three networks.  All are optional, especially if the device will
@@ -30,19 +31,18 @@ set location ...FIXME...
 set time-server-host ...FIXME...
 
 # HTTP upload service on port 8086 on this host, responds to POST /data
-set http-upload-host ...FIXME...
+#set http-upload-host ...FIXME...
 
-# Access point name is per-device (since multiple devices can be active in the same
-# area at the same time).  Something derived from the aws-iot-id is sensible, eg,
-# if aws-iot-id is blahblah then using snappy-blahblah-config here is probably OK,
-# note the name is at most 32 characters, and it's helpful to keep it <= 20, for
-# display purposes.  Using both "snappy-" and "-config" makes it easy to recognize
-# the network but is not required, and abbreviations like "snp-" and "-cfg" might
-# be just as good.
+# Access point name (used for end-user config) is per-device since multiple devices
+# can be active in the same area at the same time.  Something derived from the aws-iot-id
+# is sensible, eg, if aws-iot-id is snp_1_1_no_48 (v1.1 device s/n 48) then using
+# snp_1_1_no_48_config here is OK, note the name is at most 32 characters, and it's
+# helpful to keep it <= 20, for display purposes.  Using "snp_" and "_config" makes it
+# easy to recognize the network but is not required.
 set web-config-access-point ...FIXME...
 
 # All of the following except the class comes from AWS IoT.
-# The class is "snappysense" for the snappysense v1.0.0 devices; TBD for other
+# The class is "snappysense" for the SnappySense devices; TBD for other
 # versions or other devices.
 
 set aws-iot-endpoint-host ...FIXME...
@@ -53,7 +53,6 @@ set aws-iot-class "snappysense"
 cert aws-iot-root-ca
 -----BEGIN CERTIFICATE-----
 ...FIXME...
-rqXRfboQnoZsG4q5WTP468SQvvG5
 -----END CERTIFICATE-----
 
 # Device Certificate (XXXXXXXXXX-certificate.pem.crt)

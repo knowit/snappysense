@@ -4,7 +4,7 @@
 #include "network.h"
 #include "web_server.h"
 
-#ifdef SERIAL_CONFIGURATION
+#ifdef WEB_CONFIGURATION
 
 // Configuration file format version, see the 'config' statement help text further down.
 // This is intended to be used in a proper "semantic versioning" way.
@@ -28,14 +28,19 @@ static String evaluate_config(List<String>& input) {
       return fmt("Configuration program did not end with `end`");
     }
     String line = input.pop_front();
+    Serial.printf("> LINE: %s\n", line.c_str());
     String kwd = get_word(line, 0);
     if (kwd == "end") {
+      Serial.println("> end");
       return String();
     } else if (kwd == "clear") {
+      Serial.println("> clear");
       reset_configuration();
     } else if (kwd == "save") {
+      Serial.println("> save");
       save_configuration();
     } else if (kwd == "version") {
+      Serial.println("> version");
       int major, minor, bugfix;
       if (sscanf(get_word(line, 1).c_str(), "%d.%d.%d", &major, &minor, &bugfix) != 3) {
         return fmt("Bad statement [%s]\n", line.c_str());
@@ -48,6 +53,7 @@ static String evaluate_config(List<String>& input) {
       }
       // version is OK
     } else if (kwd == "set") {
+      Serial.println("> set");
       String varname = get_word(line, 1);
       if (varname == "") {
         return fmt("Missing variable name for 'set'\n");
@@ -68,6 +74,7 @@ static String evaluate_config(List<String>& input) {
         p->int_value = int(value.toInt());
       }
     } else if (kwd == "cert") {
+       Serial.println("> cert");
       String varname = get_word(line, 1);
       if (varname == "") {
         return fmt("Missing variable name for 'cert'\n");
@@ -100,6 +107,7 @@ static String evaluate_config(List<String>& input) {
       }
       p->str_value = value;
     } else {
+      Serial.println("> other");
       int i = 0;
       while (i < line.length() && isspace(line[i])) {
         i++;
@@ -117,148 +125,6 @@ static String evaluate_config(List<String>& input) {
   panic("Unreachable state in evaluate_config");
 }
 
-// Manual for the configuration language.
-//
-// The configuration language is used only during provisioning at this point.
-
-static const char CONFIG_MANUAL_PART1[] = R"EOF(
-config
-  This command will wait for you to enter a program in a simple configuration language,
-  as follows.  Generally whitespace is insignificant except within quoted values
-  and in the payloads for `cert`.  Comment lines start with # and go until EOL.
-  Statements are executed in the order they appear.
-
-    Program ::= Statements End
-    End ::= "end" EOL
-    Statement ::= Clear | Version | Save | Set | Cert
-    Clear ::= "clear" EOL
-      -- This resets all variables
-    Version ::= "version" Major-dot-Minor-dot-Bugfix EOL
-      -- This optional statement states the version of the firmware that the
-      -- configuration was written for.
-    Save ::= "save" EOL
-      -- This saves all variables to nonvolatile storage.
-    Set ::= "set" Variable Value EOL
-      -- This assigns Value to Variable
-      -- Value is a string of non-whitespace characters, or a quoted string
-    Cert ::= "cert" Cert-name EOL Text-lines
-      -- This defines a multi-line text variable
-      -- The first payload line must start with the usual "-----BEGIN ...", and the last
-      -- payload line must end with with the usual "-----END ...".  No blank lines or
-      -- comments may appear after the "cert" line until after the last payload line.)EOF";
-
-// "Part 2" of the manual is the list of variable names for `set` and `cert`; see later.
-
-static void print_help(Stream* io) {
-  io->println(R"EOF(Interactive configuration commands:
-
-show
-  Show current settings.  Certificates are shown with first line only,
-  passwords with first letter only.
-
-config
-  This will wait for you to enter (or more usually, paste in) a number of lines
-  followed by a line that reads only "end".  See `help config`.
-
-clear
-  Remove all settings (or restore them to compiled-in values, in development mode).
-
-save
-  Save the configuration to nonvolatile storage.
-
-quit
-  Leave configuration mode and start the device in a normal manner.
-
-Note it is possible to compile default settings into the source for easier development,
-see src/config.cpp.)EOF");
-}
-
-static void print_help_config(Stream* io) {
-  io->println(CONFIG_MANUAL_PART1);
-  io->println();
-  io->println("  Variables for 'set' are:");
-  for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (!p->is_cert()) {
-      io->printf("    %-22s - %s\n", p->long_key, p->help);
-    }
-  }
-  io->println();
-  io->println("  Cert-names for 'cert' are:");
-  for ( Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (p->is_cert()) {
-      io->printf("    %-20s - %s\n", p->long_key, p->help);
-    }
-  }
-}
-
-static String cert_first_line(const char* cert) {
-  const char* p = strstr(cert, "BEGIN");
-  const char* q = strchr(p, '\n');
-  const char* r = strchr(q+1, '\n');
-  return String((const uint8_t*)(q+1), (r-q-1));
-}
-
-static void show_cmd(Stream* io) {
-  for (Pref* p = prefs; p->long_key != nullptr; p++ ) {
-    if (p->is_string()) {
-      if (p->str_value.isEmpty()) {
-        continue;
-      }
-      if (p->is_cert()) {
-        io->printf("%-22s - %s...\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
-      } else if (p->is_passwd() && !p->str_value.isEmpty()) {
-        io->printf("%-22s - %c.....\n", p->long_key, p->str_value[0]);
-      } else {
-        io->printf("%-22s - %s\n", p->long_key, p->str_value.c_str());
-      }
-    } else {
-      io->printf("%-22s - %d\n", p->long_key, p->int_value);
-    }
-  }
-}
-
-void SerialConfigTask::perform() {
-  auto *io = &Serial;
-  if (state == COLLECTING) {
-    // collecting input for the "config" command in `config_lines`, ending when we've seen
-    // the "end" line.
-    String cmd = get_word(line, 0);
-    config_lines.add_back(std::move(line));
-    if (cmd == "end") {
-      String result = evaluate_config(config_lines);
-      if (!result.isEmpty()) {
-        io->println(result);
-      }
-      config_lines.clear();
-      state = RUNNING;
-    }
-  } else {
-    String cmd = get_word(line, 0);
-    if (cmd == "help") {
-      if (get_word(line, 1).equals("config")) {
-        print_help_config(io);
-      } else {
-        print_help(io);
-      }
-    } else if (cmd == "show") {
-      show_cmd(io);
-    } else if (cmd == "config") {
-      state = COLLECTING;
-    } else if (cmd == "clear") {
-      reset_configuration();
-    } else if (cmd == "save") {
-      save_configuration();
-    } else if (cmd == "quit") {
-      io->println("PRESS RESET BUTTON");
-      enter_end_state("PRESS RESET BUTTON");
-    } else {
-      io->printf("Unknown command [%s], try `help`.\n", line.c_str());
-    }
-  }
-}
-#endif
-
-#ifdef WEB_CONFIGURATION
 // Configuration / provisioning:
 //
 // The device acts as an access point, and its SSID and IP address are displayed on the
@@ -306,71 +172,57 @@ static const char config_page[] = R"EOF(
 </html>
 )EOF";
 
-void WebConfigRequestHandler::process_request() {
-  if (request.startsWith("GET / ")) {
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-type:text/html");
-    client.println();
-    client.printf(config_page, "",
-                  access_point_ssid(1), access_point_password(1),
-                  access_point_ssid(2), access_point_password(2),
-                  access_point_ssid(3), access_point_password(3),
-                  location_name());
-    dead = true;
-    return;
-  }
+bool WebConfigRequestHandler::handle_get_user_config() {
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:text/html");
+  client.println();
+  client.printf(config_page, "",
+                access_point_ssid(1), access_point_password(1),
+                access_point_ssid(2), access_point_password(2),
+                access_point_ssid(3), access_point_password(3),
+                location_name());
+  return true;
+}
 
-  if (request.startsWith("POST / ")) {
-    int ix = request.indexOf("Content-Length:");
-    int bufsiz = 0;
-    uint8_t* buf = nullptr;
-    size_t bytes_read = 0;
-    bool updated = false;
-    const char* p = nullptr;
-    if (ix == -1) {
-      goto failure;
+bool WebConfigRequestHandler::handle_post_user_config(const char* buf) {
+  bool updated = false;
+  bool failed = true;
+  const char* p = (char*)buf;
+  for (;;) {
+    String key, value;
+    int len;
+    char id;
+    if (failed) {
+      break;
     }
-    if (sscanf(request.c_str()+ix+15, "%d", &bufsiz) != 1) {
-      goto failure;
+    if (!get_posted_field(&p, &key, &value)) {
+      break;
     }
-    buf = (uint8_t*)malloc(bufsiz+1);
-    if (buf == nullptr) {
-      goto failure;
+    if (sscanf(key.c_str(), "ssid%c%n", &id, &len) == 1 && len == 5) {
+      set_access_point_ssid(id-'0', value.c_str());
+      updated = true;
+      continue;
     }
-    bytes_read = client.readBytes(buf, bufsiz);
-    buf[bytes_read] = 0;
-    p = (char*)buf;
-    for(;;) {
-      String key, value;
-      int len;
-      char id;
-      if (!get_posted_field(&p, &key, &value)) {
-        break;
-      }
-      if (sscanf(key.c_str(), "ssid%c%n", &id, &len) == 1 && len == 5) {
-        set_access_point_ssid(id-'0', value.c_str());
-        updated = true;
-        continue;
-      }
-      if (sscanf(key.c_str(), "password%c%n", &id, &len) == 1 && len == 9) {
-        set_access_point_password(id-'0', value.c_str());
-        updated = true;
-        continue;
-      }
-      if (key == "location") {
-        set_location_name(value.c_str());
-        updated = true;
-        continue;
-      }
-      goto failure;
+    if (sscanf(key.c_str(), "password%c%n", &id, &len) == 1 && len == 9) {
+      set_access_point_password(id-'0', value.c_str());
+      updated = true;
+      continue;
     }
-    if (*p) {
-      log("Stuff left in buffer: [%s]\n", p);
-      goto failure;
+    if (key == "location") {
+      set_location_name(value.c_str());
+      updated = true;
+      continue;
     }
-    if (updated) {
-      save_configuration();
-    }
+    failed = true;
+  }
+  if (!failed && *p) {
+    log("Stuff left in buffer: [%s]\n", p);
+    failed = true;
+  }
+  if (!failed && updated) {
+    save_configuration();
+  }
+  if (!failed) {
     client.println("HTTP/1.1 202 Accepted");
     client.println("Content-type:text/html");
     client.println();
@@ -379,24 +231,75 @@ void WebConfigRequestHandler::process_request() {
                   access_point_ssid(2), access_point_password(2),
                   access_point_ssid(3), access_point_password(3),
                   location_name());
-    free(buf);
-    buf = nullptr;
-    dead = true;
-    return;
-
-  failure:
-    log("Web server: bad request\n");
-    if (buf != nullptr) {
-      log(" [%s]\n", buf);
-      free(buf);
-    }
-    client.println("HTTP/1.1 400 Bad request");
-    dead = true;
-    return;
   }
+  return !failed;
+}
 
-  log("Web server: invalid method or URL\n");
-  client.println("HTTP/1.1 405 Bad request");
+String WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
+  // In this case the content is a config script.  Split it into lines and hand it to the
+  // config script processor.
+  List<String> lines;
+  const char* p = buf;
+  while (*p) {
+    String s;
+    while (*p && *p != '\n') {
+      s += *p++;
+    }
+    if (*p) {
+      p++;
+    }
+    Serial.printf("Text: %s\n", s.c_str());
+    lines.add_back(std::move(s));
+  }
+  return evaluate_config(lines);
+}
+
+char* WebConfigRequestHandler::get_post_data() {
+  int ix = request.indexOf("Content-Length:");
+  if (ix == -1) {
+    return nullptr;
+  }
+  int bufsiz;
+  if (sscanf(request.c_str()+ix+15, "%d", &bufsiz) != 1) {
+    return nullptr;
+  }
+  uint8_t* buf = (uint8_t*)malloc(bufsiz+1);
+  if (buf == nullptr) {
+    return nullptr;
+  }
+  size_t bytes_read = client.readBytes(buf, bufsiz);
+  buf[bytes_read] = 0;
+  return (char*)buf;
+}
+
+void WebConfigRequestHandler::process_request() {
+  bool failed = false;
+  String errmsg;
+  if (request.startsWith("GET / ")) {
+    failed = !handle_get_user_config();
+  } else if (request.startsWith("POST /")) {
+    char* post_data = get_post_data();
+    if (post_data) {
+      if (request.startsWith("POST / ")) {
+        failed = !handle_post_user_config(post_data);
+      } else if (request.startsWith("POST /config ")) {
+        errmsg = handle_post_factory_config(post_data);
+        failed = !errmsg.isEmpty();
+      } else {
+        failed = true;
+      }
+    } else {
+      failed = true;
+    }
+    free(post_data);
+  }
+  if (failed) {
+    log("Web server: invalid method or URL\n");
+    if (!errmsg.isEmpty()) {
+      log("Error: %s\n", errmsg.c_str());
+    }
+    client.println("HTTP/1.1 405 Bad request");
+  }
   dead = true;
 }
 
@@ -406,10 +309,14 @@ void WebConfigRequestHandler::failed_request() {
 }
 
 bool WebConfigTask::start() {
+  char buf[32];
   const char* ssid = web_config_access_point();
   if (*ssid == 0) {
-    render_text("Configuration mode\nNo cfg access point");
-    return false;
+    // No AP configured, but we're not defeated that easily.  Generate a randomish name.
+    unsigned hibits = rand() % 65536;
+    unsigned lobits = rand() % 65536;
+    sprintf(buf, "snp_%04x_%04x_cfg", hibits, lobits);
+    ssid = buf;
   }
   // TODO: Handle return code better!  If we fail to bring up the AP then we probably
   // should not try again, as we're wasting energy.  On the other hand, if we fail
@@ -419,7 +326,7 @@ bool WebConfigTask::start() {
   if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
     return false;
   }
-  String msg = fmt("Configuration mode\n%s\n%s", ssid, ip.toString().c_str());
+  String msg = fmt("Provisioning mode\n%s\n%s", ssid, ip.toString().c_str());
   render_text(msg.c_str());
   int port = 80;
   web_server = new WebServer(port);

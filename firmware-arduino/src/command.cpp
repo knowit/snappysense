@@ -134,6 +134,32 @@ static void cmd_inet(const String& cmd, const SnappySenseData&, Stream* out) {
 #endif
 }
 
+static String cert_first_line(const char* cert) {
+  const char* p = strstr(cert, "BEGIN");
+  const char* q = strchr(p, '\n');
+  const char* r = strchr(q+1, '\n');
+  return String((const uint8_t*)(q+1), (r-q-1));
+}
+
+static void cmd_config(const String& cmd, const SnappySenseData&, Stream* out) {
+  for (Pref* p = prefs; p->long_key != nullptr; p++ ) {
+    if (p->is_string()) {
+      if (p->str_value.isEmpty()) {
+        continue;
+      }
+      if (p->is_cert()) {
+        out->printf("%-22s - %s...\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
+      } else if (p->is_passwd() && !p->str_value.isEmpty()) {
+        out->printf("%-22s - %c.....\n", p->long_key, p->str_value[0]);
+      } else {
+        out->printf("%-22s - %s\n", p->long_key, p->str_value.c_str());
+      }
+    } else {
+      out->printf("%-22s - %d\n", p->long_key, p->int_value);
+    }
+  }
+}
+
 Command commands[] = {
   {"hello",    "Echo the argument",                                  cmd_hello},
   {"help",     "Print help text",                                    cmd_help},
@@ -144,6 +170,7 @@ Command commands[] = {
   {"get",      "Get the sensor reading for a specific sensor name",  cmd_get},
   {"view",     "View all the current sensor readings",               cmd_view},
   {"inet",     "Internet connectivity details",                      cmd_inet},
+  {"config",   "Show device configuration",                          cmd_config},
   {nullptr,    nullptr,                                              nullptr}
 };
 

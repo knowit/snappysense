@@ -7,23 +7,12 @@
 #include "util.h"
 #include "web_server.h"
 
-#ifdef SERIAL_CONFIGURATION
-class SerialConfigTask final : public ReadSerialInputTask {
-  enum {
-    RUNNING,
-    COLLECTING,
-  } state = RUNNING;
-  List<String> config_lines;
-public:
-  const char* name() override {
-    return "Serial server config input";
-  }
-  void perform() override;
-};
-#endif
-
 #ifdef WEB_CONFIGURATION
 class WebConfigRequestHandler final : public WebRequestHandler {
+  bool handle_get_user_config();
+  bool handle_post_user_config(const char* payload);
+  String handle_post_factory_config(const char* payload);
+  char* get_post_data();
 public:
   WebConfigRequestHandler(WiFiClient&& client) : WebRequestHandler(std::move(client)) {}
   virtual void process_request() override;

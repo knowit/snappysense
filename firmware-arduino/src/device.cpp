@@ -136,9 +136,9 @@ void device_setup(bool* do_interactive_configuration) {
 
   log("Device initialized\n");
 
-#ifdef SNAPPY_INTERACTIVE_CONFIGURATION
+#ifdef WEB_CONFIGURATION
   // To enter configuration mode, press and hold the WAKE/BTN1 button and then press and release
-  // the reset button.
+  // the reset button.  For more information, see CONFIG.md at the root of the repo.
   if (digitalRead(BUTTON_PIN)) {
     delay(1000);
     if (digitalRead(BUTTON_PIN)) {

@@ -80,10 +80,7 @@
 //    compiled into the code, more frequent activity, and other things.
 //
 // When the device is powered on it can also be brought up in a "provisioning" mode,
-// to set configuration variables.  To do this, connect a terminal over USB, press
-// and hold the WAKE/BTN1 button on the device, then press and release the "reset"
-// button on the CPU.  The device will enter an interactive mode over the USB line.
-// There is on-line help for how to use that mode.
+// to set configuration variables.  See CONFIG.md at the root for more information.
 //
 // The device may be configured to fetch the current time from a time server.
 // Follow breadcrumbs from the definition of TIMESTAMP in main.h for more information.
@@ -91,10 +88,9 @@
 //
 // The device can be configured to upload results to an MQTT broker (typically AWS)
 // or to a Web server (for development and testing), or to neither.  For uploading to
-// work, networking configuration variables have to be set, see config.cpp and the
-// help text for the provisioning mode.  Also, appropriate servers will have to be
-// running.  There is a simple server for http upload in the test-server/ directory in
-// the present repo.
+// work, networking configuration variables have to be set, see CONFIG.md.  Also,
+// appropriate servers will have to be running.  There is a simple server for http
+// upload in the test-server/ directory in the present repo.
 //
 // For development, the device can also listen for interactive commands over the
 // serial line or on an http port, see SERIAL_COMMAND_SERVER and WEB_COMMAND_SERVER
@@ -141,16 +137,13 @@ void setup() {
 
   // We are up.  Choose between config mode and normal mode.
 
-#ifdef SNAPPY_INTERACTIVE_CONFIGURATION
+#ifdef WEB_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
-    Serial.print("*** INTERACTIVE CONFIGURATION MODE ***\n\n");
-    Serial.print("Type 'help' for help.\nThere is no line editing - type carefully.\n\n");
-    sched_microtask_periodically(new SerialConfigTask, serial_input_poll_interval_s() * 1000);
 #ifdef WEB_CONFIGURATION
     sched_microtask_periodically(new WebConfigTask, web_command_poll_interval_s() * 1000);
+    log("Web configuration is running!\n");
 #endif
-    log("Configuration is running!\n");
     return;
   }
 #endif

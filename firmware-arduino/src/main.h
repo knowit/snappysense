@@ -37,7 +37,7 @@
 // and short time intervals for many things (to speed up testing).
 // Otherwise, we're in "production" mode and default values are mostly blank and
 // the device must be provisioned from interactive config mode.
-#define DEVELOPMENT
+//#define DEVELOPMENT
 
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
@@ -52,18 +52,11 @@
 // connected then log messages will appear there, otherwise they will be discarded.
 #define LOGGING
 
-// SERIAL_CONFIGURATION causes the device to listen on the serial input line for
-// configuration commands when the device comes up in config mode (see
-// SNAPPY_INTERACTIVE_CONFIGURATION below).  The user enters commands through the
-// terminal to configure all aspects of the device.
-#define SERIAL_CONFIGURATION
-
 // WEB_CONFIGURATION causes a WiFi access point to be created with an SSID
-// printed on the display when the device comes up in config mode (see
-// SNAPPY_INTERACTIVE_CONFIGURATION below).  The user can connect to this network and
-// request "/".  This will return an HTML page that contains a form that is
-// submitted with "POST /" and can be used to set some simple parameters
-// in the configuration.
+// printed on the display when the device comes up in config mode, allowing for both
+// factory provisioning of ID, certificates, and so on, as well as user provisioning
+// of network names and other local information.  See CONFIG.md at the root of the
+// repo.
 #define WEB_CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  The device and
@@ -118,21 +111,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// To enter interactive configuration mode:
-//  - connect the device to USB and open a serial console
-//  - press and hold the WAKE/BTN1 button and then press and release the reset button
-//  - there will be a message INTERACTIVE CONFIGURATION MODE in the console
-//    and if there's a display there will be a message CONFIGURATION
-//    on it
-//  - there will be a menu system for configuring the device
-//
-// Depending on parameters above, the device supports full configuration over
-// the serial line and/or limited configuration over a web connection.
-
-#if defined(SERIAL_CONFIGURATION) || defined(WEB_CONFIGURATION)
-# define SNAPPY_INTERACTIVE_CONFIGURATION
-#endif
-
 #if defined(WEB_CONFIGURATION) || defined(WEB_COMMAND_SERVER)
 # define WEB_SERVER
 #endif
@@ -141,11 +119,11 @@
 # define SNAPPY_WIFI
 #endif
 
-#if defined(SERIAL_SERVER) || defined(WEB_SERVER)
+#if defined(SERIAL_COMMAND_SERVER) || defined(WEB_SERVER)
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
-#if defined(SERIAL_SERVER) || defined(SERIAL_CONFIGURATION)
+#if defined(SERIAL_COMMAND_SERVER) || defined(SERIAL_CONFIGURATION)
 # define SNAPPY_SERIAL_INPUT
 #endif
 
@@ -154,11 +132,11 @@
 #endif
 
 #if !defined(DEVELOPMENT)
-# ifdef SLIDESHOW_MODE
-#  warning "SLIDESHOW_MODE not usually enabled in production"
-# endif
+//# ifdef SLIDESHOW_MODE
+//#  warning "SLIDESHOW_MODE not usually enabled in production"
+//# endif
 # ifdef SERIAL_COMMAND_SERVER
-#  warning "SERIAL_SERVER not usually enabled in production"
+#  warning "SERIAL_COMMAND_SERVER not usually enabled in production"
 # endif
 # ifdef WEB_UPLOAD
 #  warning "WEB_UPLOAD not usually enabled in production"
