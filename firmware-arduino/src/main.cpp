@@ -87,13 +87,13 @@
 //
 // The device may be configured to fetch the current time from a time server.
 // Follow breadcrumbs from the definition of TIMESTAMP in main.h for more information.
-// A simple time server is in the server/ directory in the present repo.
+// A simple time server is in the test-server/ directory in the present repo.
 //
 // The device can be configured to upload results to an MQTT broker (typically AWS)
 // or to a Web server (for development and testing), or to neither.  For uploading to
 // work, networking configuration variables have to be set, see config.cpp and the
 // help text for the provisioning mode.  Also, appropriate servers will have to be
-// running.  There is a simple server for http upload in the server/ directory in
+// running.  There is a simple server for http upload in the test-server/ directory in
 // the present repo.
 //
 // For development, the device can also listen for interactive commands over the

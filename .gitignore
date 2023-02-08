@@ -7,4 +7,4 @@ firmware-arduino/src/development_config.h
 firmware-arduino/src/configuration.cfg
 firmware-idf/build
 music-compiler/musiccomp
-server/httpsrv
+test-server/httpsrv
