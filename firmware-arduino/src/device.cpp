@@ -401,3 +401,8 @@ void stop_note() {
   ledcWrite(PWM_CHAN, 0);
 }
 #endif // SNAPPY_PIEZO
+
+unsigned long entropy() {
+  // Well, at least we tried.
+  return micros() ^ (analogRead(PIR_SENSOR_PIN) << 8) ^ (analogRead(MIC_PIN) << 16);
+}

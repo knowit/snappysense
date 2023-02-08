@@ -137,6 +137,8 @@ void setup() {
 
   // We are up.  Choose between config mode and normal mode.
 
+    randomSeed(entropy());
+
 #ifdef WEB_CONFIGURATION
   if (do_interactive_configuration) {
     render_text("Configuration mode");
