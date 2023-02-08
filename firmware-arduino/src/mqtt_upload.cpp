@@ -68,7 +68,7 @@ static void mqtt_enqueue(String&& topic, String&& body) {
   mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
 }
 
-void StartMqttTask::execute(SnappySenseData*) {
+void StartMqttTask::execute(SnappySenseData* data) {
   String topic;
   String body;
 
@@ -80,8 +80,10 @@ void StartMqttTask::execute(SnappySenseData*) {
   body += "{\"interval\":";
   body += sensor_poll_interval_s();
 #ifdef TIMESTAMP
-  body += ",\"time\":\"";
-  body += format_time(snappy_local_time());
+  if (data->have_time) {
+    body += ",\"time\":\"";
+    body += format_time(snappy_local_time());
+  }
 #endif
   body += "\"}";
 
@@ -89,11 +91,6 @@ void StartMqttTask::execute(SnappySenseData*) {
 }
 
 void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
-  // FIXME: Issue 19: Number 0 is mostly bogus data so skip it
-  if (data->sequence_number == 0) {
-    return;
-  }
-
   String topic;
   String body;
 

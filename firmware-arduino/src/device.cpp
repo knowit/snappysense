@@ -109,6 +109,9 @@ static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
 static bool peripherals_powered_on = false;
+static bool have_environment = false;
+static bool have_air = false;
+static bool air_is_primed = false;
 
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
@@ -158,8 +161,8 @@ void power_peripherals_on() {
     // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
     Wire.begin((int) I2C_SDA, I2C_SCL);
 
-    environment.begin();
-    ENS160.begin();
+    have_environment = environment.begin() == 0;
+    have_air = ENS160.begin() == 0;
 
     // init oled display
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -203,8 +206,8 @@ int probe_i2c_devices(Stream* stream) {
   return num;
 }
 
-// The sequence_number is useful because the first couple readings after startup are iffy,
-// server-side we can discard at least those with sequence_number 0.
+// The sequence_number is not very useful any more, but it's a fallback for when we don't have a time
+// stamp, and may help us out when the time changes under our feet.
 static unsigned sequence_number;
 
 void get_sensor_values(SnappySenseData* data) {
@@ -212,28 +215,49 @@ void get_sensor_values(SnappySenseData* data) {
     return;
   }
 
+  memset(data, 0, sizeof(SnappySenseData));
   data->sequence_number = sequence_number++;
+
 #ifdef TIMESTAMP
   data->time = snappy_local_time();
+  data->have_time = true;
 #endif
 
 #ifdef SENSE_TEMPERATURE
-  data->temperature = environment.getTemperature(TEMP_C);
+  if (have_environment) {
+    data->temperature = environment.getTemperature(TEMP_C);
+    data->have_temperature = data->temperature != -45.0;
+  }
 #endif
 #ifdef SENSE_HUMIDITY
-  data->humidity = environment.getHumidity();
+  if (have_environment) {
+    data->humidity = environment.getHumidity();
+    data->have_humidity = data->humidity != 0;
+  }
 #endif
 #ifdef SENSE_UV
-  data->uv = environment.getUltravioletIntensity();
+  if (have_environment) {
+    data->uv = environment.getUltravioletIntensity();
+    data->have_uv = true;
+  }
 #endif
 #ifdef SENSE_LIGHT
-  data->lux = environment.getLuminousIntensity();
+  if (have_environment) {
+    data->lux = environment.getLuminousIntensity();
+    data->have_lux = true;
+  }
 #endif
 #ifdef SENSE_PRESSURE
-  data->hpa = environment.getAtmospherePressure(HPA);
+  if (have_environment) {
+    data->hpa = environment.getAtmospherePressure(HPA);
+    data->have_hpa = data->hpa > 0;
+  }
 #endif
 #ifdef SENSE_ALTITUDE
-  data->elevation = environment.getElevation();
+  if (have_environment) {
+    data->elevation = environment.getElevation();
+    data->have_elevation = true;
+  }
 #endif
 
 #if defined(SENSE_AIR_QUALITY_INDEX) || defined(SENSE_TVOC) || defined(SENSE_CO2)
@@ -241,32 +265,25 @@ void get_sensor_values(SnappySenseData* data) {
 #  error "Humidity and temperature required for air quality"
 # endif
 
-  // The gas sensor does not appear to like repeated initialization, so do it only
-  // once.  Do it only when the environment values have stabilized (the first reading
-  // is usually bogus).
-  // FIXME: Issue 4: The problem persists.
-  // FIXME: Issue 19: sequence_number 0 needs to be ignored ad-hoc.
-  data->air_sensor_status = 2;  // startup
-  if (sequence_number > 1) {
-    static bool set = false;
-    if (!set) {
-      // Despite the documentation, it appears the humidity value should be in
-      // the range 0..1, not 0..100.
-      ENS160.setTempAndHum(data->temperature, data->humidity / 100);
-      set = true;
-    }
-    // It takes a while for the sensor to settle down so don't read immediately
-    // after initializing.
-    if (sequence_number > 2) {
-      data->air_sensor_status = ENS160.getENS160Status();
+  if (!air_is_primed && data->have_humidity && data->have_temperature) {
+    ENS160.setTempAndHum(data->temperature, data->humidity / 100);
+    air_is_primed = true;
+  }
+  if (air_is_primed) {
+    data->air_sensor_status = ENS160.getENS160Status();
+    data->have_air_sensor_status = true;
+    if (data->air_sensor_status != 3) {
 #ifdef SENSE_AIR_QUALITY_INDEX
       data->aqi = ENS160.getAQI();
+      data->have_aqi = data->aqi >= 1 && data->aqi <= 5;
 #endif
 #ifdef SENSE_TVOC
       data->tvoc = ENS160.getTVOC();
+      data->have_tvoc = data->tvoc > 0 && data->tvoc <= 65000;
 #endif
 #ifdef SENSE_CO2
       data->eco2 = ENS160.getECO2();
+      data->have_eco2 = data->eco2 > 400;
 #endif
     }
   }
@@ -274,10 +291,12 @@ void get_sensor_values(SnappySenseData* data) {
 
 #ifdef SENSE_MOTION
   data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
+  data->have_motion = true;
 #endif
 
 #ifdef SENSE_NOISE
   data->noise = analogRead(MIC_PIN);
+  data->have_noise = true;
 #endif
 }
 

@@ -12,54 +12,67 @@ struct SnappySenseData {
   // The sequence number is useful for calibration, bug fixing, etc.  It is
   // set from a global variable when a reading is obtained.  It will wrap
   // around silently.
+  //
+  // This member shall be at offset 0, so that offsetof() of a flag variable
+  // is never 0.
   unsigned sequence_number;
 
 #ifdef TIMESTAMP
   // Current local time when the reading was taken
   struct tm time;
+  bool have_time;
 #endif
 
 #ifdef SENSE_ALTITUDE
   // Altitude of device, meters above (below) sea level
   float elevation;
+  bool have_elevation;
 #endif
 
 #ifdef SENSE_HUMIDITY
   // Relative humidity, percent
   float humidity;
+  bool have_humidity;
 #endif
 
 #ifdef SENSE_TEMPERATURE
   // Degrees Celsius
   float temperature;
+  bool have_temperature;
 #endif
 
 #ifdef SENSE_PRESSURE
   // Air pressure, in 10^2 Pascal
   uint16_t hpa;
+  bool have_hpa;
 #endif
 
 #ifdef SENSE_LIGHT
   // Illumninance, in lux
   float lux;
+  bool have_lux;
 #endif
 
 #ifdef SENSE_UV
   // Ultraviolet radiation, in mW / cm^2
   float uv;
+  bool have_uv;
 #endif
 
   // Status code from the device: 0=normal, 1=warmup, 2=startup, 3=invalid
   uint8_t air_sensor_status;
+  bool have_air_sensor_status;
 
 #ifdef SENSE_AIR_QUALITY_INDEX
   // AQI: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy
   uint8_t aqi;
+  bool have_aqi;
 #endif
 
 #ifdef SENSE_TVOC
   // Total volatile organic compounds, 0–65000, ppb
   uint16_t tvoc;
+  bool have_tvoc;
 #endif
 
 #ifdef SENSE_CO2
@@ -67,6 +80,7 @@ struct SnappySenseData {
   // Five levels: Excellent(400 - 600), Good(600 - 800), Moderate(800 - 1000),
   //              Poor(1000 - 1500), Unhealthy(> 1500)
   uint16_t eco2;
+  bool have_eco2;
 #endif
 
 #ifdef SENSE_NOISE
@@ -76,11 +90,13 @@ struct SnappySenseData {
   // higher, reaching into the 2200 range.  Some readings were seen around 900
   // and 4100, but not clear what these were.
   uint16_t noise;
+  bool have_noise;
 #endif
 
 #ifdef SENSE_MOTION
   // Passive motion sensor.  Unit: no movement / movement.
   bool motion_detected;
+  bool have_motion;
 #endif
 };
 
@@ -104,6 +120,9 @@ struct SnappyMetaDatum {
 
   // The icon may be null, otherwise it's a pointer to a bitmap
   const unsigned char* icon;
+
+  // The offset within the structure of a bool that denotes whether the data is valid.
+  off_t flag_offset;
 
   // `display` is for the unit's display when running SLIDESHOW_MODE, it loses some information.
   // This may be null, if it is it's because we don't want to display this.

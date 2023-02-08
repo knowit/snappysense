@@ -129,47 +129,62 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
 #endif
 
 SnappyMetaDatum snappy_metadata[] = {
-  {"sequenceno",  "Sequence number",       "",    "",        nullptr,                nullptr,             format_sequenceno},
+  {"sequenceno",  "Sequence number",       "",    "",        nullptr,                0,
+  nullptr,              format_sequenceno},
 #ifdef TIMESTAMP
-  {"time",        "Local time of reading", "",    "",        nullptr,                nullptr,             format_time},
+  {"time",        "Local time of reading", "",    "",        nullptr,                offsetof(SnappySenseData, have_time),
+   nullptr,             format_time},
 #endif
 #ifdef SENSE_TEMPERATURE
-  {"temperature", "Temperature",           "C",   "C",       ICON(temperature_icon), display_temp,        format_temp},
+  {"temperature", "Temperature",           "C",   "C",       ICON(temperature_icon), offsetof(SnappySenseData, have_temperature),
+  display_temp,        format_temp},
 #endif
 #ifdef SENSE_HUMIDITY
-  {"humidity",    "Humidity",              "%",   "%",       ICON(humidity_icon),    display_humidity,    format_humidity},
+  {"humidity",    "Humidity",              "%",   "%",       ICON(humidity_icon),    offsetof(SnappySenseData, have_humidity),
+  display_humidity,    format_humidity},
 #endif
 #ifdef SENSE_UV
-  {"uv",          "Ultraviolet intensity", "",    "mW/cm^2", ICON(uv_icon),          format_uv,           format_uv},
+  {"uv",          "Ultraviolet intensity", "",    "mW/cm^2", ICON(uv_icon),          offsetof(SnappySenseData, have_uv),
+  format_uv,           format_uv},
 #endif
 #ifdef SENSE_LIGHT
-  {"light",       "Luminous intensity",    "lx",  "lx",      ICON(lux_icon),         display_light,       format_light},
+  {"light",       "Luminous intensity",    "lx",  "lx",      ICON(lux_icon),         offsetof(SnappySenseData, have_lux),
+  display_light,       format_light},
 #endif
 #ifdef SENSE_PRESSURE
-  {"pressure",    "Atmospheric pressure",  "hpa", "hpa",     ICON(hpa_icon),         format_pressure,     format_pressure},
+  {"pressure",    "Atmospheric pressure",  "hpa", "hpa",     ICON(hpa_icon),         offsetof(SnappySenseData, have_hpa),
+  format_pressure,     format_pressure},
 #endif
 #ifdef SENSE_ALTITUDE
-  {"altitude",    "Altitude",              "m",   "m",       ICON(elevation_icon),   display_altitude,    format_altitude},
+  {"altitude",    "Altitude",              "m",   "m",       ICON(elevation_icon),   offsetof(SnappySenseData, have_altitude),
+  display_altitude,    format_altitude},
 #endif
-  {"airsensor",   "Air sensor status",     "",    "",        nullptr,                nullptr,             format_air_sensor_status},
+  {"airsensor",   "Air sensor status",     "",    "",        nullptr,                offsetof(SnappySenseData, have_air_sensor_status),
+  nullptr,             format_air_sensor_status},
 #ifdef SENSE_AIR_QUALITY_INDEX
-  {"airquality",  "Air quality index",     "",    "",        ICON(aqi_icon),         format_air_quality,  format_air_quality},
+  {"airquality",  "Air quality index",     "",    "",        ICON(aqi_icon),         offsetof(SnappySenseData, have_aqi),
+  format_air_quality,  format_air_quality},
 #endif
 #ifdef SENSE_TVOC
   {"tvoc",        "Concentration of total volatile organic compounds",
-                                           "ppb", "ppb",     ICON(aqi_icon),         format_tvoc,         format_tvoc},
+                                           "ppb", "ppb",     ICON(aqi_icon),         offsetof(SnappySenseData, have_tvoc),
+   format_tvoc,         format_tvoc},
 #endif
 #ifdef SENSE_CO2
   {"co2",         "Carbon dioxide equivalent concentration",
-                                           "ppm", "ppm",     ICON(co2_icon),         format_co2,          format_co2},
+                                           "ppm", "ppm",     ICON(co2_icon),         offsetof(SnappySenseData, have_eco2),
+   format_co2,          format_co2},
 #endif
 #ifdef SENSE_MOTION
-  { "motion",     "Motion detected",       "",    "",        ICON(motion_icon),      format_motion,       format_motion},
+  { "motion",     "Motion detected",       "",    "",        ICON(motion_icon),      offsetof(SnappySenseData, have_motion),
+  format_motion,       format_motion},
 #endif
 #ifdef SENSE_NOISE
-  {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       format_noise,        format_noise},
+  {"noise",       "Noise value",           "",    "",        ICON(noise_icon),       offsetof(SnappySenseData, have_noise),
+  format_noise,        format_noise},
 #endif
-  {nullptr,       nullptr,                 "",    "",        nullptr,                nullptr,             nullptr}
+  {nullptr,       nullptr,                 "",    "",        nullptr,                0,
+   nullptr,             nullptr}
 };
 
 String format_readings_as_json(const SnappySenseData& data) {
@@ -186,6 +201,11 @@ String format_readings_as_json(const SnappySenseData& data) {
     buf += r->json_key;
     buf += '"';
     buf += ':';
+    // Skip data that are not valid
+    if (r->flag_offset > 0 &&
+        !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + r->flag_offset)) {
+      continue;
+    }
     char tmp[256];
     r->format(data, tmp, tmp+sizeof(tmp));
     buf += tmp;

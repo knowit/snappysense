@@ -83,6 +83,11 @@ static void cmd_view(const String& cmd, const SnappySenseData& data, Stream* out
   out->println("Measurement Data");
   out->println("----------------");
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
+    // Skip data that are not valid
+    if (m->flag_offset > 0 &&
+        !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + m->flag_offset)) {
+      continue;
+    }
     // This ignores m->display on purpose
     out->print(m->explanatory_text);
     out->print(": ");
@@ -102,9 +107,15 @@ static void cmd_get(const String& cmd, const SnappySenseData& data, Stream* out)
   }
   for ( SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++ ) {
     if (strcmp(m->json_key, arg.c_str()) == 0) {
-      char buf[32];
-      m->format(data, buf, buf+sizeof(buf));
-      out->printf("%s: %s\n", m->json_key, buf);
+      // Skip data that are not valid
+      if (m->flag_offset > 0 &&
+          !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + m->flag_offset)) {
+        out->printf("%s: data not valid\n", m->json_key);
+      } else {
+        char buf[32];
+        m->format(data, buf, buf+sizeof(buf));
+        out->printf("%s: %s\n", m->json_key, buf);
+      }
       return;
     }
   }

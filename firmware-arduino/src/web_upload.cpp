@@ -13,12 +13,6 @@
 #include <HTTPClient.h>
 
 void WebUploadTask::execute(SnappySenseData* data) {
-  // FIXME: Issue 19: sequence_number 0 needs to be ignored ad-hoc.
-  if (data->sequence_number == 0) {
-    // Mostly bogus data
-    return;
-  }
-
   log("Web: uploading data\n");
 
   String payload = format_readings_as_json(*data);
