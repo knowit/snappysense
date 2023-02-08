@@ -149,7 +149,9 @@ void power_peripherals_on() {
   if (!peripherals_powered_on) {
     // turn on peripheral power, must be on for i2c to work!
     digitalWrite(POWER_ENABLE_PIN, HIGH);
-    delay(100);
+    // wait until peripherals are stable.  100ms is not enough (issue #14), and 1000ms does not
+    // really seem to be a hardship, so why not.
+    delay(1000);
 
     // init i2c
     // Note the (int) cast, some versions of the ESP32 libs need this, ref
@@ -368,7 +370,7 @@ struct tm snappy_local_time() {
 void setup_sound() {
   // TODO: Justify these choices, which are wrong.  Probably 1 bit of resolution is fine?
   // And the question is whether ledcSetup should be before or after ledcAttachPin.
-  ledcSetup(PWM_CHAN, 4000, 16);
+  //ledcSetup(PWM_CHAN, 4000, 16);
   ledcAttachPin(PWM_PIN, PWM_CHAN);
 }
 
