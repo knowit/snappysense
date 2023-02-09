@@ -1,15 +1,13 @@
 # AWS IoT backend for SnappySense
 
+(Why is this file not the same file as the DESIGN file?)
+
 The SnappySense device uploads measurement data to an MQTT broker periodically, and can also receive
 commands or adjustments from the broker.
 
-## SnappySense prototyp 2022/2023
-
-En reboot av SnappySense-prosjektet for MQTT og AWS IoT / AWS Lambda anno 2022.
-
 ### Status pr 2022-12-14
 
-- Det er et greit design på plass, se `design.md`, `data-model.md` og `mqtt-protocol.md` for
+- Det er et greit design på plass, se `DESIGN.md`, `DATA-MODEL.md` og `MQTT-PROTOCOL.md` for
   henholdsvis overordnet design, beskrivelse av data i DynamoDB, og beskrivelse av protokollen
   via MQTT for kommunikasjon mellom device og server.
 
@@ -23,49 +21,6 @@ En reboot av SnappySense-prosjektet for MQTT og AWS IoT / AWS Lambda anno 2022.
 
 - Server-koden for REST-API for web server er under utarbeidelse.
 
-## Creating policies and roles for IoT devices
-
-The policy that allows an IoT route to route data to a lambda is created in IAM.  I have one that
-looks like this, called `my-iot-policy`:
-
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "lambda:*",
-            "Resource": "*"
-        }
-    ]
-}
-```
-
-
-## Creating certs for an IoT device
-
-(This is suitable for a small fleet of devices.  There are other methods.)
-
-Open the AWS Management console as **Dataplattform production** if the cert is going to be
-long-lived and not just for testing / prototyping.
-
-Go to AWS IoT.  Under "Manage > Things", ask to create a single thing.
-
-The name of a SnappySense device is `snp_x_y_no_z` where `x.y` is the device type version (1.0 or
-1.1 at the time of writing; it's printed on the front of the circuit board) and `z` is the serial
-number within that type, usually handwritten on the underside of the processor board.
-
-Make sure **Thing Type** is `SnappySense`.
-
-The thing should have no device shadow, at this point.
-
-On the next screen, auto-generate certificates.
-
-You need to have created an IoT policy for these devices (see separate section).  On the next
-screen, pick that policy and then "Create Thing".
-
-You'll be presented with a download screen.  In a new directory, called `snp_x_y_no_z` as above,
-store all five files.
 
 ## Factory provisioning a SnappySense device
 

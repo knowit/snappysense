@@ -1,8 +1,17 @@
 -*- fill-column: 100 -*-
 
-# SnappySense data model
+# SnappySense Data Model
 
-For notes on the overall design, see design.md in this directory.
+This is the data model definition for the SnappySense back-end based on AWS Lambda.  For notes on
+the overall design, see DESIGN.md in this directory.
+
+This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION, DEVICE, CLASS, IDEAL,
+FACTOR, HISTORY, and AGGREGATE.  The first five are mostly static, while HISTORY and AGGREGATE are
+updated in response to data received from the devices.
+
+Right now this is a NoSQL model, and the data stored in HISTORY and AGGREGATE (and to some extent in
+LOCATION) are not uniform, but vary with the device that reported data (or the nature of the
+location).
 
 ## Location
 
@@ -47,6 +56,9 @@ default for `enabled` is 1.  The default for `reading_interval` is something sen
 
 DynamoDB table name: `snappy_device`.  Primary key: `device`.  Sort key: `class`.
 
+Note that a device name cannot match any class name or the string `all`.  (This is probably a bug
+having to do with the control message protocol; it should be fixed.)
+
 TODO: It's possible that the `reading_interval` on a device should be per factor and not for the
 device as a whole, and that the default `reading_interval` for a factor should be stored in
 `FACTOR`.
@@ -79,6 +91,66 @@ Example:
 	          "airquality","tvoc","co2","motion","noise"],
     actuators: ["temperature"]
 ```
+
+## Class
+
+There is one entry in `CLASS` for each device class.  These are are mostly informational and for
+optimizing communication, further use TBD.
+
+DynamoDB table name: `snappy_class`.  Primary key: `class`.
+
+Note that a class name cannot match any device name or the string `all`.  (This is probably a bug
+having to do with the control message protocol; it should be fixed.)
+
+```
+CLASS
+    class: <string, class-id>
+    description: <string, human-readable text>
+```
+
+Examples:
+```
+    class: "snappysense", description: "SnappySense"
+    class: "rpi2b+", description: "Raspberry Pi 2 Model B+"
+    class: "rpi1b+", description: "Raspberry Pi 1 Model B+"
+    class: "humidifierxyz", description: "Bosch Humidifier XYZ"
+```
+
+## Factor
+
+There is one entry in `FACTOR` for each type of measurement factor known to the sensor fleet and the
+code.  When a new `FACTOR` is added it's because we want to add a new device with a new kind of
+sensor, or want to add a new sensor to an existing device.
+
+DynamoDB table name: `snappy_factor`.  Primary key: `factor`.
+
+```
+FACTOR
+    factor: <string, factor-id>
+    description: <string, human-readable text>
+```
+Example:
+```
+    factor: "temperature",
+    description: "Temperature in degrees Celsius"
+```
+
+The factors known so far are the ones measured by the SnappySense device:
+
+* `temperature`: float, degrees celsius
+* `humidity`: float, relative in interval 0..100
+* `uv`: float, UV index 0..15
+* `light`: float, luminous intensity in lux, range unclear
+* `altitude`: float, meters relative to sea level
+* `pressure`: integer, hecto-Pascals
+* `airquality`: integer, 1..5, air quality index
+* `airsensor`: integer, 0..3, air sensor status (0..2 mean OK, 3 means broken)
+* `tvoc`: integer, 0..65000, total volatile organic content in ppb
+* `co2`: integer, 400..65000, equivalent co2 content in ppm
+* `noise`: integer, range unclear, unit unclear
+* `motion`: integer, 0 or 1, whether motion was detected during last measurement window
+
+but there can be others.
 
 ## History
 
@@ -119,46 +191,6 @@ HISTORY
 
 TODO: This is a table keyed on location (and maybe other things) that holds aggregate readings
 per locations.
-
-## Class
-
-There is one entry in `CLASS` for each device class.  These are are mostly informational and for
-optimizing communication, further use TBD.
-
-DynamoDB table name: `snappy_class`.  Primary key: `class`.
-
-```
-CLASS
-    class: <string, class-id>
-    description: <string, human-readable text>
-```
-
-Examples:
-```
-    class: "snappysense", description: "SnappySense"
-    class: "rpi2b+", description: "Raspberry Pi 2 Model B+"
-    class: "rpi1b+", description: "Raspberry Pi 1 Model B+"
-    class: "humidifierxyz", description: "Bosch Humidifier XYZ"
-```
-
-## Factor
-
-There is one entry in `FACTOR` for each type of measurement factor known to the sensor fleet and the
-code.  When a new `FACTOR` is added it's because we want to add a new device with a new kind of
-sensor, or want to add a new sensor to an existing device.
-
-DynamoDB table name: `snappy_factor`.  Primary key: `factor`.
-
-```
-FACTOR
-    factor: <string, factor-id>
-    description: <string, human-readable text>
-```
-Example:
-```
-    factor: "temperature",
-    description: "Temperature in degrees Celsius"
-```
 
 ## Ideal
 

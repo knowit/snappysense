@@ -1,29 +1,38 @@
 -*- fill-column: 100 -*-
 
-# SnappySense MQTT-protokoll
+# SnappySense MQTT protocol
 
-## Meldingsformat
+If configured with a network the device will connect to AWS IoT via MQTT every so often to upload
+sensor data and receive commands.  The communication window remains open for a little while; data
+and commands generated while the window is closed will be queued (modulo device limits) until the
+window is open.  The device fleet is small and messages are fairly infrequent, so messages should be
+sent with MQTT QoS=1 to avoid data loss.
 
-### Oppstart
+## Startup message
 
-Ved oppstart sender devicet en melding `snappy/startup/<device-class>/<device-id>` med en JSON-pakke:
+At startup the device sends a message with topic `snappy/startup/<device-class>/<device-id>` and a
+JSON payload:
 
 ```
   { time: <string, timestamp, OPTIONAL>,
-    reading_interval: <integer, seconds between readings, REQUIRED> }
+    reading_interval: <integer, seconds between readings, OPTIONAL> }
 ```
 
-hvor `reading_interval` bare blir sendt med om devicet er en sensor.  Ved oppstart er devicet normalt
-`On`, dvs, det vil sende observasjoner om det ikke får beskjed om annet.
+where `reading_interval` is only sent if the device is a sensor (as opposed to only an actuator).
+At startup, the device is usually enabled, that is, it will report readings if it is not told
+otherwise.
 
-Et `timestamp` har formatet `yyyy-mm-ddThh:ii/xxx` hvor `xxx` er fra settet
-{sun,mon,tue,wed,thu,fri,sat}.  Feltet `time` kan mangle dersom devicet ikke er konfigurert for
-klokke.  Klokkeslettet er i utgangspunkt normaltid der devicet er plassert (dersom det er
-konfigurert riktig).
+A `timestamp` is a string derived from the ISO date format: `yyyy-mm-ddThh:ss/xxx` where the date
+and time fields are obvious and `xxx` is a string from the set `{sun,mon,tue,wed,thu,fri,sat}`, ie,
+the weekday name.  The field `time` can be absent from messages if the device is not configured for
+time.  The time stamp normally represents the local time at the location of the device, if the
+device is properly configured.
 
-### Observasjon
+## Observation message
 
-Ved observasjon sender devicet en melding med topic `snappy/reading/<device-class>/<device-id>`:
+Uploaded observation data (which need not be uploaded at the time of observation, but can be held
+until a communication window is open) has the topic `snappy/reading/<device-class>/<device-id>` and
+a JSON payload:
 
 ```
   { time: <string, timestamp, OPTIONAL>,
@@ -31,10 +40,14 @@ Ved observasjon sender devicet en melding med topic `snappy/reading/<device-clas
     ... }
 ```
 
-For `time`, se over.
+For `time`, se over.  The sequence number allows the server to organize the incoming data in case
+the time stamp is missing.  It is reset to 0 every time the device is rebooted.  Messages are
+uploaded (and received) in increasing sequence number order, though not all observations are
+necessarily uploaded.  A drop in the sequence number hence indicates a reboot (but since not every
+observation is uploaded it is not possible to detect all reboots using this fact).
 
-I denne pakken kan devicet sende med felter som representerer siste avlesing av de sensorer som
-måtte finnes på devicet.  Disse er pr nå:
+The payload contains fields that represent the last valid readings of the sensors that are on the
+device.  The defined fields are currently:
 
 ```
   temperature: <float, degrees celsius, OPTIONAL>
@@ -52,57 +65,39 @@ måtte finnes på devicet.  Disse er pr nå:
   
 ```
 
-Verdier rapporteres kun dersom devicet mener de er troverdige.
+Note that the possible sensor readings that may be reported are defined by the FACTOR table, see
+DATA-MODEL.md.
 
-### Kontrollmeldinger
+## Control message
 
-AWS IoT kan sende kontrollmeldinger til devicet.  Disse sendes til topic `snappy/control/<device-id>`,
-`snappy/control/<device-class>` og `snappy/control/all`, som devicet kan abonnere på.  Device-class
-indikerer typen device.
-
-Kontrolldataene kan være blant disse:
+AWS IoT can send a control message to the device via the topics `snappy/control/<device-id>`,
+`snappy/control/<device-class>` and `snappy/control/all`, to which the device can subscribe.  The
+message has a JSON payload with at least these fields:
 
 ```
   enable: <integer, 0 or 1, whether to enable or disable device, OPTIONAL>,
   reading_interval: <integer, positive number of seconds between readings, OPTIONAL>,
 ```
 
-hvor `enable` kontrollerer om devicet utfører og rapporterer målinger, og `reading_interval`
-kontrollerer hvor ofte målingene skjer.
+where `enable` controls whether the device performs and reports measurements, and `reading_interval`
+controls how often the measurements are taken.
 
-### Kommandomeldinger
+(This protocol is buggy and pointlessly restricts the names of devices and classes.  More sensibly,
+the topics would be `snappy/control-device/<device-id>`, `snappy/control-class/<device-class>`, and
+`snappy/control-all`.)
 
-AWS IoT kan også sende kommando-meldinger til devicet.  Disse sendes til `snappy/command/<device-id>`
-(og ikke til verken device-class eller til `all`, det gir antakelig ikke mening) og kan inneholde
-meldinger som disse:
+## Command message
+
+AWS IoT can send a command message to the device via the topic `snappy/command/<device-id>` (and
+unlike control message, not to the class or to all devices) with a JSON payload of the following
+form, other forms TBD:
 
 ```
   { actuator: <string>, reading: <value>, ideal: <value> }
 ```
 
-Meningen her er at den navngitte actuator, om den finnes, skal slå inn på en sånn måte at
-forskjellen mellom reading og ideal blir mindre.  (Her er det rom for å tenke annerledes / mer.)
-
-Hver klient har en unik device ID (som bare har betydning for applikasjonen) og tilhører en device
-klasse (ditto).
-
-## Policy
-
-### Klient
-
-Hver klient skal ha et sertifikat med en AWS IoT Core Policy som tillater maksimalt:
-
-* `iot:Connect`
-* `iot:Subscribe` til `snappy/control/+`
-* `iot:Subscribe` til `snappy/command/+`
-* `iot:Publish` til `snappy/startup/+/+`
-* `iot:Publish` til `snappy/reading/+/+`.
-
-TODO: Aller best ville være om vi kunne kvitte oss med `+` og pub/sub bare kan være med devicets egen klasse
-og ID, men det er foreløpig uklart om dette lar seg gjøre i en stor flåte av devices.  Men i tillegg til
-sikkerhet er det en annen fordel med en mer restriktiv policy: det blir mye mindre datatrafikk i en stor
-flåte av devices.
-
-### Server
-
-En server / lambda skal ha lov å lytte på og publisere til alt, antakelig.
+The intent of this message is that the named actuator, if it exists, shall be triggered in such a
+way that the difference beteen the `reading` and the `ideal` is decreaed.  (This is very
+preliminary, but the effect can range from actually manipulating some environmental control, via
+flashing a message to the operator prompting her to do something, to just dropping the message on
+the floor.)
