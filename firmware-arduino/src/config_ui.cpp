@@ -28,19 +28,14 @@ static String evaluate_config(List<String>& input) {
       return fmt("Configuration program did not end with `end`");
     }
     String line = input.pop_front();
-    Serial.printf("> LINE: %s\n", line.c_str());
     String kwd = get_word(line, 0);
     if (kwd == "end") {
-      Serial.println("> end");
       return String();
     } else if (kwd == "clear") {
-      Serial.println("> clear");
       reset_configuration();
     } else if (kwd == "save") {
-      Serial.println("> save");
       save_configuration();
     } else if (kwd == "version") {
-      Serial.println("> version");
       int major, minor, bugfix;
       if (sscanf(get_word(line, 1).c_str(), "%d.%d.%d", &major, &minor, &bugfix) != 3) {
         return fmt("Bad statement [%s]\n", line.c_str());
@@ -53,7 +48,6 @@ static String evaluate_config(List<String>& input) {
       }
       // version is OK
     } else if (kwd == "set") {
-      Serial.println("> set");
       String varname = get_word(line, 1);
       if (varname == "") {
         return fmt("Missing variable name for 'set'\n");
@@ -74,7 +68,6 @@ static String evaluate_config(List<String>& input) {
         p->int_value = int(value.toInt());
       }
     } else if (kwd == "cert") {
-       Serial.println("> cert");
       String varname = get_word(line, 1);
       if (varname == "") {
         return fmt("Missing variable name for 'cert'\n");
@@ -107,7 +100,6 @@ static String evaluate_config(List<String>& input) {
       }
       p->str_value = value;
     } else {
-      Serial.println("> other");
       int i = 0;
       while (i < line.length() && isspace(line[i])) {
         i++;
@@ -248,7 +240,6 @@ String WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
     if (*p) {
       p++;
     }
-    Serial.printf("Text: %s\n", s.c_str());
     lines.add_back(std::move(s));
   }
   return evaluate_config(lines);
