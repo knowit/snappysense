@@ -92,6 +92,7 @@ String format_time(const struct tm& time) {
     "sun", "mon", "tue", "wed", "thu", "fri", "sat"
   };
   char buf[256];
+  // Timestamp format defined in aws-iot-backend/mqtt-protocol.md.
   snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s",
            time.tm_year + 1900,     // year number
            time.tm_mon + 1,         // month, 1-12

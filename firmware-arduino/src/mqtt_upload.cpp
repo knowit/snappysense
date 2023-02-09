@@ -2,8 +2,13 @@
 //
 // Summarized from the design document:
 //
+// The mqtt topic strings and JSON data formats are defined by aws-iot-backend/mqtt-protocol.md.
+//
+// Summary:
+//
 // On startup, we publish to topic snappy/startup/<device-class>/<device-id> with
-// fields "time" (timestamp, string) and "interval" (reading interval, positive integer seconds).
+// fields "time" (timestamp, string) and "reading_interval" (reading interval,
+// positive integer seconds).
 //
 // On a reading, we publish to topic snappy/reading/<device-class>/<device-id> with
 // all the fields in the sensor object.
@@ -72,12 +77,13 @@ void StartMqttTask::execute(SnappySenseData* data) {
   String topic;
   String body;
 
+  // The topic string and JSON data format are defined by aws-iot-backend/mqtt-protocol.md
   topic += "snappy/startup/";
   topic += mqtt_device_class();
   topic += "/";
   topic += mqtt_device_id();
 
-  body += "{\"interval\":";
+  body += "{\"reading_interval\":";
   body += sensor_poll_interval_s();
 #ifdef TIMESTAMP
   if (data->have_time) {
@@ -94,6 +100,7 @@ void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
   String topic;
   String body;
 
+  // The topic string and JSON data format are defined by aws-iot-backend/mqtt-protocol.md
   topic += "snappy/reading/";
   topic += mqtt_device_class();
   topic += "/";

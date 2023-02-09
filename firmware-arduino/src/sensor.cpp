@@ -187,6 +187,7 @@ SnappyMetaDatum snappy_metadata[] = {
    nullptr,             nullptr}
 };
 
+// The JSON data format is defined by aws-iot-backend/mqtt-protocol.md
 String format_readings_as_json(const SnappySenseData& data) {
   // TODO: Issue 17: for production code we have to handle OOM all the way down, see
   // comments below.  String::operator+= does not deal with that.
