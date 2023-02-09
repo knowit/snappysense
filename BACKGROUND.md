@@ -44,21 +44,41 @@ And a non-goal:
   projects within Dataplattform could take that on, so long as it does not conflict with the 
   above goals.)
 
+To keep the complexity of the system down we'll tie ourselves to AWS IoT for the time being, with
+Lambda and DynamoDB for the prototype.
+
+### High-level design
+
+At some _location_ there is a _device_ that senses environmental _factors_ that it reports to a
+backend somewhere.  At the location there may also be _actuators_ that can cause a change to some of
+those factors.  For every factor in a location that has an actuator for that factor there may be an
+_ideal_ value; the actuator seeks to move the factor toward that ideal.  The ideal is a function of
+zero or more factors (for example the ideal for `light` may be "low" if no `movement` has been
+detected in a location for some time).
+
+The goal of the system is perhaps to keep the readings for factors at locations with actuators as
+close to the ideal as it can; and absent actuators, to log the readings of factors over time to
+allow long-term analysis of the quality of the environment at the location, and perhaps to trigger
+alerts if the quality is found to be low.
+
 ### Architectural parameters
+
+In order to simplify, the central communication paradigm will be a publish/subscribe model based
+around MQTT, and we will tie this into a cloud provider with MQTT/IoT functionality.
 
 There is no sense in limiting ourselves to the custom SnappySense unit, anything that can read a
 sensor and talk MQTT will do (or indeed, if it can talk something like LoRa that can lets it connect
 to a gateway that in turn talks MQTT), and we should encourage this diversity.  But either way, the
-back-end architecture is based on receiving and sending MQTT messages.
+central architecture is based on MQTT.
 
 It's nice if devices that have the juice for it can communicate over WiFi, as WiFi networks will be
-ubiquitous in work environments.  This means they have to handle enterprise networks too.
+ubiquitous in work environments.  This means they have to handle enterprise WiFi networks too.
 
 We'll want it to be possible for the device to receive commands or instructions, even though the
 utility of these is a little unclear at present.
 
-On the back-end, something with IoT routing and Lambda and DynamoDB will be fine for prototyping.
-Longer term we probably want an EC2 instance and a relational database.
+On the back-end, something with IoT routing and function-as-a-service / serverless and NoSQL will be
+fine for prototyping.  Longer term we probably want an container instance and a relational database.
 
 Data volumes (both in transit and at rest) should be restricted to something "sensible", ie, not an
 observation every 15s and not storing everything just because we can.  The device should aggregate
@@ -67,7 +87,6 @@ all, only "recent" data.
 
 Longer term we want to consider building digital twins for all the devices, but this is a back-end
 consideration and independent (mostly) of the device form factors.
-
 
 ## Second generation
 
