@@ -38,7 +38,7 @@ Coding standards are documented at the beginning of `firmware-arduino/src/main.h
 
 ### Developer builds
 
-Canonical source code for the Arduino-based firmware is in `firmware-arduino/src/`, start with
+Source code for the Arduino-based firmware is in `firmware-arduino/src/`, start with
 `firmware-arduino/src/main.cpp` and `firmware-arduino/src/main.h`.
 
 Enable `DEVELOPER` in `firmware-arduino/src/main.h` to make it easier to develop and test.
