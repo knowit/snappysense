@@ -33,6 +33,10 @@ void SlideshowTask::execute(SnappySenseData* data) {
     } else if (snappy_metadata[next_view].display == nullptr) {
       // Field is not for SLIDESHOW_MODE display
       next_view++;
+    } else if (snappy_metadata[next_view].flag_offset > 0 &&
+               !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(data) + snappy_metadata[next_view].flag_offset)) {
+      // Field has invalid data
+      next_view++;
     } else {
       char buf[32];
       snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
