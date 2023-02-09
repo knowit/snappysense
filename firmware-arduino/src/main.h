@@ -24,6 +24,8 @@
 // - Indent using spaces, not tabs.  Preferably 2 spaces per level.
 // - Try to conform to whatever standard is used in the file you're editing, if
 //   it differs (in reasonable ways) from the above.
+// - Try to limit line lengths to 100 chars (allowing two side-by-side editors
+//   on laptops and three on most standalone displays)
 
 ////////////////////////////////////////////////////////////////////////////////
 //
