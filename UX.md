@@ -5,8 +5,8 @@ own documentation.)
 
 ## Day-to-day use
 
-The SnappySense device has two modes, selectable by pressing the front button at run-time:
-_slideshow_ mode and _monitoring_ mode.
+The SnappySense device has two modes, currently selectable at compile time (in the future selectable
+by pressing the front button at run-time): _slideshow_ mode and _monitoring_ mode.
 
 In slideshow mode, SnappySense is on continually, reads the environment frequently, and displays a
 repeating slideshow of the readings on its little screen.  In this mode, SnappySense needs to be on
@@ -19,7 +19,8 @@ mode, SnappySense can run on battery power for some time.
 
 If SnappySense is appropriately configured, the readings are uploaded occasionally to AWS IoT for
 processing and storage.  If uploading is not possible because no network is reachable, then readings
-are gradually discarded as memory fills up.
+are gradually discarded as memory fills up, but the ones still in memory will be uploaded if the
+network becomes available.
 
 ## Access point mode
 

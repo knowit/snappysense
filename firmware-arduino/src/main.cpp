@@ -135,9 +135,10 @@ void setup() {
   // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
 
-  // We are up.  Choose between config mode and normal mode.
+  // We sometimes need random numbers, try to seed the stream.
+  randomSeed(entropy());
 
-    randomSeed(entropy());
+  // We are up.  Choose between config mode and normal mode.
 
 #ifdef WEB_CONFIGURATION
   if (do_interactive_configuration) {
