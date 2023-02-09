@@ -2,7 +2,7 @@
 //
 // Summarized from the design document:
 //
-// The mqtt topic strings and JSON data formats are defined by aws-iot-backend/mqtt-protocol.md.
+// The mqtt topic strings and JSON data formats are defined by aws-iot-backend/MQTT-PROTOCOL.md.
 //
 // Summary:
 //
@@ -77,7 +77,7 @@ void StartMqttTask::execute(SnappySenseData* data) {
   String topic;
   String body;
 
-  // The topic string and JSON data format are defined by aws-iot-backend/mqtt-protocol.md
+  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
   topic += "snappy/startup/";
   topic += mqtt_device_class();
   topic += "/";
@@ -100,7 +100,7 @@ void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
   String topic;
   String body;
 
-  // The topic string and JSON data format are defined by aws-iot-backend/mqtt-protocol.md
+  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
   topic += "snappy/reading/";
   topic += mqtt_device_class();
   topic += "/";
