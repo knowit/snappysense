@@ -132,6 +132,9 @@ void read_configuration();
 // Save current configuration in nvram.
 void save_configuration();
 
+// Dump the current configuration without revealing too many secrets.
+void show_configuration(Stream* out);
+
 // A structure holding a preference value.
 //
 // By and large no strings will have leading or trailing whitespace unless they were

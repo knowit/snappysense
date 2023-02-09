@@ -254,6 +254,14 @@ String WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
   return evaluate_config(lines);
 }
 
+bool WebConfigRequestHandler::handle_show_factory_config() {
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:text/html");
+  client.println();
+  show_configuration(&client);
+  return true;
+}
+
 char* WebConfigRequestHandler::get_post_data() {
   int ix = request.indexOf("Content-Length:");
   if (ix == -1) {
@@ -277,6 +285,8 @@ void WebConfigRequestHandler::process_request() {
   String errmsg;
   if (request.startsWith("GET / ")) {
     failed = !handle_get_user_config();
+  } else if (request.startsWith("GET /show ")) {
+    failed = !handle_show_factory_config();
   } else if (request.startsWith("POST /")) {
     char* post_data = get_post_data();
     if (post_data) {
@@ -324,9 +334,10 @@ bool WebConfigTask::start() {
   // the appropriate response...
   IPAddress ip;
   if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
-    return false;
+    render_text("AP config failed.\n\nHanging now.");
+    for(;;) {}
   }
-  String msg = fmt("Provisioning mode\n%s\n%s", ssid, ip.toString().c_str());
+  String msg = fmt("%s\n\n%s", ssid, ip.toString().c_str());
   render_text(msg.c_str());
   int port = 80;
   web_server = new WebServer(port);

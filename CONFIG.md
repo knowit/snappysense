@@ -2,10 +2,24 @@
 
 ## Individual factory provisioning
 
-In "individual factory provisioning mode" the SnappySense device is brought up in provisioning mode
-as described in UX.md, offering a WiFi AP with a name advertised on its screen (the AP name is
-generated randomly if none has been cconfigured).  The screen will also show an IP address.  To
-configure the device, run
+In "individual factory provisioning mode" the SnappySense device is brought up in "access point
+mode" (AP mode) as described in UX.md, offering a WiFi access point with a name advertised on its
+screen (the AP name is generated randomly if none has been cconfigured).  The screen will also show
+an IP address.
+
+### Factory config query
+
+To query the device configuration, run
+
+```
+   curl http://192.168.a.b/show
+```
+
+Passwords are represented by their first letter and certificates by their first line.
+
+### Factory config update
+
+To configure the device, run
 
 ```
    curl --data-binary @snp_x_y_no_z.cfg http://192.168.a.b/config

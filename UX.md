@@ -21,22 +21,24 @@ If SnappySense is appropriately configured, the readings are uploaded occasional
 processing and storage.  If uploading is not possible because no network is reachable, then readings
 are gradually discarded as memory fills up.
 
-## Configuration
+## Access point mode
 
-The SnappySense device can be brought up in "provisioning" mode.  To do this, press and hold the
-button on the front of SnappySense (labeled WAKE on 1.0.0 and BTN1 on 1.1.0) and press and release
-the RESET button on the back.  When SnappySense enters provisioning mode, a message on its little
-screen reads "Provisioning mode" along with a network name and an IP address on the form
-`192.168.x.y`.  If the device has not been given an access point name, it will generate a random
-one.
+The SnappySense device can be brought up in "access point mode" (AP mode), allowing it to be
+configured and for its configuration to be queried.
+
+To enter AP mode, press and hold the button on the front of SnappySense (labeled WAKE on 1.0.0 and
+BTN1 on 1.1.0) and press and release the RESET button on the back.  When SnappySense enters
+provisioning mode, a message on its little screen will show a network name and an IP address on the
+form `192.168.x.y`.  If the device has not been given an access point name, it will generate a
+random one.
 
 ### End-user configuration
 
-In provisioning mode, the user can perform _end-user configuration_ by connecting to the named WiFi
-network (ignore any errors you may see about the network not providing internet access).  Then in a
-browser on the connected device, open a page at `http://192.168.x.y`.  (Be sure not to use `https` at
-this time.)  You will see a form with configuration options.  Change what you want to change, then
-press the SUBMIT button to store the options on SnappySense.
+In AP mode, the user can perform _end-user configuration_ by connecting to the named WiFi network
+(ignore any errors you may see about the network not providing internet access).  Then in a browser
+on the connected device, open a page at `http://192.168.x.y`.  (Be sure not to use `https` at this
+time.)  You will see a form with configuration options.  Change what you want to change, then press
+the SUBMIT button to store the options on SnappySense.
 
 After configuration, press the RESET button on the back of SnappySense to restart it with the new
 settings.
@@ -48,5 +50,5 @@ stored on AWS, as the name is used to help identify the data and should be uniqu
 
 ### Factory provisioning
 
-In provisioning mode, the device similarly responds to factory configuration commands.  These are
+In AP mode, the device similarly responds to factory configuration and query commands.  These are
 more complicated, not usefully performed after initial setup, and described in CONFIG.md.

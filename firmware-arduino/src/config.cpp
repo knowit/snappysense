@@ -365,3 +365,29 @@ void read_configuration() {
     log("No configuration in parameter store\n");
   }
 }
+
+static String cert_first_line(const char* cert) {
+  const char* p = strstr(cert, "BEGIN");
+  const char* q = strchr(p, '\n');
+  const char* r = strchr(q+1, '\n');
+  return String((const uint8_t*)(q+1), (r-q-1));
+}
+
+void show_configuration(Stream* out) {
+  for (Pref* p = prefs; p->long_key != nullptr; p++ ) {
+    if (p->is_string()) {
+      if (p->str_value.isEmpty()) {
+        continue;
+      }
+      if (p->is_cert()) {
+        out->printf("%-22s - %s...\n", p->long_key, cert_first_line(p->str_value.c_str()).c_str());
+      } else if (p->is_passwd() && !p->str_value.isEmpty()) {
+        out->printf("%-22s - %c.....\n", p->long_key, p->str_value[0]);
+      } else {
+        out->printf("%-22s - %s\n", p->long_key, p->str_value.c_str());
+      }
+    } else {
+      out->printf("%-22s - %d\n", p->long_key, p->int_value);
+    }
+  }
+}
