@@ -48,7 +48,7 @@ extern uint8_t ssd1306_mem[];
 extern SSD1306_Device_t* ssd1306;
 
 /* Initialize the device, set ssd1306 to non-null iff it succeeds */
-void initialize_i2c_ssd1306();
+bool initialize_i2c_ssd1306() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO

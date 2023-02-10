@@ -27,13 +27,12 @@ SOFTWARE.
 #ifndef __SSD1306_FONTS_H__
 #define __SSD1306_FONTS_H__
 
-#include <stdint.h>
-#include "ssd1306_conf.h"
+#include "main.h"
 
 typedef struct {
-	const uint8_t FontWidth;    /*!< Font width in pixels */
-	uint8_t FontHeight;   /*!< Font height in pixels */
-	const uint16_t *data; /*!< Pointer to data font data array */
+  const uint8_t  FontWidth;    /*!< Font width in pixels */
+  uint8_t        FontHeight;   /*!< Font height in pixels */
+  const uint16_t *data;        /*!< Pointer to data font data array */
 } FontDef;
 
 #ifdef SSD1306_INCLUDE_FONT_6x8

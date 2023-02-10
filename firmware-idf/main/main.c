@@ -99,7 +99,9 @@ void app_main(void)
 
 #ifdef SNAPPY_I2C_SSD1306
   /* Display */
-  initialize_i2c_ssd1306();
+  if (!initialize_i2c_ssd1306()) {
+    LOG("Failed to init SSD1306");
+  }
 #endif
 
   /* We're far enough along that we can talk to the screen */

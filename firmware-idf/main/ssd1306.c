@@ -1,7 +1,9 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* Driver for SSD1306-based OLED display
-   https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
+   https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/
+
+   Origin: https://github.com/afiskon/stm32-ssd1306.  Refactored and adapted. */
 
 /*
 MIT License
@@ -27,16 +29,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/* This Library was originally written by Olivier Van den Eede (4ilo) in 2016.
-   Some refactoring was done and SPI support was added by Aleksander Alekseev (afiskon) in 2018.
-   Origin: https://github.com/afiskon/stm32-ssd1306
-  
-   SPI support was removed by Lars T Hansen in 2023 and the library was generalized to support
-   multiple I2C devices simultaneously.
-  
-   Dependence on stm32*hal was removed by Lars T Hansen in 2023 in favor of a generic i2c library,
-   see header file. */
-
 #include "ssd1306.h"
 
 #include <math.h>
@@ -50,10 +42,10 @@ SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr,
   device->width = width;
   device->height = height;
   device->buffer_size = (width * height) / 8;
-  device->screen.CurrentX = 0;
-  device->screen.CurrentY = 0;
-  device->screen.Initialized = 0;
-  device->screen.DisplayOn = 0;
+  device->current_x = 0;
+  device->current_y = 0;
+  device->initialized = false;
+  device->display_on = false;
   memset(device->buffer, 0, device->buffer_size);
 
   device->i2c_failure = false;
@@ -61,39 +53,31 @@ SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr,
   return device->i2c_failure ? NULL : device;
 }
 
-/* Send a byte to the command register */
-bool ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
-  if (!ssd1306_Write_Blocking(device->bus, device->addr, 0x00, &byte, 1)) {
-    device->i2c_failure = true;
-    return false;
+static void ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
+  if (!device->i2c_failure) {
+    if (!ssd1306_WriteI2C(device->bus, device->addr, 0x00, &byte, 1)) {
+      device->i2c_failure = true;
+    }
   }
-  return true;
 }
 
-/* Send data */
-bool ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size) {
-  if (!ssd1306_Write_Blocking(device->bus, device->addr, 0x40, buffer, buff_size)) {
-    device->i2c_failure = true;
-    return false;
+static void ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size) {
+  if (!device->i2c_failure) {
+    if (!ssd1306_WriteI2C(device->bus, device->addr, 0x40, buffer, buff_size)) {
+      device->i2c_failure = true;
+    }
   }
-  return true;
 }
 
-/* Fills the Screenbuffer with values from a given buffer of a fixed length */
-SSD1306_Error_t ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint32_t len) {
-  SSD1306_Error_t ret = SSD1306_ERR;
+void ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint32_t len) {
   if (len <= device->buffer_size) {
     memcpy(device->buffer,buf,len);
-    ret = SSD1306_OK;
   }
-  return ret;
 }
 
-/* Initialize the oled screen.  The caller must wait for a bit after bringing up the i2c
-   bus before calling this, typically 100ms.  */
 void ssd1306_Init(SSD1306_Device_t* device) {
   /* Init OLED - turn display off */
-  ssd1306_SetDisplayOn(device, 0);
+  ssd1306_SetDisplayOn(device, false);
 
   /* Set Memory Addressing Mode */
   ssd1306_WriteCommand(device, 0x20);
@@ -176,7 +160,7 @@ void ssd1306_Init(SSD1306_Device_t* device) {
 
   ssd1306_WriteCommand(device, 0x8D); //--set DC-DC enable
   ssd1306_WriteCommand(device, 0x14); //
-  ssd1306_SetDisplayOn(device, 1); //--turn on SSD1306 panel
+  ssd1306_SetDisplayOn(device, true); //--turn on SSD1306 panel
 
   // Clear screen
   ssd1306_Fill(device, SSD1306_BLACK);
@@ -185,13 +169,12 @@ void ssd1306_Init(SSD1306_Device_t* device) {
   ssd1306_UpdateScreen(device);
     
   // Set default values for screen object
-  device->screen.CurrentX = 0;
-  device->screen.CurrentY = 0;
+  device->current_x = 0;
+  device->current_y = 0;
     
-  device->screen.Initialized = 1;
+  device->initialized = true;
 }
 
-/* Fill the whole screen with the given color */
 void ssd1306_Fill(SSD1306_Device_t* device, SSD1306_COLOR color) {
   uint32_t i;
 
@@ -200,7 +183,6 @@ void ssd1306_Fill(SSD1306_Device_t* device, SSD1306_COLOR color) {
   }
 }
 
-/* Write the screenbuffer with changed to the screen */
 void ssd1306_UpdateScreen(SSD1306_Device_t* device) {
   // Write data to each page of RAM. Number of pages
   // depends on the screen height:
@@ -216,12 +198,6 @@ void ssd1306_UpdateScreen(SSD1306_Device_t* device) {
   }
 }
 
-/*
- * Draw one pixel in the screenbuffer
- * X => X Coordinate
- * Y => Y Coordinate
- * color => Pixel color
- */
 void ssd1306_DrawPixel(SSD1306_Device_t* device, uint8_t x, uint8_t y, SSD1306_COLOR color) {
   if(x >= device->width || y >= device->height) {
     // Don't write outside the buffer
@@ -236,25 +212,19 @@ void ssd1306_DrawPixel(SSD1306_Device_t* device, uint8_t x, uint8_t y, SSD1306_C
   }
 }
 
-/*
- * Draw 1 char to the screen buffer
- * ch       => char om weg te schrijven
- * Font     => Font waarmee we gaan schrijven
- * color    => Black or White
- */
-char ssd1306_WriteChar(SSD1306_Device_t* device, char ch, FontDef Font, SSD1306_COLOR color) {
+bool ssd1306_WriteChar(SSD1306_Device_t* device, char ch, FontDef Font, SSD1306_COLOR color) {
   uint32_t i, b, j;
     
   // Check if character is valid
   if (ch < 32 || ch > 126)
-    return 0;
+    return false;
     
   // Check remaining space on current line
-  if (device->width < (device->screen.CurrentX + Font.FontWidth) ||
-      device->height < (device->screen.CurrentY + Font.FontHeight))
+  if (device->width < (device->current_x + Font.FontWidth) ||
+      device->height < (device->current_y + Font.FontHeight))
     {
       // Not enough space on current line
-      return 0;
+      return false;
     }
     
   // Use the font to write
@@ -262,40 +232,31 @@ char ssd1306_WriteChar(SSD1306_Device_t* device, char ch, FontDef Font, SSD1306_
     b = Font.data[(ch - 32) * Font.FontHeight + i];
     for(j = 0; j < Font.FontWidth; j++) {
       if((b << j) & 0x8000)  {
-	ssd1306_DrawPixel(device, device->screen.CurrentX + j, (device->screen.CurrentY + i),
+	ssd1306_DrawPixel(device, device->current_x + j, (device->current_y + i),
 			  (SSD1306_COLOR) color);
       } else {
-	ssd1306_DrawPixel(device, device->screen.CurrentX + j, (device->screen.CurrentY + i),
+	ssd1306_DrawPixel(device, device->current_x + j, (device->current_y + i),
 			  (SSD1306_COLOR)!color);
       }
     }
   }
     
   // The current space is now taken
-  device->screen.CurrentX += Font.FontWidth;
-    
-  // Return written char for validation
-  return ch;
+  device->current_x += Font.FontWidth;
+  return true;
 }
 
-/* Write full string to screenbuffer */
-char ssd1306_WriteString(SSD1306_Device_t* device, char* str, FontDef Font, SSD1306_COLOR color) {
-  while (*str) {
-    if (ssd1306_WriteChar(device, *str, Font, color) != *str) {
-      // Char could not be written
-      return *str;
-    }
+const char* ssd1306_WriteString(SSD1306_Device_t* device, const char* str, FontDef Font,
+                                SSD1306_COLOR color) {
+  while (*str && ssd1306_WriteChar(device, *str, Font, color)) {
     str++;
   }
-    
-  // Everything ok
-  return *str;
+  return str;
 }
 
-/* Position the cursor */
 void ssd1306_SetCursor(SSD1306_Device_t* device, uint8_t x, uint8_t y) {
-  device->screen.CurrentX = x;
-  device->screen.CurrentY = y;
+  device->current_x = x;
+  device->current_y = y;
 }
 
 #ifdef SSD1306_GRAPHICS
@@ -327,7 +288,6 @@ void ssd1306_Line(SSD1306_Device_t* device, uint8_t x1, uint8_t y1, uint8_t x2, 
   return;
 }
 
-/* Draw polyline */
 void ssd1306_Polyline(SSD1306_Device_t* device, const SSD1306_VERTEX *par_vertex, uint16_t par_size,
 		      SSD1306_COLOR color) {
   uint16_t i;
@@ -343,12 +303,10 @@ void ssd1306_Polyline(SSD1306_Device_t* device, const SSD1306_VERTEX *par_vertex
   return;
 }
 
-/* Convert Degrees to Radians */
 static float ssd1306_DegToRad(float par_deg) {
   return par_deg * 3.14 / 180.0;
 }
 
-/* Normalize degree to [0;360] */
 static uint16_t ssd1306_NormalizeTo0_360(uint16_t par_deg) {
   uint16_t loc_angle;
   if(par_deg <= 360) {
@@ -577,24 +535,17 @@ void ssd1306_DrawBitmap(SSD1306_Device_t* device, uint8_t x, uint8_t y,
 }
 #endif // SSD1306_GRAPHICS
 
-void ssd1306_SetContrast(SSD1306_Device_t* device, const uint8_t value) {
+void ssd1306_SetContrast(SSD1306_Device_t* device, uint8_t value) {
   const uint8_t kSetContrastControlRegister = 0x81;
   ssd1306_WriteCommand(device, kSetContrastControlRegister);
   ssd1306_WriteCommand(device, value);
 }
 
-void ssd1306_SetDisplayOn(SSD1306_Device_t* device, const uint8_t on) {
-  uint8_t value;
-  if (on) {
-    value = 0xAF;   // Display on
-    device->screen.DisplayOn = 1;
-  } else {
-    value = 0xAE;   // Display off
-    device->screen.DisplayOn = 0;
-  }
-  ssd1306_WriteCommand(device, value);
+void ssd1306_SetDisplayOn(SSD1306_Device_t* device, bool turn_it_on) {
+  device->display_on = turn_it_on;
+  ssd1306_WriteCommand(device, 0xAE | (int)turn_it_on);
 }
 
-uint8_t ssd1306_GetDisplayOn(SSD1306_Device_t* device) {
-  return device->screen.DisplayOn;
+bool ssd1306_GetDisplayOn(SSD1306_Device_t* device) {
+  return device->display_on;
 }

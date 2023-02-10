@@ -165,16 +165,14 @@ bool initialize_i2c_sen0514() {
 #endif
 
 #ifdef SNAPPY_I2C_SSD1306
-void initialize_i2c_ssd1306() {
+bool initialize_i2c_ssd1306() {
   /* Check the OLED and initialize it */
-  ssd1306 = ssd1306_Create(ssd1306_mem, SSD1306_BUS, SSD1306_ADDRESS, SSD1306_WIDTH, SSD1306_HEIGHT);
-  if (!ssd1306) {
-    LOG("Failed to init SSD1306");
-  }
+  return (ssd1306 = ssd1306_Create(ssd1306_mem, SSD1306_BUS, SSD1306_ADDRESS,
+				   SSD1306_WIDTH, SSD1306_HEIGHT)) != NULL;
 }
 
-bool ssd1306_Write_Blocking(unsigned i2c_num, unsigned device_address, unsigned mem_address,
-			    uint8_t* write_buffer, size_t write_size) {
+bool ssd1306_WriteI2C(unsigned i2c_num, unsigned device_address, unsigned mem_address,
+		      uint8_t* write_buffer, size_t write_size) {
   /* Based on i2c_master_write_to_device() */
 
   /* SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
