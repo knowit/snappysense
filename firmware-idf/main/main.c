@@ -14,7 +14,6 @@
 #include "freertos/queue.h"
 #include "freertos/timers.h"
 
-#include "factory_config.h"
 #include "device.h"
 #include "piezo.h"
 #include "bitmaps.h"
@@ -106,18 +105,6 @@ void app_main(void)
 
   /* We're far enough along that we can talk to the screen */
   LOG("Snappysense active!");
-
-  /* Look for factory config signal */
-  if (btn1_is_pressed()) {
-    for ( int i=0 ; i < 10 && btn1_is_pressed(); i++ ) {
-      vTaskDelay(pdMS_TO_TICKS(100));
-    }
-    if (btn1_is_pressed()) {
-      show_text("SnappySense v1.1\nUSB config");
-      factory_configuration();
-      esp_restart();
-    }
-  }
 
 #ifdef SNAPPY_GPIO_SEN0171
   /* Movement sensor */
