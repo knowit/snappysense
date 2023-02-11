@@ -22,6 +22,7 @@
 # include "sound_sampler.h"
 #endif
 #include "bitmaps.h"
+#include "framebuf.h"
 
 /* Parameters */
 #define MONITORING_WINDOW_S 10
@@ -79,6 +80,19 @@ static unsigned sound_level;    /* On a scale from 1 to 5 */
 static int slideshow_next = 0;
 static bool show_debug = false;
 
+/* Screen state */
+#ifdef SNAPPY_OLED
+static uint8_t bufmem[(SSD1306_WIDTH*SSD1306_HEIGHT+7)/8];
+static framebuf_t fb = {
+  .width = SSD1306_WIDTH,
+  .height = SSD1306_HEIGHT,
+  .buffer_size = sizeof(bufmem),
+  .current_x = 0,
+  .current_y = 0,
+  .buffer = bufmem
+};
+#endif
+
 static void advance_slideshow();
 static void open_monitoring_window();
 static void close_monitoring_window();
@@ -111,6 +125,10 @@ void app_main(void)
   /* Display */
   if (!initialize_i2c_ssd1306()) {
     LOG("OLED device inoperable");
+  }
+  if (have_ssd1306) {
+    fb_fill(&fb, fb_black);
+    ssd1306_UpdateScreen(&ssd1306, &fb);
   }
 #endif
 
@@ -178,7 +196,7 @@ void app_main(void)
 
 #ifdef SNAPPY_I2C_SSD1306
   /* Create a clock tick used to drive the slideshow, independent of monitoring. */
-  if (ssd1306) {
+  if (have_ssd1306) {
     slideshow_clock = xTimerCreate("slideshow", pdMS_TO_TICKS(NEXT_SLIDE_INTERVAL_S*1000),
                                    /* restart= */ pdTRUE,
                                    NULL, clock_callback);
@@ -390,11 +408,13 @@ static void close_monitoring_window() {
 
 #ifdef SNAPPY_I2C_SSD1306
 static void splash_screen() {
-  ssd1306_Fill(ssd1306, SSD1306_BLACK);
-  ssd1306_DrawBitmap(ssd1306, 0, 1,
-                     knowit_logo_bitmap, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
-                     SSD1306_WHITE);
-  ssd1306_UpdateScreen(ssd1306);
+  if (have_ssd1306) {
+    fb_fill(&fb, fb_black);
+    fb_draw_bitmap(&fb, 0, 1,
+                   knowit_logo_bitmap, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
+                   fb_white);
+    ssd1306_UpdateScreen(&ssd1306, &fb);
+  }
 }
 #endif
 
@@ -578,10 +598,10 @@ void show_text(const char* fmt, ...) {
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
 # ifdef SNAPPY_I2C_SSD1306
-  if (!ssd1306) {
+  if (!have_ssd1306) {
     return;
   }
-  ssd1306_Fill(ssd1306, SSD1306_BLACK);
+  fb_fill(&fb, fb_black);
   char* p = buf;
   int y = 0;
   while (*p) {
@@ -592,11 +612,11 @@ void show_text(const char* fmt, ...) {
     if (*p) {
       *p++ = 0;
     }
-    ssd1306_SetCursor(ssd1306, 0, y);
-    ssd1306_WriteString(ssd1306, start, Font_7x10, SSD1306_WHITE);
+    fb_set_cursor(&fb, 0, y);
+    fb_write_string(&fb, start, Font_7x10, fb_white);
     y += Font_7x10.FontHeight + 1;
   }
-  ssd1306_UpdateScreen(ssd1306);
+  ssd1306_UpdateScreen(&ssd1306, &fb);
 # endif
 }
 #endif  /* SNAPPY_OLED */

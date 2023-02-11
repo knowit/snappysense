@@ -1,7 +1,10 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
 /* The device layer is strictly about device access and control.  Any higher-level work, such as
-   creating separate tasks to perform sampling or sound output, is handled in the caller. */
+   creating separate tasks to perform sampling or sound output, is handled in the caller.
+
+   The more complex devices have driver files of their own; simpler devices are handled directly in
+   this file.  */
 
 #include "device.h"
 
@@ -56,10 +59,8 @@
 #ifdef SNAPPY_I2C_SSD1306
 # define SSD1306_BUS I2C1_BUS
 # define SSD1306_ADDRESS 0x3C /* Hardwired */
-# define SSD1306_WIDTH 128
-# define SSD1306_HEIGHT 32
-uint8_t ssd1306_mem[SSD1306_DEVICE_SIZE(SSD1306_WIDTH, SSD1306_HEIGHT)];
-SSD1306_Device_t* ssd1306; /* If non-null then we have a device */
+bool have_ssd1306;
+SSD1306_Device_t ssd1306; /* If non-null then we have a device */
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
@@ -175,8 +176,8 @@ bool initialize_i2c_sen0514() {
 #ifdef SNAPPY_I2C_SSD1306
 bool initialize_i2c_ssd1306() {
   /* Check the OLED and initialize it */
-  return (ssd1306 = ssd1306_Create(ssd1306_mem, SSD1306_BUS, SSD1306_ADDRESS,
-				   SSD1306_WIDTH, SSD1306_HEIGHT)) != NULL;
+  return (have_ssd1306 = ssd1306_Create(&ssd1306, SSD1306_BUS, SSD1306_ADDRESS,
+					SSD1306_WIDTH, SSD1306_HEIGHT));
 }
 
 bool ssd1306_WriteI2C(unsigned i2c_num, unsigned device_address, unsigned mem_address,

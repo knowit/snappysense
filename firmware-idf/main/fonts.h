@@ -24,8 +24,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef __SSD1306_FONTS_H__
-#define __SSD1306_FONTS_H__
+#ifndef __FONTS_H__
+#define __FONTS_H__
 
 #include "main.h"
 
@@ -35,20 +35,20 @@ typedef struct {
   const uint16_t *data;        /*!< Pointer to data font data array */
 } FontDef;
 
-#ifdef SSD1306_INCLUDE_FONT_6x8
+#ifdef INCLUDE_FONT_6x8
 extern FontDef Font_6x8;
 #endif
-#ifdef SSD1306_INCLUDE_FONT_7x10
+#ifdef INCLUDE_FONT_7x10
 extern FontDef Font_7x10;
 #endif
-#ifdef SSD1306_INCLUDE_FONT_11x18
+#ifdef INCLUDE_FONT_11x18
 extern FontDef Font_11x18;
 #endif
-#ifdef SSD1306_INCLUDE_FONT_16x26
+#ifdef INCLUDE_FONT_16x26
 extern FontDef Font_16x26;
 #endif
-#ifdef SSD1306_INCLUDE_FONT_16x24
+#ifdef INCLUDE_FONT_16x24
 extern FontDef Font_16x24;
 #endif
 
-#endif // __SSD1306_FONTS_H__
+#endif // __FONTS_H__

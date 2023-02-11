@@ -33,21 +33,7 @@ SOFTWARE.
 #define __SSD1306_H__
 
 #include "main.h"
-#include "ssd1306_fonts.h"
-
-#ifdef SSD1306_X_OFFSET
-#define SSD1306_X_OFFSET_LOWER (SSD1306_X_OFFSET & 0x0F)
-#define SSD1306_X_OFFSET_UPPER ((SSD1306_X_OFFSET >> 4) & 0x07)
-#else
-#define SSD1306_X_OFFSET_LOWER 0
-#define SSD1306_X_OFFSET_UPPER 0
-#endif
-
-/* Enumeration for screen colors */
-typedef enum {
-  SSD1306_BLACK = 0,		/* Black color, no pixel */
-  SSD1306_WHITE = 1		/* Pixel is set. Color depends on OLED */
-} SSD1306_COLOR;
+#include "framebuf.h"
 
 /* This is allocated, with a larger buffer, inside a single memory area.  All fields
    should be considered private to the driver.
@@ -56,109 +42,24 @@ typedef enum {
 typedef struct {
   unsigned bus;                 /* I2C bus number */
   unsigned addr;                /* I2C device address, unshifted */
-  unsigned width;               /* Width in pixels */
-  unsigned height;              /* Height in pixels */
-  unsigned buffer_size;         /* Buffer size in bytes */
-  unsigned current_x;           /* Initially (0,0), updated by ssd1306_SetCursor, */
-  unsigned current_y;           /*   ssd1306_WriteChar and ssd1306_WriteString */
+  unsigned width;               /* Width of screen in pixels */
+  unsigned height;              /* Height of screen in pixels */
   bool     i2c_failure;		/* Set to true if low-level i2c write commands fail */
   bool     initialized;         /* Set to true once ssd1306_Init succeeds */
   bool     display_on;          /* Set to true once the display has been enabled */
-  uint8_t  buffer[1];		/* Will be larger than this */
 } SSD1306_Device_t;
 
-/* Width and height should be constants, in which case this is also constant and can
-   be used to allocate memory statically. */
-#define SSD1306_DEVICE_SIZE(width, height) (sizeof(SSD1306_Device_t) + (((width) * (height)) / 8) - 1)
-
-/* This will initialize the device struct using the provided memory, which must be large enough to
-   hold the struct and the memory for the buffer.
-
-   The only valid heights are 32, 64, and 128.  The effects of other values are unspecified.
-*/
-SSD1306_Device_t* ssd1306_Create(uint8_t* mem, unsigned bus, unsigned i2c_addr,
-                                 unsigned width, unsigned height) WARN_UNUSED;
+/* This will initialize the device struct.  The only valid heights are 32, 64, and 128.  The effects
+   of other values are unspecified. */
+bool ssd1306_Create(SSD1306_Device_t* mem, unsigned bus, unsigned i2c_addr,
+                    unsigned width, unsigned height) WARN_UNUSED;
 
 /* Procedure definitions.  Where noted these set device->i2c_failure if there's a write failure to
    the device, and will frequently be no-ops if that flag is already set.  Writes outside the buffer
    bounds will silently be ignored.  */
 
-/* Initialize the OLED device.
-
-   Mostly for internal use; ssd1306_Create calls it on your behalf.  Sets device->i2c_failure on
-   failure.
-
-   NOTE: The caller must wait after bringing up the i2c bus before calling this, typically 100ms. */
-void ssd1306_Init(SSD1306_Device_t* device);
-
-/* Fill the buffer with the given color */
-void ssd1306_Fill(SSD1306_Device_t* device, SSD1306_COLOR color);
-
-/* Fill the buffer with the given data */
-void ssd1306_FillBuffer(SSD1306_Device_t* device, uint8_t* buf, uint32_t len);
-
 /* Flush the buffer to the OLED device.  Sets device->i2c_failure on failure. */
-void ssd1306_UpdateScreen(SSD1306_Device_t* device);
-
-/* Set a pixel in the buffer */
-void ssd1306_DrawPixel(SSD1306_Device_t* device, uint8_t x, uint8_t y, SSD1306_COLOR color);
-
-/* Set the cursor in the buffer (pixel values) for use with WriteChar and WriteString.  The value
-   being set is the top left corner of the character cell.  */
-void ssd1306_SetCursor(SSD1306_Device_t* device, uint8_t x, uint8_t y);
-
-/* Write a printable char to the buffer.  Returns true if it was written, otherwise false.  Updates
-   the cursor position. */
-bool ssd1306_WriteChar(SSD1306_Device_t* device, char ch, FontDef Font, SSD1306_COLOR color);
-
-/* Write a string to the buffer.  Returns a pointer to the first char that could not be written
-   (which could be the terminating NUL).  Updates the cursor position.  */
-const char* ssd1306_WriteString(SSD1306_Device_t* device, const char* str, FontDef Font,
-                                SSD1306_COLOR color);
-
-#ifdef SSD1306_GRAPHICS
-/* Draw a line in the buffer */
-void ssd1306_Line(SSD1306_Device_t* device, uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2,
-                  SSD1306_COLOR color);
-
-/* Draw an arc in the buffer */
-void ssd1306_DrawArc(SSD1306_Device_t* device, uint8_t x, uint8_t y, uint8_t radius,
-                     uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color);
-
-/* Draw an arc in the buffer */
-void ssd1306_DrawArcWithRadiusLine(SSD1306_Device_t* device, uint8_t x, uint8_t y, uint8_t radius,
-                                   uint16_t start_angle, uint16_t sweep, SSD1306_COLOR color);
-
-/* Draw a circle in the buffer */
-void ssd1306_DrawCircle(SSD1306_Device_t* device, uint8_t par_x, uint8_t par_y, uint8_t par_r,
-                        SSD1306_COLOR color);
-
-/* Draw a filled circle in the buffer */
-void ssd1306_FillCircle(SSD1306_Device_t* device, uint8_t par_x,uint8_t par_y,uint8_t par_r,
-                        SSD1306_COLOR par_color);
-
-/* Vertex data for Polyline */
-typedef struct {
-  uint8_t x;
-  uint8_t y;
-} SSD1306_VERTEX;
-
-/* Draw a set of connected lines in the buffer */
-void ssd1306_Polyline(SSD1306_Device_t* device, const SSD1306_VERTEX *par_vertex, uint16_t par_size,
-                      SSD1306_COLOR color);
-
-/* Draw a rectangle in the buffer */
-void ssd1306_DrawRectangle(SSD1306_Device_t* device, uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2,
-                           SSD1306_COLOR color);
-
-/* Draw a filled rectangle in the buffer */
-void ssd1306_FillRectangle(SSD1306_Device_t* device, uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2,
-                           SSD1306_COLOR color);
-
-/* Draw a bitmap in the buffer */
-void ssd1306_DrawBitmap(SSD1306_Device_t* device, uint8_t x, uint8_t y,
-                        const unsigned char* bitmap, uint8_t w, uint8_t h, SSD1306_COLOR color);
-#endif /* SSD1306_GRAPHICS */
+void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb);
 
 /* Set the OLED display contrast.  The contrast increases as the value increases.
    The value 7Fh resets the contrast.  Sets device->i2c_failure on failure.  */

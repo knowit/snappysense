@@ -47,10 +47,13 @@ bool initialize_i2c_sen0514() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_I2C_SSD1306
-extern uint8_t ssd1306_mem[];
-extern SSD1306_Device_t* ssd1306;
+# define SSD1306_WIDTH 128
+# define SSD1306_HEIGHT 32
 
-/* Initialize the device, set ssd1306 to non-null iff it succeeds */
+extern bool have_ssd1306;
+extern SSD1306_Device_t ssd1306;
+
+/* Initialize the device, set have_ssd1306 to true iff it succeeds */
 bool initialize_i2c_ssd1306() WARN_UNUSED;
 #endif
 
