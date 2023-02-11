@@ -1,7 +1,7 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-#ifndef sampler_h_included
-#define sampler_h_included
+#ifndef sound_sampler_h_included
+#define sound_sampler_h_included
 
 #include "main.h"
 
@@ -19,4 +19,4 @@ void sound_sampler_stop();
 
 #endif /* SNAPPY_READ_NOISE */
 
-#endif /* !sampler_h_included */
+#endif /* !sound_sampler_h_included */

@@ -16,10 +16,10 @@
 
 #include "device.h"
 #ifdef SNAPPY_SOUND_EFFECTS
-# include "piezo.h"
+# include "sound_player.h"
 #endif
 #ifdef SNAPPY_READ_NOISE
-# include "sampler.h"
+# include "sound_sampler.h"
 #endif
 #include "bitmaps.h"
 

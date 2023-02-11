@@ -4,7 +4,7 @@
    the available sound sampler device, integrate the readings over time, and occasionally report the
    integrated readings on the event queue. */
 
-#include "sampler.h"
+#include "sound_sampler.h"
 
 #ifdef SNAPPY_READ_NOISE
 

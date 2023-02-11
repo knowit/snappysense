@@ -1,7 +1,7 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-#ifndef piezo_h_included
-#define piezo_h_included
+#ifndef sound_player_h_included
+#define sound_player_h_included
 
 #include "main.h"
 
@@ -30,4 +30,4 @@ void sound_effects_stop();
 
 #endif	/* SNAPPY_SOUND_EFFECTS */
 
-#endif /* !piezo_h_included */
+#endif /* !sound_player_h_included */

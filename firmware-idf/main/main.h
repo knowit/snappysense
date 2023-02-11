@@ -17,7 +17,7 @@
  */
 
 #define SNAPPY_LOGGING          /* Debug logging to the USB */
-#define SNAPPY_SOUND_EFFECTS    /* Output sound to a piezo speaker */
+#define SNAPPY_SOUND_EFFECTS    /* Output sound to a speaker */
 #define SNAPPY_OLED             /* Output on a screen */
 #define SNAPPY_READ_TEMPERATURE
 #define SNAPPY_READ_HUMIDITY

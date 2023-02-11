@@ -1,6 +1,6 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-#include "piezo.h"
+#include "sound_player.h"
 
 #ifdef SNAPPY_SOUND_EFFECTS
 
