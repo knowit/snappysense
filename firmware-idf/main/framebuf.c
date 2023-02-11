@@ -81,7 +81,7 @@ bool fb_write_char(framebuf_t* fb, char ch, FontDef Font, fb_color_t color) {
       if((b << j) & 0x8000)  {
 	fb_draw_pixel(fb, fb->current_x + j, (fb->current_y + i), color);
       } else {
-	fb_draw_pixel(fb, fb->current_x + j, (fb->current_y + i), color);
+	fb_draw_pixel(fb, fb->current_x + j, (fb->current_y + i), color ^ 1);
       }
     }
   }
