@@ -56,6 +56,10 @@ void fb_fill_buffer(framebuf_t* fb, uint8_t* buf, unsigned len);
 /* Set a pixel in the buffer */
 void fb_draw_pixel(framebuf_t* fb, unsigned x, unsigned y, fb_color_t color);
 
+/* Draw a bitmap in the buffer */
+void fb_draw_bitmap(framebuf_t* fb, unsigned x, unsigned y, const unsigned char* bitmap,
+		    unsigned w, unsigned h, fb_color_t color);
+
 /* Set the cursor in the buffer (pixel values) for use with WriteChar and WriteString.  The value
    being set is the top left corner of the character cell.  */
 void fb_set_cursor(framebuf_t* fb, unsigned x, unsigned y);
@@ -105,10 +109,6 @@ void fb_draw_rectangle(framebuf_t* fb, unsigned x1, unsigned y1, unsigned x2, un
 /* Draw a filled rectangle in the buffer */
 void fb_fill_rectangle(framebuf_t* fb, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		       fb_color_t color);
-
-/* Draw a bitmap in the buffer */
-void fb_draw_bitmap(framebuf_t* fb, unsigned x, unsigned y, const unsigned char* bitmap,
-		    unsigned w, unsigned h, fb_color_t color);
 
 #endif /* FRAMEBUFFER_GRAPHICS */
 

@@ -59,6 +59,33 @@ void fb_draw_pixel(framebuf_t* fb, unsigned x, unsigned y, fb_color_t color) {
   }
 }
 
+
+/* Draw a bitmap */
+void fb_draw_bitmap(framebuf_t* fb, unsigned x, unsigned y,
+			const unsigned char* bitmap, unsigned w, unsigned h, fb_color_t color) {
+  int byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
+  uint8_t byte = 0;
+
+  if (x >= fb->width || y >= fb->height) {
+    return;
+  }
+
+  for (unsigned j = 0; j < h; j++, y++) {
+    for (unsigned i = 0; i < w; i++) {
+      if (i & 7) {
+	byte <<= 1;
+      } else {
+	byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
+      }
+
+      if (byte & 0x80) {
+	fb_draw_pixel(fb, x + i, y, color);
+      }
+    }
+  }
+  return;
+}
+
 bool fb_write_char(framebuf_t* fb, char ch, FontDef Font, fb_color_t color) {
   uint32_t i, b, j;
     
@@ -344,32 +371,6 @@ void fb_fill_rectangle(framebuf_t* fb, unsigned x1, unsigned y1, unsigned x2, un
   for (unsigned y= y_start; (y<= y_end)&&(y<fb->height); y++) {
     for (unsigned x= x_start; (x<= x_end)&&(x<fb->width); x++) {
       fb_draw_pixel(fb, x, y, color);
-    }
-  }
-  return;
-}
-
-/* Draw a bitmap */
-void fb_draw_bitmap(framebuf_t* fb, unsigned x, unsigned y,
-			const unsigned char* bitmap, unsigned w, unsigned h, fb_color_t color) {
-  int byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
-  uint8_t byte = 0;
-
-  if (x >= fb->width || y >= fb->height) {
-    return;
-  }
-
-  for (unsigned j = 0; j < h; j++, y++) {
-    for (unsigned i = 0; i < w; i++) {
-      if (i & 7) {
-	byte <<= 1;
-      } else {
-	byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
-      }
-
-      if (byte & 0x80) {
-	fb_draw_pixel(fb, x + i, y, color);
-      }
     }
   }
   return;
