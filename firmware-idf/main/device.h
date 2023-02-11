@@ -7,11 +7,9 @@
 #include "dfrobot_sen0500.h"
 #include "dfrobot_sen0514.h"
 #include "ssd1306.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 
 void power_up_peripherals();
-void install_interrupts(QueueHandle_t evt_queue);
+void install_interrupts();
 
 void initialize_onboard_buttons();
 void enable_onboard_buttons();
@@ -21,6 +19,11 @@ bool btn1_is_pressed();
 bool initialize_gpio_sen0171() WARN_UNUSED;
 void enable_gpio_sen0171();
 void disable_gpio_sen0171();
+#endif
+
+#ifdef SNAPPY_ADC_SEN0487
+bool initialize_adc_sen0487() WARN_UNUSED;
+unsigned sen0487_sound_level();
 #endif
 
 #ifdef SNAPPY_I2C

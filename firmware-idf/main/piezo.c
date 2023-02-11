@@ -2,7 +2,7 @@
 
 #include "piezo.h"
 
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_SOUND_EFFECTS
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -97,24 +97,19 @@ static void vPlayerTask(void* arg) {
   }
 }
 
-bool piezo_begin() {
+bool sound_effects_begin() {
   command_queue = xQueueCreate(5, sizeof(PlayerCommand));
-  /* FIXME: Priority is probably defined elsewhere */
-  return xTaskCreate( vPlayerTask, "player", 1024, NULL, tskIDLE_PRIORITY+1, NULL) == pdPASS;
+  return xTaskCreate( vPlayerTask, "player", 1024, NULL, PLAYER_PRIORITY, NULL) == pdPASS;
 }
 
-void play_song(const struct music* melody) {
+void sound_effects_play(const struct music* melody) {
   PlayerCommand cmd = { START, melody };
   xQueueSend(command_queue, &cmd, portMAX_DELAY);
 }
 
-void stop_song() {
+void sound_effects_stop() {
   PlayerCommand cmd = { STOP, NULL };
   xQueueSend(command_queue, &cmd, portMAX_DELAY);
 }
 
-#else /* SNAPPY_GPIO_PIEZO */
-void piezo_initialize() {}
-void play_song(const struct music* melody) {}
-void stop_song() {}
-#endif /* SNAPPY_GPIO_PIEZO */
+#endif /* SNAPPY_SOUND_EFFECTS */

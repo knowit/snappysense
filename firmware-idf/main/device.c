@@ -1,5 +1,8 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
+/* The device layer is strictly about device access and control.  Any higher-level work, such as
+   creating separate tasks to perform sampling or sound output, is handled in the caller. */
+
 #include "device.h"
 
 #include <stdarg.h>
@@ -26,10 +29,18 @@
 //#include "esp32-hal-ledc.h"
 #endif
 
+#ifdef SNAPPY_ADC_SEN0487
+/* FIXME: Include something from the ADC subsystem */
+/* This looks like an ADC oneshot mode situation */
+#include "esp_adc/adc_oneshot.h"
+/* Whether calibration is needed is TBD.  See app example */
+#endif
+
 #ifdef SNAPPY_HARDWARE_1_1_0
 # define POWER_PIN 26		/* GPIO26 aka A0 aka DAC2: peripheral power */
 # define BTN1_PIN 25		/* GPIO25 aka A1 aka DAC1: BTN1 aka WAKE */
 # define PIR_PIN 34		/* GPIO34 aka A2: PIR */
+# define MIC_PIN 4		/* GPIO4 aka A5: MEMS ADC */
 # define I2C1_BUS 0		/* Everything is on I2C bus 0 */
 # define I2C_SCL_PIN 22		/* GPIO22: Standard I2C pin */
 # define I2C_SDA_PIN 23		/* GPIO23: Standard I2C pin */
@@ -78,26 +89,23 @@ void power_up_peripherals() {
   vTaskDelay(pdMS_TO_TICKS(PERIPHERAL_POWERUP_MS));
 }
 
-static QueueHandle_t evt_queue = NULL;
-
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
   uint32_t gpio_num = (uint32_t) arg;
-  uint32_t ev = EV_NONE;
+  snappy_event_t ev = EV_NONE;
   switch (gpio_num) {
   case BTN1_PIN:
     ev = EV_BTN1 | (gpio_get_level(BTN1_PIN) << 4);
     break;
   case PIR_PIN:
-    ev = EV_PIR | (gpio_get_level(PIR_PIN) << 4);
+    ev = EV_MOTION;
     break;
   }
   if (ev != EV_NONE) {
-    xQueueSendFromISR(evt_queue, &ev, NULL);
+    xQueueSendFromISR(snappy_event_queue, &ev, NULL);
   }
 }
 
-void install_interrupts(QueueHandle_t evt_queue_) {
-  evt_queue = evt_queue_;
+void install_interrupts() {
   gpio_install_isr_service(0);
 }
 
@@ -235,11 +243,10 @@ bool initialize_gpio_sen0171() {
 void enable_gpio_sen0171() {
   gpio_isr_handler_add(PIR_PIN, gpio_isr_handler, (void*) PIR_PIN);
 
-  /* If the device has already detected motion we won't get an
-     interrupt, so check specially for this. */
+  /* If the device has already detected motion we won't get an interrupt; handle this. */
   if (gpio_get_level(PIR_PIN)) {
-    uint32_t ev = EV_PIR | 1 << 4;
-    xQueueSend(evt_queue, &ev, portMAX_DELAY);
+    snappy_event_t ev = EV_MOTION;
+    xQueueSend(snappy_event_queue, &ev, portMAX_DELAY);
   }
 }
 
@@ -263,5 +270,32 @@ void start_note(int frequency) {
 
 void stop_note() {
   //  ledcWrite(PWM_CHAN, 0);
+}
+#endif
+
+#ifdef SNAPPY_ADC_SEN0487
+bool initialize_adc_sen0487() {
+  /* FIXME: Almost certainly something to do */
+  return true;
+}
+
+unsigned sen0487_sound_level() {
+  /* FIXME: analogRead is Arduino */
+  //  unsigned r = analogRead(MIC_PIN);
+  unsigned r = 0;
+  /* TODO - This scale is pretty arbitrary */
+  if (r < 1700) {
+    return 1;
+  }
+  if (r < 2000) {
+    return 2;
+  }
+  if (r < 2500) {
+    return 3;
+  }
+  if (r < 3000) {
+    return 4;
+  }
+  return 5;
 }
 #endif

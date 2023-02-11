@@ -15,7 +15,12 @@
 #include "freertos/timers.h"
 
 #include "device.h"
-#include "piezo.h"
+#ifdef SNAPPY_SOUND_EFFECTS
+# include "piezo.h"
+#endif
+#ifdef SNAPPY_READ_NOISE
+# include "sampler.h"
+#endif
 #include "bitmaps.h"
 
 /* Parameters */
@@ -28,8 +33,10 @@
 const struct tone notes_5577006791947779410[] = {{1109,197},{740,197},{740,197},{740,197},{988,1183},{1480,1183},{1319,197},{1245,197},{1109,197},{1976,1183},{1480,591},{1319,197},{1245,197},{1109,197},{1976,1183},{1480,591},{1319,197},{1245,197},{1319,197},{1109,1183},{740,197},{740,197},{740,197},{988,1183},{1480,1183},{1319,197},{1245,197},{1109,197},{1976,1183},{1480,591},{1319,197},{1245,197},{1109,197},{1976,1183},{1480,591},{1319,197},{1245,197},{1319,197},{1109,789},{440,1578},};
 const struct music melody = { 40, notes_5577006791947779410 };
 
-/* Queues and clocks */
-static QueueHandle_t evt_queue = NULL;
+/* The global event queue for the main loop */
+QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue = NULL;
+
+/* Clocks used by the main loop */
 static TimerHandle_t sensor_clock = NULL;
 static TimerHandle_t slideshow_clock = NULL;
 static TimerHandle_t monitoring_clock = NULL;
@@ -43,7 +50,7 @@ static void clock_callback(TimerHandle_t t) {
   } else if (t == monitoring_clock) {
     ev = EV_MONITORING_CLOCK;
   }
-  xQueueSend(evt_queue, &ev, portMAX_DELAY);
+  xQueueSend(snappy_event_queue, &ev, portMAX_DELAY);
 }
 
 /* Sensor state */
@@ -65,6 +72,8 @@ static unsigned tvoc;
 static bool have_aqi = false;
 static unsigned aqi;
 static bool motion = false;
+static bool have_sound_level = false;
+static unsigned sound_level;    /* On a scale from 1 to 5 */
 
 /* Slideshow state */
 static int slideshow_next = 0;
@@ -74,6 +83,8 @@ static void advance_slideshow();
 static void open_monitoring_window();
 static void close_monitoring_window();
 static void record_motion();
+static void record_noise(uint32_t level);
+static void handle_button(uint32_t state);
 static void panic(const char* msg) __attribute__ ((noreturn));
 
 void app_main(void)
@@ -81,9 +92,9 @@ void app_main(void)
   /* Bring the power line up and wait until it stabilizes */
   power_up_peripherals();
 
-  /* Queue of events from clocks and ISRs to the main task */
-  evt_queue = xQueueCreate(10, sizeof(uint32_t));
-  install_interrupts(evt_queue);
+  /* Set up interrupts and event queueing. */
+  snappy_event_queue = xQueueCreate(10, sizeof(snappy_event_t));
+  install_interrupts();
 
   /* Initialize peripherals */
 
@@ -99,39 +110,55 @@ void app_main(void)
 #ifdef SNAPPY_I2C_SSD1306
   /* Display */
   if (!initialize_i2c_ssd1306()) {
-    LOG("Failed to init SSD1306");
+    LOG("OLED device inoperable");
   }
 #endif
 
   /* We're far enough along that we can talk to the screen */
   LOG("Snappysense active!");
+  show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
 
 #ifdef SNAPPY_GPIO_SEN0171
   /* Movement sensor */
   if (!initialize_gpio_sen0171()) {
-    LOG("Movement sensor inoperable");
+    LOG("Movement device inoperable");
   }
 #endif
 
-  /* TODO: SNAPPY_ADC_SEN0487 microphone */
+#ifdef SNAPPY_ADC_SEN0487
+  /* Sound sensor */
+  if (!initialize_adc_sen0487()) {
+    LOG("Sound device inoperable");
+  }
+#endif
+#ifdef SNAPPY_READ_NOISE
+  if (!sound_sampler_begin()) {
+    LOG("Unable to initialize the sampler task");
+  }
+#endif
 
 #ifdef SNAPPY_I2C_SEN0500
   /* Environment sensor */
   if (!initialize_i2c_sen0500()) {
-    LOG("Environment sensor inoperable");
+    LOG("Environment device inoperable");
   }
 #endif
 
 #ifdef SNAPPY_I2C_SEN0514
   /* Air/gas sensor */
   if (!initialize_i2c_sen0514()) {
-    LOG("Air/gas sensor inoperable");
+    LOG("Air/gas device inoperable");
   }
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
-  if (!initialize_gpio_piezo() || !piezo_begin()) {
-    LOG("Piezo speaker inoperable");
+  if (!initialize_gpio_piezo()) {
+    LOG("Piezo device inoperable");
+  }
+#endif
+#ifdef SNAPPY_SOUND_EFFECTS
+  if (!sound_effects_begin()) {
+    LOG("Unable to initialize the sound player task");
   }
 #endif
 
@@ -164,7 +191,6 @@ void app_main(void)
 
   /* And we are up! */
   LOG("Snappysense running!");
-  show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
   //  play_song(&melody);
 
   /* Process events forever.
@@ -182,39 +208,19 @@ void app_main(void)
      monitoring and are simply recorded.  Button interrupts are seen anytime and are currently
      ignored but may cause the device operation to change. */
 
-  struct timeval button_down; /* Time of button press */
-  bool was_pressed = false;   /*   if this is true */
-
   for(;;) {
     uint32_t ev;
-    if(xQueueReceive(evt_queue, &ev, portMAX_DELAY)) {
+    if(xQueueReceive(snappy_event_queue, &ev, portMAX_DELAY)) {
       switch (ev & 15) {
-      case EV_PIR:
+#ifdef SNAPPY_READ_MOTION
+      case EV_MOTION:
         record_motion();
 	break;
+#endif
 
-      case EV_BTN1: {
-	/* Experimentation suggests that it's possible to have spurious button presses of around 10K
-	   us, when the finger nail sort of touches the edge of the button and slides off.  A "real"
-	   press lasts at least 100K us. */
-	uint32_t state = ev >> 4;
-	LOG("BUTTON: %" PRIu32, state);
-	if (!state && was_pressed) {
-	  struct timeval now;
-	  gettimeofday(&now, NULL);
-	  uint64_t t = ((uint64_t)now.tv_sec * 1000000 + (uint64_t)now.tv_usec) -
-	    ((uint64_t)button_down.tv_sec * 1000000 + (uint64_t)button_down.tv_usec);
-	  LOG("  Pressed for %" PRIu64 "us", t);
-          if (t < 1000000) {
-            show_debug = !show_debug;
-          }
-	}
-	was_pressed = state == 1;
-	if (was_pressed) {
-	  gettimeofday(&button_down, NULL);
-	}
+      case EV_BTN1:
+        handle_button(ev >> 4);
 	break;
-      }
 
       case EV_SENSOR_CLOCK:
         open_monitoring_window();
@@ -227,6 +233,12 @@ void app_main(void)
       case EV_SLIDESHOW_CLOCK:
         advance_slideshow();
         break;
+
+#ifdef SNAPPY_READ_NOISE
+      case EV_SOUND_SAMPLE:
+        record_noise(ev >> 4);
+        break;
+#endif
 
       default:
 	LOG("Unknown event: %" PRIu32, ev);
@@ -250,18 +262,23 @@ static void open_monitoring_window() {
   /* Environment sensor.  These we read instantaneously.  It might make sense to read multiple times
      and average or otherwise integrate; TBD. */
   if (have_sen0500) {
+# ifdef SNAPPY_READ_TEMPERATURE
     have_temperature =
       dfrobot_sen0500_get_temperature(&sen0500, DFROBOT_SEN0500_TEMP_C, &temperature) &&
       temperature != -45.0;
     if (have_temperature) {
       LOG("Temperature = %.2f", temperature);
     }
+# endif
+# ifdef SNAPPY_READ_HUMIDITY
     have_humidity =
       dfrobot_sen0500_get_humidity(&sen0500, &humidity) &&
       humidity != 0.0;
     if (have_humidity) {
       LOG("Humidity = %.2f", humidity);
     }
+# endif
+# ifdef SNAPPY_READ_PRESSURE
     have_atmospheric_pressure =
       dfrobot_sen0500_get_atmospheric_pressure(&sen0500, DFROBOT_SEN0500_PRESSURE_HPA,
                                                &atmospheric_pressure) &&
@@ -269,12 +286,16 @@ static void open_monitoring_window() {
     if (have_atmospheric_pressure) {
       LOG("Pressure = %u", atmospheric_pressure);
     }
+# endif
+# ifdef SNAPPY_READ_UV_INTENSITY
     have_uv_intensity =
       dfrobot_sen0500_get_ultraviolet_intensity(&sen0500, &uv_intensity) &&
       uv_intensity != 0.0;
     if (have_uv_intensity) {
       LOG("UV intensity = %.2f", uv_intensity);
     }
+# endif
+# ifdef SNAPPY_READ_LIGHT_INTENSITY
     have_luminous_intensity =
       dfrobot_sen0500_get_luminous_intensity(&sen0500, &luminous_intensity) &&
       luminous_intensity != 0.0;
@@ -282,7 +303,8 @@ static void open_monitoring_window() {
       LOG("Luminous intensity = %.2f", luminous_intensity);
     }
   }
-#endif
+# endif
+#endif  /* SNAPPY_I2C_SEN0500 */
 #ifdef SNAPPY_I2C_SEN0514
   if (have_sen0514) {
     dfrobot_sen0514_status_t stat;
@@ -297,34 +319,49 @@ static void open_monitoring_window() {
         dfrobot_sen0514_get_sensor_status(&sen0514, &stat) &&
         /* See the header for an explanation of the status codes */
         stat != DFROBOT_SEN0514_INVALID_OUTPUT) {
+# ifdef SNAPPY_READ_CO2
       have_co2 =
         dfrobot_sen0514_get_co2(&sen0514, &co2) &&
         co2 > 400;
       if (have_co2) {
         LOG("CO2 = %u", co2);
       }
+# endif
+# ifdef SNAPPY_READ_VOLATILE_ORGANICS
       have_tvoc =
         dfrobot_sen0514_get_total_volatile_organic_compounds(&sen0514, &tvoc) &&
         tvoc > 0;
       if (have_tvoc) {
         LOG("TVOC = %u", tvoc);
       }
+# endif
+# ifdef SNAPPY_READ_AIR_QUALITY_INDEX
       have_aqi =
         dfrobot_sen0514_get_air_quality_index(&sen0514, &aqi) &&
         aqi >= 1 && aqi <= 5;
       if (have_aqi) {
         LOG("AQI = %u", aqi);
       }
+# endif
     } else {
       LOG("SEN0514 not ready: %d", stat);
     }
   }
 #endif
-#ifdef SNAPPY_GPIO_SEN0171
-  /* Motion sensor.  We enable the interrupt for the PIR while the monitoring window is open; then
-     PIR interrupts will simply be recorded higher up in the switch. */
+#ifdef SNAPPY_READ_MOTION
+  /* The motion sensor runs continually while the monitoring window is open, it's interrupt-driven
+     or running as a sampler on a separate task.  Motion events are posted back to the main thread
+     on the event queue.  */
   motion = false;
+# ifdef SNAPPY_GPIO_SEN0171
   enable_gpio_sen0171();
+# endif
+#endif
+#ifdef SNAPPY_READ_NOISE
+  /* The sound sensor runs continually while the monitoring window is open, it is a sampler running
+     on a separate task.  Sound level samples are posted back to the main thread on the event
+     queue. */
+  sound_sampler_start();
 #endif
   xTimerStart(monitoring_clock, portMAX_DELAY);
 }
@@ -334,9 +371,19 @@ static void record_motion() {
   motion = true;
 }
 
+static void record_noise(uint32_t level) {
+  sound_level = level;
+  have_sound_level = true;
+}
+
 static void close_monitoring_window() {
-#ifdef SNAPPY_GPIO_SEN0171
+#ifdef SNAPPY_READ_MOTION
+# ifdef SNAPPY_GPIO_SEN0171
   disable_gpio_sen0171();
+# endif
+#endif
+#ifdef SNAPPY_READ_NOISE
+  sound_sampler_stop();
 #endif
   LOG("Monitoring window closed");
 }
@@ -351,16 +398,37 @@ static void splash_screen() {
 }
 #endif
 
+static struct timeval button_down; /* Time of button press */
+static bool was_pressed = false;   /*   if this is true */
+
+static void handle_button(uint32_t state) {
+  /* Experimentation suggests that it's possible to have spurious button presses of around 10K
+     us, when the finger nail sort of touches the edge of the button and slides off.  A "real"
+     press lasts at least 100K us. */
+  LOG("BUTTON: %" PRIu32, state);
+  if (!state && was_pressed) {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    uint64_t t = ((uint64_t)now.tv_sec * 1000000 + (uint64_t)now.tv_usec) -
+      ((uint64_t)button_down.tv_sec * 1000000 + (uint64_t)button_down.tv_usec);
+    LOG("  Pressed for %" PRIu64 "us", t);
+    if (t < 1000000) {
+      show_debug = !show_debug;
+    }
+  }
+  was_pressed = state == 1;
+  if (was_pressed) {
+    gettimeofday(&button_down, NULL);
+  }
+}
+
+#ifdef SNAPPY_OLED
 static void advance_slideshow() {
   switch (slideshow_next) {
   case 0:
     slideshow_next++;
-#ifdef SNAPPY_I2C_SSD1306
-    if (ssd1306) {
-      splash_screen();
-      break;
-    }
-#endif
+    splash_screen();
+    break;
     /* FALLTHROUGH */
   case 1:
     slideshow_next++;
@@ -454,13 +522,30 @@ static void advance_slideshow() {
     /* FALLTHROUGH */
   case 9:
     slideshow_next++;
-#ifdef SNAPPY_GPIO_SEN0171
+#ifdef SNAPPY_READ_MOTION
     show_text("Movement\n\n%s", motion ? "Yes" : "No");
     break;
 #else
     /* FALLTHROUGH */
 #endif
   case 10:
+    slideshow_next++;
+#ifdef SNAPPY_READ_SOUND
+    if (have_sound_level) {
+      /* The scale is made-up */
+      static const char* sound_text[] = {
+        "",
+        "eerie",
+        "quiet",
+        "normal",
+        "bad",
+        "runway?" };
+      show_text("Sound level\n\n%d - %s", sound_level, sound_text[sound_level]);
+      break;
+    }
+#endif
+    /* FALLTHROUGH */
+  case 11:
     slideshow_next++;
     if (show_debug) {
       char buf[128];
@@ -486,16 +571,16 @@ static void advance_slideshow() {
 }
 
 /* Display abstractions. */
-#ifdef SNAPPY_I2C_SSD1306
 void show_text(const char* fmt, ...) {
-  if (!ssd1306) {
-    return;
-  }
   va_list args;
   va_start(args, fmt);
   char buf[32*4];		/* Largest useful string for this screen and font */
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
+# ifdef SNAPPY_I2C_SSD1306
+  if (!ssd1306) {
+    return;
+  }
   ssd1306_Fill(ssd1306, SSD1306_BLACK);
   char* p = buf;
   int y = 0;
@@ -512,8 +597,9 @@ void show_text(const char* fmt, ...) {
     y += Font_7x10.FontHeight + 1;
   }
   ssd1306_UpdateScreen(ssd1306);
+# endif
 }
-#endif
+#endif  /* SNAPPY_OLED */
 
 #ifdef SNAPPY_LOGGING
 void snappy_log(const char* fmt, ...) {
