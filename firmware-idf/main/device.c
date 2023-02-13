@@ -17,7 +17,7 @@
 #include "dfrobot_sen0500.h"
 #include "dfrobot_sen0514.h"
 #include "ssd1306.h"
-#include "piezo.h"
+#include "esp32_ledc_piezo.h"
 
 #ifdef SNAPPY_HARDWARE_1_1_0
 # define POWER_PIN 26		/* GPIO26 aka A0 aka DAC2: peripheral power */
@@ -236,8 +236,8 @@ void disable_gpio_sen0171() {
 }
 #endif
 
-#ifdef SNAPPY_GPIO_PIEZO
-bool initialize_gpio_piezo() {
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
+bool initialize_esp32_ledc_piezo() {
   /* TODO: Maybe this needs to setup some pins at least. */
   return piezo_begin();
 }

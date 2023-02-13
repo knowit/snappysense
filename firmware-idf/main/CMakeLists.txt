@@ -6,5 +6,5 @@ idf_component_register(SRCS
 
   		       # Tightly device-bound code.
 		       "device.c" "dfrobot_sen0487.c" "dfrobot_sen0500.c" "dfrobot_sen0514.c"
-		       "ssd1306.c" "piezo.c"
+		       "ssd1306.c" "esp32_ledc_piezo.c"
                     INCLUDE_DIRS ".")

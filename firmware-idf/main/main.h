@@ -128,8 +128,8 @@
 */
 #endif
 
-/* TODO: DOCUMENTME */
-#define SNAPPY_GPIO_PIEZO
+/* Piezo speaker: based on the ESP32-IDF "ledc" library */
+#define SNAPPY_ESP32_LEDC_PIEZO
 
 #if defined(SNAPPY_I2C_SEN0500) || defined(SNAPPY_I2C_SEN0514) || defined(SNAPPY_I2C_SSD1306)
 # define SNAPPY_I2C
@@ -142,7 +142,7 @@
  * some generalization is probably going to happen.
  */
 
-#if defined(SNAPPY_SOUND_EFFECTS) && !defined(SNAPPY_GPIO_PIEZO)
+#if defined(SNAPPY_SOUND_EFFECTS) && !defined(SNAPPY_ESP32_LEDC_PIEZO)
 # error "SNAPPY_SOUND_EFFECTS without a sound device"
 #endif
 

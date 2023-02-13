@@ -1,6 +1,6 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
-#include "piezo.h"
+#include "esp32_ledc_piezo.h"
 
 /* FIXME: This is arduino stuff.  Instead, we want to include "driver/ledc.h" and we want to control
    the pulse in the same way that the arduino library does.  Some inspiration for this may be taken

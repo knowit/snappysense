@@ -100,8 +100,8 @@ void app_main(void)
   }
 #endif
 
-#ifdef SNAPPY_GPIO_PIEZO
-  if (!initialize_gpio_piezo()) {
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
+  if (!initialize_esp32_ledc_piezo()) {
     LOG("Piezo device inoperable");
   }
 #endif

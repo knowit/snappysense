@@ -57,8 +57,8 @@ extern SSD1306_Device_t ssd1306;
 bool initialize_i2c_ssd1306() WARN_UNUSED;
 #endif
 
-#ifdef SNAPPY_GPIO_PIEZO
-bool initialize_gpio_piezo() WARN_UNUSED;
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
+bool initialize_esp32_ledc_piezo() WARN_UNUSED;
 #endif
 
 #endif /* device_h_included */

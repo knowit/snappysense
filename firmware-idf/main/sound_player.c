@@ -4,9 +4,7 @@
 
 #ifdef SNAPPY_SOUND_EFFECTS
 
-#ifdef SNAPPY_GPIO_PIEZO
-# include "piezo.h"
-#endif
+#include "esp32_ledc_piezo.h"
 
 typedef enum {
     STOP,
@@ -50,7 +48,7 @@ static void vPlayerTask(void* arg) {
       switch (cmd.op) {
         case STOP:
           if (is_playing) {
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
             piezo_stop_note();
 #endif
             is_playing = false;
@@ -58,12 +56,12 @@ static void vPlayerTask(void* arg) {
           break;
         case START:
           if (is_playing) {
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
             piezo_stop_note();
 #endif
             is_playing = false;
           }
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
           start_playing(cmd.melody);
           prev_frequency = -1;
 #endif
@@ -80,7 +78,7 @@ static void vPlayerTask(void* arg) {
     if (is_playing) {
       int frequency, duration_ms;
       if (get_note(&frequency, &duration_ms)) {
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
         if (prev_frequency == frequency) {
           /* A bit of a hack.  Avoid running the notes together if they are the same.  This works
              well for some tunes and less well for some others, and the delay probably ought to be
@@ -94,7 +92,7 @@ static void vPlayerTask(void* arg) {
         vTaskDelay(pdMS_TO_TICKS(duration_ms));
 #endif
       } else {
-#ifdef SNAPPY_GPIO_PIEZO
+#ifdef SNAPPY_ESP32_LEDC_PIEZO
         piezo_stop_note();
 #endif
         is_playing = false;
