@@ -9,7 +9,6 @@
 
 #ifdef SNAPPY_I2C_SEN0514
 
-#include "freertos/FreeRTOS.h"
 #include "driver/i2c.h"
 
 #define ENS160_PART_ID         0x160   ///< ENS160 chip version

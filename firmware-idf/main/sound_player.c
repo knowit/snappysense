@@ -4,9 +4,6 @@
 
 #ifdef SNAPPY_SOUND_EFFECTS
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
 #ifdef SNAPPY_GPIO_PIEZO
 # include "piezo.h"
 #endif

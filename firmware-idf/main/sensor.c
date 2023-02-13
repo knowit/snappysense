@@ -2,10 +2,6 @@
 
 #include "sensor.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/timers.h"
 #include "device.h"
 #include "sound_player.h"
 #include "sound_sampler.h"

@@ -9,10 +9,6 @@
 #ifdef SNAPPY_READ_NOISE
 
 #include "device.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/timers.h"
 
 typedef enum {
   SAMP_EV_START,

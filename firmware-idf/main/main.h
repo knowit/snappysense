@@ -1,5 +1,8 @@
 /* -*- fill-column: 100; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 
+/* SnappySense firmware code based only on FreeRTOS, with esp32-idf at the device interface level.
+   No Arduino. */
+
 #ifndef main_h_included
 #define main_h_included
 
@@ -36,6 +39,8 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
+#include "freertos/timers.h"
 
 /********************************************************************************
  *
@@ -43,6 +48,7 @@
  */
 
 #define SNAPPY_LOGGING          /* Debug logging to the USB */
+#define SNAPPY_SLIDESHOW        /* Rotating display of data values, if enabled */
 #define SNAPPY_SOUND_EFFECTS    /* Output sound to a speaker */
 #define SNAPPY_OLED             /* Output on a screen */
 #define SNAPPY_READ_TEMPERATURE
@@ -142,6 +148,10 @@
 
 #if defined(SNAPPY_OLED) && !defined(SNAPPY_I2C_SSD1306)
 # error "SNAPPY_OLED without an OLED device"
+#endif
+
+#if defined(SNAPPY_SLIDESHOW) && !defined(SNAPPY_OLED)
+# error "SNAPPY_SLIDESHOW without an OLED device"
 #endif
 
 #if defined(SNAPPY_READ_TEMPERATURE) && !defined(SNAPPY_I2C_SEN0500)
