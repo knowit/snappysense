@@ -30,28 +30,11 @@ SOFTWARE.
 */
 
 #include "ssd1306.h"
-
-#include <math.h>
-#include <string.h>
-
-static void ssd1306_Init(SSD1306_Device_t* device);
-
-bool ssd1306_Create(SSD1306_Device_t* device, unsigned bus, unsigned i2c_addr,
-                    unsigned width, unsigned height) {
-  device->bus = bus;
-  device->addr = i2c_addr;
-  device->width = width;
-  device->height = height;
-  device->initialized = false;
-  device->display_on = false;
-  device->i2c_failure = false;
-  ssd1306_Init(device);
-  return !device->i2c_failure;
-}
+#include "esp32_i2c.h"
 
 static void ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
   if (!device->i2c_failure) {
-    if (!ssd1306_WriteI2C(device->bus, device->addr, 0x00, &byte, 1)) {
+    if (i2c_mem_write(device->bus, device->addr, 0x00, &byte, 1) != ESP_OK) {
       device->i2c_failure = true;
     }
   }
@@ -59,7 +42,7 @@ static void ssd1306_WriteCommand(SSD1306_Device_t* device, uint8_t byte) {
 
 static void ssd1306_WriteData(SSD1306_Device_t* device, uint8_t* buffer, size_t buff_size) {
   if (!device->i2c_failure) {
-    if (!ssd1306_WriteI2C(device->bus, device->addr, 0x40, buffer, buff_size)) {
+    if (i2c_mem_write(device->bus, device->addr, 0x40, buffer, buff_size) != ESP_OK) {
       device->i2c_failure = true;
     }
   }
@@ -153,6 +136,19 @@ static void ssd1306_Init(SSD1306_Device_t* device) {
   ssd1306_SetDisplayOn(device, true); //--turn on SSD1306 panel
 
   device->initialized = true;
+}
+
+bool ssd1306_Create(SSD1306_Device_t* device, unsigned bus, unsigned i2c_addr,
+                    unsigned width, unsigned height) {
+  device->bus = bus;
+  device->addr = i2c_addr;
+  device->width = width;
+  device->height = height;
+  device->initialized = false;
+  device->display_on = false;
+  device->i2c_failure = false;
+  ssd1306_Init(device);
+  return !device->i2c_failure;
 }
 
 void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb) {

@@ -71,18 +71,4 @@ void ssd1306_SetDisplayOn(SSD1306_Device_t* device, bool turn_it_on);
 /* Return whether the display is on (true) or off (false) */
 bool ssd1306_GetDisplayOn(SSD1306_Device_t* device);
 
-/* ssd1306_WriteI2C() is free within the library; it must be provided by the application.
-
-   Write the bytes to the device, blocking until the write's done. `bus` is the 0-based i2c bus
-   number.  `address` is the *unshifted* device address on that bus.  `mem_address` is a memory
-   address on the device to which data is written (basically a prefix byte to be sent).  `buffer` is
-   the data to write, and `buffer_size` the number of bytes to be written from `buffer`.
-   
-   If any locking is required for bus access this function will have to perform that locking, as the
-   ssd1306 library will not.
-  
-   Returns true if the write succeeded, false otherwise. */
-bool ssd1306_WriteI2C(unsigned bus, unsigned address, unsigned mem_address,
-                      uint8_t* buffer, size_t buffer_size) WARN_UNUSED;
-
 #endif /* __SSD1306_H__ */
