@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <math.h>
 #include <sys/time.h>
-#include <stdarg.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,9 +16,7 @@
 #include "device.h"
 #include "sound_player.h"
 #include "sound_sampler.h"
-#include "bitmaps.h"
-#include "framebuf.h"
-#include "piezo.h"
+#include "oled.h"
 
 /* Parameters */
 #define MONITORING_WINDOW_S 10
@@ -77,19 +74,6 @@ static unsigned sound_level;    /* On a scale from 1 to 5 */
 static int slideshow_next = 0;
 static bool show_debug = false;
 
-/* Screen state */
-#ifdef SNAPPY_OLED
-static uint8_t bufmem[(SSD1306_WIDTH*SSD1306_HEIGHT+7)/8];
-static framebuf_t fb = {
-  .width = SSD1306_WIDTH,
-  .height = SSD1306_HEIGHT,
-  .buffer_size = sizeof(bufmem),
-  .current_x = 0,
-  .current_y = 0,
-  .buffer = bufmem
-};
-#endif
-
 static void advance_slideshow();
 static void open_monitoring_window();
 static void close_monitoring_window();
@@ -100,6 +84,10 @@ static void panic(const char* msg) __attribute__ ((noreturn));
 
 void app_main(void)
 {
+  /*******************************************************************************
+   *
+   * Boot level 1: Devices that must work */
+
   /* Bring the power line up and wait until it stabilizes */
   power_up_peripherals();
 
@@ -107,7 +95,7 @@ void app_main(void)
   snappy_event_queue = xQueueCreate(10, sizeof(snappy_event_t));
   install_interrupts();
 
-  /* Initialize peripherals */
+  /* Peripherals */
 
   /* Set up buttons but do not make them send events yet */
   initialize_onboard_buttons();
@@ -123,15 +111,20 @@ void app_main(void)
   if (!initialize_i2c_ssd1306()) {
     LOG("OLED device inoperable");
   }
-  if (have_ssd1306) {
-    fb_fill(&fb, fb_black);
-    ssd1306_UpdateScreen(&ssd1306, &fb);
-  }
+#endif
+#ifdef SNAPPY_OLED
+  oled_clear_screen();
 #endif
 
   /* We're far enough along that we can talk to the screen */
   LOG("Snappysense active!");
-  show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
+#ifdef SNAPPY_OLED
+  oled_show_text("SnappySense v1.1\nKnowIt ObjectNet\n2023-02-07 / IDF");
+#endif
+
+  /*******************************************************************************
+   *
+   * Boot level 2: Sensor devices, these can be absent */
 
 #ifdef SNAPPY_GPIO_SEN0171
   /* Movement sensor */
@@ -144,11 +137,6 @@ void app_main(void)
   /* Sound sensor */
   if (!initialize_adc_sen0487()) {
     LOG("Sound device inoperable");
-  }
-#endif
-#ifdef SNAPPY_READ_NOISE
-  if (!sound_sampler_begin()) {
-    LOG("Unable to initialize the sampler task");
   }
 #endif
 
@@ -167,8 +155,20 @@ void app_main(void)
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
-  if (!initialize_gpio_piezo() || !piezo_begin()) {
+  if (!initialize_gpio_piezo()) {
     LOG("Piezo device inoperable");
+  }
+#endif
+
+  /*******************************************************************************
+   *
+   * Boot level 3: helper tasks and clocks.
+   *
+   * TODO: Clock creation must not fail, check that. */
+
+#ifdef SNAPPY_READ_NOISE
+  if (!sound_sampler_begin()) {
+    LOG("Unable to initialize the sampler task");
   }
 #endif
 #ifdef SNAPPY_SOUND_EFFECTS
@@ -191,9 +191,9 @@ void app_main(void)
                                   /* restart= */ pdFALSE,
                                   NULL, clock_callback);
 
-#ifdef SNAPPY_I2C_SSD1306
-  /* Create a clock tick used to drive the slideshow, independent of monitoring. */
-  if (have_ssd1306) {
+#ifdef SNAPPY_OLED
+  if (oled_present()) {
+    /* Create a clock tick used to drive the slideshow, independent of monitoring. */
     slideshow_clock = xTimerCreate("slideshow", pdMS_TO_TICKS(NEXT_SLIDE_INTERVAL_S*1000),
                                    /* restart= */ pdTRUE,
                                    NULL, clock_callback);
@@ -267,7 +267,9 @@ void app_main(void)
 
 static void panic(const char* msg) {
   LOG("PANIC: %s", msg);
-  show_text("PANIC: %s", msg);
+#ifdef SNAPPY_OLED
+  oled_show_text("PANIC: %s", msg);
+#endif
   for(;;) {}
 }
 
@@ -403,18 +405,6 @@ static void close_monitoring_window() {
   LOG("Monitoring window closed");
 }
 
-#ifdef SNAPPY_I2C_SSD1306
-static void splash_screen() {
-  if (have_ssd1306) {
-    fb_fill(&fb, fb_black);
-    fb_draw_bitmap(&fb, 0, 1,
-                   knowit_logo_bitmap, KNOWIT_LOGO_WIDTH, KNOWIT_LOGO_HEIGHT,
-                   fb_white);
-    ssd1306_UpdateScreen(&ssd1306, &fb);
-  }
-}
-#endif
-
 static struct timeval button_down; /* Time of button press */
 static bool was_pressed = false;   /*   if this is true */
 
@@ -444,41 +434,41 @@ static void advance_slideshow() {
   switch (slideshow_next) {
   case 0:
     slideshow_next++;
-    splash_screen();
+    oled_splash_screen();
     break;
     /* FALLTHROUGH */
   case 1:
     slideshow_next++;
     if (have_temperature) {
-      show_text("Temperature\n\n%.1f C", temperature);
+      oled_show_text("Temperature\n\n%.1f C", temperature);
       break;
     }
     /* FALLTHROUGH */
   case 2:
     slideshow_next++;
     if (have_humidity) {
-      show_text("Humidity\n\n%.1f %%", humidity);
+      oled_show_text("Humidity\n\n%.1f %%", humidity);
       break;
     }
     /* FALLTHROUGH */
   case 3:
     slideshow_next++;
     if (have_atmospheric_pressure) {
-      show_text("Pressure\n\n%u hPa", atmospheric_pressure);
+      oled_show_text("Pressure\n\n%u hPa", atmospheric_pressure);
       break;
     }
     /* FALLTHROUGH */
   case 4:
     slideshow_next++;
     if (have_uv_intensity) {
-      show_text("UV index\n\n%d", (int)roundf(uv_intensity));
+      oled_show_text("UV index\n\n%d", (int)roundf(uv_intensity));
       break;
     }
     /* FALLTHROUGH */
   case 5:
     slideshow_next++;
     if (have_luminous_intensity) {
-      show_text("Light\n\n%.1f lux", luminous_intensity);
+      oled_show_text("Light\n\n%.1f lux", luminous_intensity);
       break;
     }
     /* FALLTHROUGH */
@@ -498,7 +488,7 @@ static void advance_slideshow() {
       } else {
         co2_text = "terrible";
       };
-      show_text("CO_2\n\n%uppm - %s", co2, co2_text);
+      oled_show_text("CO_2\n\n%uppm - %s", co2, co2_text);
       break;
     }
     /* FALLTHROUGH */
@@ -518,7 +508,7 @@ static void advance_slideshow() {
       } else {
         tvoc_text = "dangerous";
       }
-      show_text("Volatile organics\n\n%uppb - %s", tvoc, tvoc_text);
+      oled_show_text("Volatile organics\n\n%uppb - %s", tvoc, tvoc_text);
       break;
     }
     /* FALLTHROUGH */
@@ -533,14 +523,14 @@ static void advance_slideshow() {
         "adequate",
         "bad",
         "terrible" };
-      show_text("Air quality index\n\n%d - %s", aqi, aqi_text[aqi]);
+      oled_show_text("Air quality index\n\n%d - %s", aqi, aqi_text[aqi]);
       break;
     }
     /* FALLTHROUGH */
   case 9:
     slideshow_next++;
 #ifdef SNAPPY_READ_MOTION
-    show_text("Movement\n\n%s", motion ? "Yes" : "No");
+    oled_show_text("Movement\n\n%s", motion ? "Yes" : "No");
     break;
 #else
     /* FALLTHROUGH */
@@ -557,7 +547,7 @@ static void advance_slideshow() {
         "normal",
         "bad",
         "runway?" };
-      show_text("Sound level\n\n%d - %s", sound_level, sound_text[sound_level]);
+      oled_show_text("Sound level\n\n%d - %s", sound_level, sound_text[sound_level]);
       break;
     }
 #endif
@@ -577,7 +567,7 @@ static void advance_slideshow() {
         }
       }
 #endif
-      show_text(buf);
+      oled_show_text(buf);
       break;
     }
     /* FALLTHROUGH */
@@ -585,36 +575,6 @@ static void advance_slideshow() {
     slideshow_next = 0;
     break;
   }
-}
-
-/* Display abstractions. */
-void show_text(const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  char buf[32*4];		/* Largest useful string for this screen and font */
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-# ifdef SNAPPY_I2C_SSD1306
-  if (!have_ssd1306) {
-    return;
-  }
-  fb_fill(&fb, fb_black);
-  char* p = buf;
-  int y = 0;
-  while (*p) {
-    char* start = p;
-    while (*p && *p != '\n') {
-      p++;
-    }
-    if (*p) {
-      *p++ = 0;
-    }
-    fb_set_cursor(&fb, 0, y);
-    fb_write_string(&fb, start, Font_7x10, fb_white);
-    y += Font_7x10.FontHeight + 1;
-  }
-  ssd1306_UpdateScreen(&ssd1306, &fb);
-# endif
 }
 #endif  /* SNAPPY_OLED */
 

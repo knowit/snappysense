@@ -240,9 +240,8 @@ void disable_gpio_sen0171() {
 
 #ifdef SNAPPY_GPIO_PIEZO
 bool initialize_gpio_piezo() {
-  /* TODO: Maybe this needs to setup some pins at least.
-     TODO: If it turns out to be empty in the end, remove it. */
-  return true;
+  /* TODO: Maybe this needs to setup some pins at least. */
+  return piezo_begin();
 }
 #endif
 

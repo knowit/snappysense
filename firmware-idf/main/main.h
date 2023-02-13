@@ -219,12 +219,6 @@ extern void snappy_log(const char* fmt, ...);
 # define LOG(...)
 #endif
 
-#ifdef SNAPPY_OLED
-void show_text(const char* fmt, ...);
-#else
-#define show_text(...) do {} while(0)
-#endif
-
 #define SAMPLER_PRIORITY 3
 #define PLAYER_PRIORITY 3
 

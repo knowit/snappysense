@@ -4,7 +4,6 @@
 #define device_h_included
 
 #include "main.h"
-#include "dfrobot_sen0487.h"
 #include "dfrobot_sen0500.h"
 #include "dfrobot_sen0514.h"
 #include "ssd1306.h"
