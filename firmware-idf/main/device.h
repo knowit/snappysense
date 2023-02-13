@@ -4,6 +4,7 @@
 #define device_h_included
 
 #include "main.h"
+#include "dfrobot_sen0487.h"
 #include "dfrobot_sen0500.h"
 #include "dfrobot_sen0514.h"
 #include "ssd1306.h"
@@ -59,8 +60,6 @@ bool initialize_i2c_ssd1306() WARN_UNUSED;
 
 #ifdef SNAPPY_GPIO_PIEZO
 bool initialize_gpio_piezo() WARN_UNUSED;
-void start_note(int frequency);
-void stop_note();
 #endif
 
 #endif /* device_h_included */

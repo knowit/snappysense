@@ -7,7 +7,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "device.h"
+#ifdef SNAPPY_GPIO_PIEZO
+# include "piezo.h"
+#endif
 
 typedef enum {
     STOP,
@@ -51,17 +53,23 @@ static void vPlayerTask(void* arg) {
       switch (cmd.op) {
         case STOP:
           if (is_playing) {
-            stop_note();
+#ifdef SNAPPY_GPIO_PIEZO
+            piezo_stop_note();
+#endif
             is_playing = false;
           }
           break;
         case START:
           if (is_playing) {
-            stop_note();
+#ifdef SNAPPY_GPIO_PIEZO
+            piezo_stop_note();
+#endif
             is_playing = false;
           }
+#ifdef SNAPPY_GPIO_PIEZO
           start_playing(cmd.melody);
           prev_frequency = -1;
+#endif
           is_playing = true;
           break;
         default:
@@ -75,19 +83,23 @@ static void vPlayerTask(void* arg) {
     if (is_playing) {
       int frequency, duration_ms;
       if (get_note(&frequency, &duration_ms)) {
+#ifdef SNAPPY_GPIO_PIEZO
         if (prev_frequency == frequency) {
           /* A bit of a hack.  Avoid running the notes together if they are the same.  This works
              well for some tunes and less well for some others, and the delay probably ought to be
              relative to the bpm of the song.  It's possible the music compiler should instead embed
              this in the song directly. */
-          stop_note();
+          piezo_stop_note();
           vTaskDelay(pdMS_TO_TICKS(10));
         }
-        start_note(frequency);
+        piezo_start_note(frequency);
         prev_frequency = frequency;
         vTaskDelay(pdMS_TO_TICKS(duration_ms));
+#endif
       } else {
-        stop_note();
+#ifdef SNAPPY_GPIO_PIEZO
+        piezo_stop_note();
+#endif
         is_playing = false;
       }
       continue;

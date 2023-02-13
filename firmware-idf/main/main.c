@@ -15,14 +15,11 @@
 #include "freertos/timers.h"
 
 #include "device.h"
-#ifdef SNAPPY_SOUND_EFFECTS
-# include "sound_player.h"
-#endif
-#ifdef SNAPPY_READ_NOISE
-# include "sound_sampler.h"
-#endif
+#include "sound_player.h"
+#include "sound_sampler.h"
 #include "bitmaps.h"
 #include "framebuf.h"
+#include "piezo.h"
 
 /* Parameters */
 #define MONITORING_WINDOW_S 10
@@ -170,7 +167,7 @@ void app_main(void)
 #endif
 
 #ifdef SNAPPY_GPIO_PIEZO
-  if (!initialize_gpio_piezo()) {
+  if (!initialize_gpio_piezo() || !piezo_begin()) {
     LOG("Piezo device inoperable");
   }
 #endif

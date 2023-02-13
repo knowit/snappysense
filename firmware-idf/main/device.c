@@ -3,8 +3,9 @@
 /* The device layer is strictly about device access and control.  Any higher-level work, such as
    creating separate tasks to perform sampling or sound output, is handled in the caller.
 
-   The more complex devices have driver files of their own; simpler devices are handled directly in
-   this file.  */
+   This file is mainly about hiding some information from the rest of the system: pin numbers, bus
+   numbers, and so on.  Most devices have driver files of their own that contain further
+   initialization code, normally called from within the present file.  */
 
 #include "device.h"
 
@@ -14,30 +15,11 @@
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 
-#ifdef SNAPPY_I2C_SEN0500
-# include "dfrobot_sen0500.h"
-#endif
-#ifdef SNAPPY_I2C_SEN0514
-# include "dfrobot_sen0514.h"
-#endif
-#ifdef SNAPPY_I2C_SSD1306
-# include "ssd1306.h"
-#endif
-
-#ifdef SNAPPY_GPIO_PIEZO
-/* FIXME: This is arduino stuff.  Instead, we want to include "driver/ledc.h" and we want to control
-   the pulse in the same way that the arduino library does.  Some inspiration for this may be taken
-   from the way Gunnar did it in his prototype. */
-
-//#include "esp32-hal-ledc.h"
-#endif
-
-#ifdef SNAPPY_ADC_SEN0487
-/* FIXME: Include something from the ADC subsystem */
-/* This looks like an ADC oneshot mode situation */
-#include "esp_adc/adc_oneshot.h"
-/* Whether calibration is needed is TBD.  See app example */
-#endif
+#include "dfrobot_sen0487.h"
+#include "dfrobot_sen0500.h"
+#include "dfrobot_sen0514.h"
+#include "ssd1306.h"
+#include "piezo.h"
 
 #ifdef SNAPPY_HARDWARE_1_1_0
 # define POWER_PIN 26		/* GPIO26 aka A0 aka DAC2: peripheral power */
@@ -258,19 +240,9 @@ void disable_gpio_sen0171() {
 
 #ifdef SNAPPY_GPIO_PIEZO
 bool initialize_gpio_piezo() {
-  // TODO: Justify these choices, which are wrong.  Probably 1 bit of resolution is fine?
-  // And the question is whether ledcSetup should be before or after ledcAttachPin.
-  //ledcSetup(PWM_CHAN, 4000, 16);
-  //  ledcAttachPin(PWM_PIN, PWM_CHAN);
+  /* TODO: Maybe this needs to setup some pins at least.
+     TODO: If it turns out to be empty in the end, remove it. */
   return true;
-}
-
-void start_note(int frequency) {
-  //  ledcWriteTone(PWM_CHAN, frequency);
-}
-
-void stop_note() {
-  //  ledcWrite(PWM_CHAN, 0);
 }
 #endif
 
@@ -278,25 +250,5 @@ void stop_note() {
 bool initialize_adc_sen0487() {
   /* FIXME: Almost certainly something to do */
   return true;
-}
-
-unsigned sen0487_sound_level() {
-  /* FIXME: analogRead is Arduino */
-  //  unsigned r = analogRead(MIC_PIN);
-  unsigned r = 0;
-  /* TODO - This scale is pretty arbitrary */
-  if (r < 1700) {
-    return 1;
-  }
-  if (r < 2000) {
-    return 2;
-  }
-  if (r < 2500) {
-    return 3;
-  }
-  if (r < 3000) {
-    return 4;
-  }
-  return 5;
 }
 #endif

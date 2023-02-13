@@ -3,6 +3,32 @@
 #ifndef main_h_included
 #define main_h_included
 
+/*
+   CODING STANDARDS
+ 
+   - All <filename>.c files shall have a corresponding <filename>.h and the <filename>.c file shall
+     include <filename>.h first.
+
+   - All <filename>.h shall include main.h first.
+
+   - Always handle errors, including OOM conditions.  Use WARN_UNUSED on functions that return error
+     indicators.  Benign / recoverable errors can be ignored / recovered from.  Everything else
+     should end up calling panic() in main.c, one way or another.
+
+   - Naming conventions: functions and variables and file names are snake_case, types are
+     snake_case_t, global constants are ALL_UPPER_SNAKE_CASE.
+
+   - Indent using spaces, not tabs.  Preferably 2 spaces per level.  Most code uses K&R style:
+     opening brace on same line as controlling statement.  Most code is fully bracketed: even single
+     dependent statements in `if`, `for`, `while`, `do` are enclosed in braces.
+
+   - Try to conform to whatever standard is used in the file you're editing, if it differs (in
+     reasonable ways) from the above.
+
+   - Try to limit line lengths to 100 chars (allowing two side-by-side editors on laptops and three
+     on most standalone displays)
+*/
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
