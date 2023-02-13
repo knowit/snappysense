@@ -2,133 +2,83 @@
 
 # SnappySense third-generation prototype, 2022/2023
 
-(Why is not this file the same as the README file?)
+This document is about the technical architecture of the backend.  It is still rough.
 
-This document is about the technical architecture of the backend.  For general background and very
-high-level design, see [`../README.md`](../README.md) and [`../BACKGROUND.md`](../BACKGROUND.md).
+For general background and high-level design, see [`README.md`](README.md) and
+[`../BACKGROUND.md`](../BACKGROUND.md).  The following assumes that knowledge.
 
+## Overall back-end architecture
 
-## Overall architecture
+The SnappySense devices perform measurements and hold them for periodic upload by MQTT (see
+[`MQTT-PROTOCOL.md`](MQTT-PROTOCOL.md)).  When an MQTT message arrives at AWS IoT, matching MQTT
+topics are routed to AWS Lambda.  The Lambda functions store the data in DynamoDB databases (see
+[`DATA-MODEL.md`](DATA-MODEL.md)).
 
-The SnappySense devices perform measurements and cache them for upload.  The possible measurements
-are described under the table `FACTOR` in [`DATA-MODEL.md`](DATA-MODEL.md); more can be added, as
-other types of sensors become available.
+There exists (or must exist, TBD) a dashboard that allows new devices and locations and other
+metadata to be defined in the databases, and allow the measurements stored in the databases to be
+viewed.
 
-Each SnappySense device is provisioned with individual certificates and keys for AWS IoT (each
-device is a "Thing" in AWS IoT), as well as with credentials for a local WiFi network.
+By way of overview:
 
-The device communicates over WiFi to the AWS IoT MQTT infrastructure (see
-[`MQTT-PROTOCOL.md`](MQTT-PROTOCOL.md).  Matching MQTT topics are routed to AWS Lambda.  The Lambda
-functions store the data in DynamoDB databases (see [`DATA-MODEL.md`](DATA-MODEL.md)).
+- The database has mostly-static tables DEVICE (for device IDs and capabilities), CLASS (for device
+  classes), LOCATION (for known locations where devices can reside), FACTOR (for the types of things
+  that can be measured), and IDEAL (for computing the target settings for devices that can adjust
+  their environment).
 
-There exists (or must exist) a dashboard that allows new devices and locations and other metadata to
-be defined in the databases, and allow the measurements stored in the databases to be viewed.
+- The database has dynamic tables HISTORY (for the most recent sensor readings for each device) and
+  AGGREGATE (for aggregated readings).
+  
+The tables are described in detail [`DATA-MODEL.md`](DATA-MODEL.md).
 
-There must also exist various kinds of triggers or alerts: for readings that indicate a very bad
-environment; for devices that stop communicating.  These are somehow integrated into the dashboard.
+When a new device is registered it is always added to DEVICE.  If it belongs to a new device class,
+then CLASS must be updated.  If it has a new type of sensor, then FACTOR must be updated.  If it is
+going to be placed in a not previously known location, then LOCATION must be updated.  IDEAL is
+updated only very rarely, in conjunction with code changes that allow new target setting
+computations to be performed.
 
-## AWS IoT architecture
+(It's possible that IDEAL is a half-baked idea, so ignore that for now.)
 
-## Creating policies and roles for IoT devices
+When a "startup" message arrives from a device, the device's HISTORY entry is updated to record last
+contact, and a control message may be generated to (re)configure the device if the device's reported
+configuration differs from what's desired.  (The desired configuration is stored in the DEVICE
+table.)
 
+When a "reading" arrives from a device, the device's HISTORY entry is updated to add the new
+readings, and some old readings may be moved into the device's AGGREGATE table, see below.  Also, if
+a reading differs from the target value of the factor for the device (as computed by any ideal
+function) and the device is able to react to actuator messages, then a command message may be
+generated to trigger the actuator on the device.
 
-## Policy
+## Is Lambda and DynamoDB what we ought to be using?
 
-### Klient
+Possibly not, but it's a prototype.
 
-Hver klient skal ha et sertifikat med en AWS IoT Core Policy som tillater maksimalt:
+Likely, some container running on an EC2 instance, a relational DB and a relational data model make
+for a better solution if we ever get to the point where we have some real volume of devices and
+readings, and/or we get the UI people to develop proper UIs and backend support for them.
 
-* `iot:Connect`
-* `iot:Subscribe` til `snappy/control/+`
-* `iot:Subscribe` til `snappy/command/+`
-* `iot:Publish` til `snappy/startup/+/+`
-* `iot:Publish` til `snappy/reading/+/+`.
+## Dashboards and UIs
 
-TODO: Aller best ville være om vi kunne kvitte oss med `+` og pub/sub bare kan være med devicets egen klasse
-og ID, men det er foreløpig uklart om dette lar seg gjøre i en stor flåte av devices.  Men i tillegg til
-sikkerhet er det en annen fordel med en mer restriktiv policy: det blir mye mindre datatrafikk i en stor
-flåte av devices.
+TBD - this is a sketch, it's not the current focus.
 
-### Server
+There must exist various kinds of triggers or alerts: for readings that indicate a very bad
+environment; for devices that stop communicating.
 
-En server / lambda skal ha lov å lytte på og publisere til alt, antakelig.
+There must exist some interface that allows for devices, classes, factors, locations, and ideals to
+be added.
 
-The policy that allows an IoT route to route data to a lambda is created in IAM.  I have one that
-looks like this, called `my-iot-policy`:
+There must exist some basic interface to inspect all the tables.  At the moment, everything must be
+added by the AWS CLI (or maybe from the console, if the console can do what we need).  Obviously
+this is not acceptable.
 
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "lambda:*",
-            "Resource": "*"
-        }
-    ]
-}
-```
+All of this is some basic REST API, maybe the AWS API Gateway or something like that.
 
+## Aggregation
 
-## Creating certs for an IoT device
+It's currently undefined what "aggregation" means, and the AGGREGATE table is not properly defined
+in the data model.  Here are some notes:
 
-(This is suitable for a small fleet of devices.  There are other methods.)
-
-Open the AWS Management console as **Dataplattform production** if the cert is going to be
-long-lived and not just for testing / prototyping.
-
-Go to AWS IoT.  Under "Manage > Things", ask to create a single thing.
-
-The name of a SnappySense device is `snp_x_y_no_z` where `x.y` is the device type version (1.0 or
-1.1 at the time of writing; it's printed on the front of the circuit board) and `z` is the serial
-number within that type, usually handwritten on the underside of the processor board.
-
-Make sure **Thing Type** is `SnappySense`.
-
-The thing should have no device shadow, at this point.
-
-On the next screen, auto-generate certificates.
-
-You need to have created an IoT policy for these devices (see separate section).  On the next
-screen, pick that policy and then "Create Thing".
-
-You'll be presented with a download screen.  In a new directory, called `snp_x_y_no_z` as above,
-store all five files.
-
-## Server
-
-På server mottas meldingene og rutes etter hvert til en lambda.  For prototypen kjører vi dem når meldingen
-kommer inn, men i et produksjonsmiljø kan det være attraktivt å bruke en basic-ingest funksjon og
-deretter prosessere i batch for å holde kostnadene nede.  TBD.
-
-En lambda for snappy/startup/+/+ leser DEVICE og henter informasjon om devicets konfigurasjon.  Om
-dette avviker fra standard (devicet er på) eller det som er rapportert i startup-meldingen sendes en
-kontroll-melding til devicet for å konfigurere det.  I tillegg oppdaterer den et felt i HISTORY om
-siste kontakt fra devicet (sekunder siden epoch) og skriver evt informasjon om plassering.
-
-En lambda for snappy/reading/+/+ prosesserer måledataene.  Den oppdaterer HISTORY med siste kontakt
-og legger til nye verdier i tabellene for sensorene, og forkaster eldste verdier.  Når HISTORY er
-oppdatert beregnes ideal-verdiene for hver faktor som ble rapportert på stedet hvor denne sensoren
-står.  Hvis ideal-verdien er ulik den leste verdien (kanskje innenfor en faktor som er spesifikk for
-hver faktor?) og det er lenge nok siden sist en kommando ble sendt, sendes en action til aktivatoren
-for faktoren på stedet, om denne er definert.
-
-TODO: Aggregering over tid?
-
-En ideal-funksjon spesifiseres som en streng, men denne har litt struktur: den er enten et tall (som
-representerer ideal-verdien), navnet på en kjent funksjon (som da beregner ideal-verdien fra verdier
-den selv har), eller navnet på en kjent funksjon med parametre på formatet
-"navn/parameter/parameter".  (Litt uklart hvor komplekst dette bør gjøres.)  En typisk funksjon kan
-være "arbeidsdag/22/20", som sier at temperaturen under arbeidsdagen (definert i funksjonen) skal
-være 22 grader og under resten av tiden 20 grader.  Men minst like meningsfylt er om disse
-parameterverdiene ligger i en tabell et sted og er satt av brukeren.
-
-
-(Much missing here, needs to be moved)
-
-## Aggregating historical data somehow
-
-- this begs the purpose of gathering the data in the first place
+- aggregation begs the purpose of gathering the data in the first place
 - we want to record "conditions" and monitor them over time and alternatively also provide an
   indicator when "conditions" are bad
 - so meaningfully we might consider weekday as the primary key for a datum, as we care more about
@@ -141,16 +91,3 @@ parameterverdiene ligger i en tabell et sted og er satt av brukeren.
   consideration.  In principle, the table could be indexed by a triple, (location, day-of-the-week,
   hour-of-the-day)
 - this all makes it easy to report per-location and per-hour and/or per-day-of-the-week.
-
-## API
-
-The sensors, actuators, and backend communicate by MQTT, see mqtt-protocol.md in this directory.
-
-The frontend and the server communicate by REST.  But what is the API?
-
-- obvious first report is to get a plot (say, or even a table) of the reports for a factor for
-  a location over time
-- so there is some kind of selector for location, a selector for factor, and a selector for a
-  date range (could even be "last week", "last month", "last year") and maybe for a time of
-  day, this turns into a GET or POST and back comes a page
-

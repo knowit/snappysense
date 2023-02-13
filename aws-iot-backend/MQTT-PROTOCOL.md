@@ -82,9 +82,11 @@ message has a JSON payload with at least these fields:
 where `enable` controls whether the device performs and reports measurements, and `reading_interval`
 controls how often the measurements are taken.
 
-(This protocol is buggy and pointlessly restricts the names of devices and classes.  More sensibly,
-the topics would be `snappy/control-device/<device-id>`, `snappy/control-class/<device-class>`, and
-`snappy/control-all`.)
+(TODO: This protocol is buggy and pointlessly restricts the names of devices and classes.  More
+sensibly, the topics would be `snappy/control-device/<device-id>`,
+`snappy/control-class/<device-class>`, and `snappy/control-all`, or the format could be
+`snappy/control/<device-class>/<device-id>` where the class and ID could both be a wildcard
+character.)
 
 ## Command message
 

@@ -13,11 +13,11 @@ Right now this is a NoSQL model, and the data stored in HISTORY and AGGREGATE (a
 LOCATION) are not uniform, but vary with the device that reported data (or the nature of the
 location).
 
-## Location
+## LOCATION
 
 An entry in `LOCATION` represents a location where we can place sensors and actuators.  A location
-records the devices in it and every device records its location, so the tables must be maintained
-together.
+entry records the devices at the location and every device entry records its location, so the
+LOCATION and DEVICE tables must be maintained together.
 
 Observe that the actuators incorporate data about desired settings for the location.  The `idealfn`
 attribute is either an `ideal-id` or an `ideal-id` concatenated with constant parameters, separated
@@ -49,14 +49,14 @@ Example:
     earth: "@60.00438419,10.84708148,397.04017576a"
 ```
 
-## Device
+## DEVICE
 
 An entry in `DEVICE` represents a single device, which can be a sensor or an actuator or both.  The
 default for `enabled` is 1.  The default for `reading_interval` is something sensible.
 
 DynamoDB table name: `snappy_device`.  Primary key: `device`.  Sort key: `class`.
 
-Note that a device name cannot match any class name or the string `all`.  (This is probably a bug
+Note that a device name cannot match any class name or the string `all`.  (TODO: This is probably a bug
 having to do with the control message protocol; it should be fixed.)
 
 TODO: It's possible that the `reading_interval` on a device should be per factor and not for the
@@ -92,15 +92,15 @@ Example:
     actuators: ["temperature"]
 ```
 
-## Class
+## CLASS
 
 There is one entry in `CLASS` for each device class.  These are are mostly informational and for
 optimizing communication, further use TBD.
 
 DynamoDB table name: `snappy_class`.  Primary key: `class`.
 
-Note that a class name cannot match any device name or the string `all`.  (This is probably a bug
-having to do with the control message protocol; it should be fixed.)
+Note that a class name cannot match any device name or the string `all`.  (TODO: This is probably a
+bug having to do with the control message protocol; it should be fixed.)
 
 ```
 CLASS
@@ -116,7 +116,7 @@ Examples:
     class: "humidifierxyz", description: "Bosch Humidifier XYZ"
 ```
 
-## Factor
+## FACTOR
 
 There is one entry in `FACTOR` for each type of measurement factor known to the sensor fleet and the
 code.  When a new `FACTOR` is added it's because we want to add a new device with a new kind of
@@ -152,7 +152,7 @@ The factors known so far are the ones measured by the SnappySense device:
 
 but there can be others.
 
-## History
+## HISTORY
 
 There is one entry in `HISTORY` for each device.  The entry holds the last readings from the device,
 the last actions, and information about the time of last contact.  These attributes are logically
@@ -187,12 +187,12 @@ HISTORY
     ... additional history fields
 ```
 
-## Aggregate
+## AGGREGATE
 
 TODO: This is a table keyed on location (and maybe other things) that holds aggregate readings
-per locations.
+per locations.  See DESIGN.md for some notes.
 
-## Ideal
+## IDEAL
 
 Ideal functions are embedded in the server code and the `IDEAL` table can be updated only when the
 code is updated at the same time.

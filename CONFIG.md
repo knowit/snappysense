@@ -1,3 +1,5 @@
+-*- fill-column: 100 -*-
+
 # Factory provisioning
 
 ## Individual factory provisioning
@@ -29,13 +31,15 @@ where `snp_x_y_no_z.cfg` is the name of the configuration file for the device wh
 `snp_x_y_no_z`, see `aws-iot-backend/README.md`, and `192.168.a.b` is the IP address printed on the
 device screen.
 
-Then reset the device.  To check that the device has been configured properly one can connect to it
-with a terminal from VS Code (if the software is set up with the serial command server) and use the
-`config` command to print the current configuration.
+Note (Issue #47) that there is currently no sensible reporting of errors in the config file.  To
+check that the device has been configured properly you can use the `/show` command as outlined above
+while still connected to the AP.
+
+### Config syntax
 
 The syntax of the config file is as follows.  (An example configuration file is also in
-`firmware-arduino/src/configuration_template.txt`, and it may be useful to read
-`aws-iot-backend/README.md`.)
+`firmware-arduino/src/configuration_template.txt`, and it will be useful to read
+`aws-iot-backend/README.md` about how to obtain the device identity and certficiates.)
 
 The config file has a line-oriented syntax.  Blank lines are ignored and generally whitespace is
 insignificant except within quoted values and in the payloads for `cert`.  Comment lines start with
@@ -74,14 +78,17 @@ Annotated grammar:
 	  -- after the last payload line.
 ```
 
+
 ## Re-provisioning
 
 It's important not to proliferate device IDs and certs too much, so save the config file and other
-key files for each device for use during future re-provisioning, should it become necessary.
+key files for each device for use during future re-provisioning, should it become necessary.  See
+also `aws-iot-backend/README.md` about this.
+
 
 ## Bulk provisioning (sketch; not implemented, but not hard)
 
-Note that the above method using `curl` to post text files is somewhat easily scriptable.  The
-script would be given the name of the device and its network and IP address, would contact AWS to
-generate the necessary files, would create a configuration, and would upload it.  The thing that's
-hardest to script is probably the connection to the device's AP.
+Note that the above method using `curl` to post text files is scriptable.  The script could be given
+the name of the device and its network and IP address, would contact AWS to generate the necessary
+files, would create a configuration, and would upload it.  The thing that's hardest to script is
+probably the connection to the device's access point.
