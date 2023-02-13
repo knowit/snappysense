@@ -71,12 +71,8 @@ static bool write_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned val) {
 static bool read_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned* response) {
   uint8_t msg = reg;
   uint8_t buf[2];
-  if (i2c_master_write_to_device(self->bus, self->address, &msg, sizeof(msg),
-				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
-    return false;
-  }
-  if (i2c_master_read_from_device(self->bus, self->address, buf, sizeof(buf),
-				  pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+  if (i2c_master_write_read_device(self->bus, self->address, &msg, 1,
+                                   buf, 2, pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
     return false;
   }
   *response = (buf[1] << 8) | buf[0];
@@ -86,12 +82,8 @@ static bool read_reg16(dfrobot_sen0514_t* self, unsigned reg, unsigned* response
 static bool read_reg8(dfrobot_sen0514_t* self, unsigned reg, unsigned* response) {
   uint8_t msg = reg;
   uint8_t buf;
-  if (i2c_master_write_to_device(self->bus, self->address, &msg, sizeof(msg),
-				 pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
-    return false;
-  }
-  if (i2c_master_read_from_device(self->bus, self->address, &buf, sizeof(buf),
-				  pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
+  if (i2c_master_write_read_device(self->bus, self->address, &msg, 1,
+                                   &buf, 1, pdMS_TO_TICKS(self->timeout_ms)) != ESP_OK) {
     return false;
   }
   *response = buf;
