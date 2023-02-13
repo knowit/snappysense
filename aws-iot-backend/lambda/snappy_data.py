@@ -2,8 +2,8 @@
 #
 # Database operations for snappysense.
 #
-# See ../mqtt-protocol.md for a description of the messages.
-# See ../data-model.md for a description of the databases.
+# See ../MQTT-PROTOCOL.md for a description of the messages.
+# See ../DATA-MODEL.md for a description of the databases.
 
 import boto3
 
@@ -95,16 +95,16 @@ def get_history_entry_or_create(db, device):
     history_entry = get_history_entry(db, device)
     if history_entry == None:
         history_entry = {"device":       {"S": device},
-                         "last_contact": {"N":"0"},
+                         "last_contact": {"S":""},
                          "readings":     {"L": []},
                          "actions":      {"L":[]}}
     return history_entry
 
 def history_last_contact(history_entry):
-    return int(history_entry["last_contact"]["N"])
+    return history_entry["last_contact"]["S"]
 
 def set_history_last_contact(history_entry, time):
-    history_entry["last_contact"]["N"] = str(time)
+    history_entry["last_contact"]["S"] = time
 
 # These nested structures are hellish.
 #
@@ -112,11 +112,11 @@ def set_history_last_contact(history_entry, time):
 #   ...,
 #   "readings": {
 #       "L": [ { "M": { "factor": {"S", str},
-#                       "last":   {"L": [ {"M": {"time":  {"N",str},
+#                       "last":   {"L": [ {"M": {"time":  {"S",str},
 #                                                "value": {"N",str}}}, ... ]}}} ] },
 #   "actions": {
 #       "L": [ { "M": { "factor": {"S", str},
-#                       "last":   {"L": [ {"M": {"time":    {"N",str},
+#                       "last":   {"L": [ {"M": {"time":    {"S",str},
 #                                                "reading": {"N",str}}},
 #                                                "ideal":   {"N",str}}}, ... ]}}} ] }
 # }
@@ -127,7 +127,7 @@ def history_readings(history_entry):
     for reading in history_entry["readings"]["L"]:
         factor_name = reading["M"]["factor"]["S"]
         for last in reading["M"]["last"]["L"]:
-            res.append({"time":      int(last["M"]["time"]["N"]),
+            res.append({"time":      last["M"]["time"]["S"],
                         factor_name: int(last["M"]["value"]["N"])})
     return res
 
@@ -135,7 +135,7 @@ def history_entry_add_reading(history_entry, factor, time, reading):
     factor_entry = find_for_factor(history_entry, "readings", factor)
 
     # Push the new one onto the front and retire old ones from the end
-    factor_entry.insert(0, {"M": {"time":  {"N": str(time)},
+    factor_entry.insert(0, {"M": {"time":  {"S": time},
                                   "value": {"N": str(reading)}}})
 
     while len(factor_entry) > MAX_FACTOR_HISTORY:
@@ -146,7 +146,7 @@ def history_actions(history_entry):
     for reading in history_entry["actions"]["L"]:
         factor_name = reading["M"]["factor"]["S"]
         for last in reading["M"]["last"]["L"]:
-            res.append({"time":      int(last["M"]["time"]["N"]),
+            res.append({"time":      last["M"]["time"]["S"],
                         factor_name: int(last["M"]["reading"]["N"]),
                         "ideal":     int(last["M"]["ideal"]["N"])})
     return res
@@ -155,7 +155,7 @@ def history_entry_add_action(history_entry, factor, time, reading, ideal):
     factor_entry = find_for_factor(history_entry, "actions", factor)
 
     # Push the new one onto the front and retire old ones from the end
-    factor_entry.insert(0, {"M": {"time":    {"N": str(time)},
+    factor_entry.insert(0, {"M": {"time":    {"S": time},
                                   "reading": {"N": str(reading)},
                                   "ideal":   {"N": str(ideal)}}})
     while len(factor_entry) > MAX_ACTION_HISTORY:

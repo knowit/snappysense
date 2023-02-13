@@ -94,7 +94,7 @@ def test_startup():
         dynamodb,
         {"device":           "1",
          "class":            "RPi2B+",
-         "time":             1,
+         "time":             "2023-02-03T16:55/fri",
          "reading_interval": 0},
         {})
 
@@ -102,7 +102,7 @@ def test_startup():
         dynamodb,
         {"device":           "2",
          "class":            "Thermostat",
-         "time":             2,
+         "time":             "2023-02-04T16:55/sat",
          "reading_interval": 0},
         {})
 
@@ -114,7 +114,7 @@ def test_startup():
     #
 
     h1 = snappy_data.get_history_entry(dynamodb, "1")
-    assert snappy_data.history_last_contact(h1) == 1
+    assert snappy_data.history_last_contact(h1) == "2023-02-03T16:55/fri"
     r1 = snappy_data.history_readings(h1)
     assert len(r1) == 0
 
@@ -122,14 +122,14 @@ def test_startup():
         dynamodb,
         {"device":  "1",
          "class":   "RPi2B+",
-         "time":    12345,
+         "time":    "2023-02-05T16:55/sun",
          "factor":  "temperature",
          "reading": 21},
         {})
     assert len(responses) == 0
 
     h1 = snappy_data.get_history_entry(dynamodb, "1")
-    assert snappy_data.history_last_contact(h1) == 12345
+    assert snappy_data.history_last_contact(h1) == "2023-02-05T16:55/sun"
     r1 = snappy_data.history_readings(h1)
     assert len(r1) == 1
     assert r1[0]["temperature"] == 21
@@ -141,7 +141,7 @@ def test_startup():
     # the last event.
 
     h2 = snappy_data.get_history_entry(dynamodb, "2")
-    assert snappy_data.history_last_contact(h2) < 12345
+    assert snappy_data.history_last_contact(h2) < "2023-02-05T16:55/sun"
     r2 = snappy_data.history_readings(h2)
     assert len(r2) == 0
     a2 = snappy_data.history_actions(h2)
@@ -159,14 +159,14 @@ def test_startup():
         dynamodb,
         {"device":  "1",
          "class":   "RPi2B+",
-         "time":    12346,
+         "time":    "2023-02-06T16:55/mon",
          "factor":  "temperature",
          "reading": 19},
         {})
     assert len(responses) == 1
 
     h1 = snappy_data.get_history_entry(dynamodb, "1")
-    assert snappy_data.history_last_contact(h1) == 12346
+    assert snappy_data.history_last_contact(h1) == "2023-02-06T16:55/mon"
     r1 = snappy_data.history_readings(h1)
     assert len(r1) == 2
     assert r1[0]["temperature"] == 19
@@ -175,7 +175,7 @@ def test_startup():
     assert len(a1) == 0
 
     h2 = snappy_data.get_history_entry(dynamodb, "2")
-    assert snappy_data.history_last_contact(h2) == 12346
+    assert snappy_data.history_last_contact(h2) == "2023-02-06T16:55/mon"
     r2 = snappy_data.history_readings(h2)
     assert len(r2) == 0
     a2 = snappy_data.history_actions(h2)
@@ -185,4 +185,4 @@ def test_startup():
     assert "ideal" in a2[0]
     assert a2[0]["temperature"] == 19
     assert a2[0]["ideal"] == 21
-    assert a2[0]["time"] == 12346
+    assert a2[0]["time"] == "2023-02-06T16:55/mon"

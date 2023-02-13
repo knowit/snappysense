@@ -91,7 +91,7 @@ def test_startup():
         dynamodb,
         {"device":           "1",
          "class":            "RPi2B+",
-         "time":             12345,
+         "time":             "2023-02-05T16:55/sun",
          "reading_interval": snappy_data.DEFAULT_READING_INTERVAL},
         {})
     assert len(responses) == 0
@@ -108,7 +108,7 @@ def test_startup():
         dynamodb,
         {"device":           "1",
          "class":            "RPi2B+",
-         "time":             12345,
+         "time":             "2023-02-05T16:55/sun",
          "reading_interval": 4},
         {})
 
@@ -132,7 +132,7 @@ def test_startup():
         dynamodb,
         {"device":           "3",
          "class":            "MBPM1Max",
-         "time":             12345,
+         "time":             "2023-02-05T16:55/sun",
          "reading_interval": 0},
         {})
     assert len(responses) == 1

@@ -3,8 +3,8 @@
 # Respond to a SnappySense "reading" message by recording the reading in the history for the device
 # and computing and sending relevant actuator commands for the location of the device.
 #
-# See ../mqtt-protocol.md for a description of the messages.
-# See ../data-model.md for a description of the databases.
+# See ../MQTT-PROTOCOL.md for a description of the messages.
+# See ../DATA-MODEL.md for a description of the databases.
 
 import snappy_data
 import snappy_mqtt
@@ -12,7 +12,7 @@ import snappy_mqtt
 # Input fields
 #   device - string
 #   class - string
-#   time - integer
+#   time - string
 #   factor - string
 #   reading - number
 

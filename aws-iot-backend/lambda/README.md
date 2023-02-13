@@ -4,14 +4,14 @@
 
 This is prototype AWS Lambda code for the SnappySense back-end.
 
-snappy_data.py and snappy_mqtt.py make up the lower layer; these communicate with AWS dynamodb and
+`snappy_data.py` and `snappy_mqtt.py` make up the lower layer; these communicate with AWS dynamodb and
 AWS iot-data.
 
-Application logic is in snappy_startup.py, which handles "snappy/startup/+/+" events (device startup
-messages), and in snappy_reading.py, which handles "snappy/reading/+/+" events (device reading
-messages).
+Application logic is in `snappy_startup.py`, which handles `snappy/startup/+/+` events (device
+startup messages), and in `snappy_reading.py`, which handles `snappy/reading/+/+` events (device
+reading messages).
 
-See .md files in the parent directory for design documents.
+See various `*.md` files in the parent directory for design documents.
 
 To run application logic regression tests, execute in this directory:
 ```

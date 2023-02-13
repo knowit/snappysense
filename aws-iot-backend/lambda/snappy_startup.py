@@ -3,8 +3,8 @@
 # Respond to a SnappySense "startup" MQTT package by recording the time in the history for the
 # device and computing and sending relevant configuration commands for the device.
 #
-# See ../mqtt-protocol.md for a description of the messages.
-# See ../data-model.md for a description of the databases.
+# See ../MQTT-PROTOCOL.md for a description of the messages.
+# See ../DATA-MODEL.md for a description of the databases.
 
 import snappy_data
 import snappy_mqtt
@@ -12,7 +12,7 @@ import snappy_mqtt
 # Input fields
 #   device - string
 #   class - string
-#   time - integer
+#   time - string
 #   reading_interval - integer(may eventually be absent but for now assume it's 0 if irrelevant)
 
 def startup_event(event, context):

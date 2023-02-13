@@ -2,8 +2,8 @@
 #
 # MQTT stuff for SnappySense.
 #
-# See ../mqtt-protocol.md for a description of the messages.
-# See ../data-model.md for a description of the databases.
+# See ../MQTT-PROTOCOL.md for a description of the messages.
+# See ../DATA-MODEL.md for a description of the databases.
 
 import boto3
 import json
