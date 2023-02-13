@@ -63,11 +63,11 @@ static void ssd1306_Init(SSD1306_Device_t* device) {
   /* Set Page Start Address for Page Addressing Mode,0-7 */
   ssd1306_WriteCommand(device, 0xB0);
 
-#ifdef SSD1306_MIRROR_VERT
-  ssd1306_WriteCommand(device, 0xC0); // Mirror vertically
-#else
-  ssd1306_WriteCommand(device, 0xC8); //Set COM Output Scan Direction
-#endif
+  if (device->flags & SSD1306_FLAG_MIRROR_VERT) {
+    ssd1306_WriteCommand(device, 0xC0); // Mirror vertically
+  } else {
+    ssd1306_WriteCommand(device, 0xC8); //Set COM Output Scan Direction
+  }
 
   ssd1306_WriteCommand(device, 0x00); //---set low column address
   ssd1306_WriteCommand(device, 0x10); //---set high column address
@@ -76,17 +76,17 @@ static void ssd1306_Init(SSD1306_Device_t* device) {
 
   ssd1306_SetContrast(device, 0xFF);
 
-#ifdef SSD1306_MIRROR_HORIZ
-  ssd1306_WriteCommand(device, 0xA0); // Mirror horizontally
-#else
-  ssd1306_WriteCommand(device, 0xA1); //--set segment re-map 0 to 127 - CHECK
-#endif
+  if (device->flags & SSD1306_FLAG_MIRROR_HORIZ) {
+    ssd1306_WriteCommand(device, 0xA0); // Mirror horizontally
+  } else {
+    ssd1306_WriteCommand(device, 0xA1); //--set segment re-map 0 to 127 - CHECK
+  }
 
-#ifdef SSD1306_INVERSE_COLOR
-  ssd1306_WriteCommand(device, 0xA7); //--set inverse color
-#else
-  ssd1306_WriteCommand(device, 0xA6); //--set normal color
-#endif
+  if (device->flags & SSD1306_FLAG_INVERSE_COLOR) {
+    ssd1306_WriteCommand(device, 0xA7); //--set inverse color
+  } else {
+    ssd1306_WriteCommand(device, 0xA6); //--set normal color
+  }
 
   // Set multiplex ratio.
   if (device->height == 128) {
@@ -139,11 +139,12 @@ static void ssd1306_Init(SSD1306_Device_t* device) {
 }
 
 bool ssd1306_Create(SSD1306_Device_t* device, unsigned bus, unsigned i2c_addr,
-                    unsigned width, unsigned height) {
+                    unsigned width, unsigned height, unsigned flags) {
   device->bus = bus;
   device->addr = i2c_addr;
   device->width = width;
   device->height = height;
+  device->flags = flags;
   device->initialized = false;
   device->display_on = false;
   device->i2c_failure = false;

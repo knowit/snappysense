@@ -36,23 +36,28 @@ SOFTWARE.
 #include "framebuf.h"
 
 /* This is allocated, with a larger buffer, inside a single memory area.  All fields
-   should be considered private to the driver.
-   
-   TODO: This is public only for the sake of SSD1306_DEVICE_SIZE, can we fix that? */
+   should be considered private to the driver.  */
 typedef struct {
   unsigned bus;                 /* I2C bus number */
   unsigned addr;                /* I2C device address, unshifted */
   unsigned width;               /* Width of screen in pixels */
   unsigned height;              /* Height of screen in pixels */
+  unsigned flags;               /* Flag values - internal use */
   bool     i2c_failure;		/* Set to true if low-level i2c write commands fail */
   bool     initialized;         /* Set to true once ssd1306_Init succeeds */
   bool     display_on;          /* Set to true once the display has been enabled */
 } SSD1306_Device_t;
 
+enum {
+  SSD1306_FLAG_MIRROR_VERT = 1,   /* Mirror vertically */
+  SSD1306_FLAG_MIRROR_HORIZ = 2,  /* Mirror horizontally */
+  SSD1306_FLAG_INVERSE_COLOR = 4, /* Use inverse colors */
+};
+
 /* This will initialize the device struct.  The only valid heights are 32, 64, and 128.  The effects
-   of other values are unspecified. */
+   of other values are unspecified.  Flags is bitwise OR of SSD1306_FLAG_ values above. */
 bool ssd1306_Create(SSD1306_Device_t* mem, unsigned bus, unsigned i2c_addr,
-                    unsigned width, unsigned height) WARN_UNUSED;
+                    unsigned width, unsigned height, unsigned flags) WARN_UNUSED;
 
 /* Procedure definitions.  Where noted these set device->i2c_failure if there's a write failure to
    the device, and will frequently be no-ops if that flag is already set.  Writes outside the buffer

@@ -157,7 +157,7 @@ bool initialize_i2c_sen0514() {
 bool initialize_i2c_ssd1306() {
   /* Check the OLED and initialize it */
   return (have_ssd1306 = ssd1306_Create(&ssd1306, SSD1306_BUS, SSD1306_ADDRESS,
-					SSD1306_WIDTH, SSD1306_HEIGHT));
+					SSD1306_WIDTH, SSD1306_HEIGHT, /* flags= */ 0));
 }
 #endif
 

@@ -90,27 +90,12 @@
    Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
 #define SNAPPY_I2C_SSD1306
 #ifdef SNAPPY_I2C_SSD1306
-/* Mirror the screen if needed.
-
-   TODO: These should be parameters to the device init, not global defines. */
-/*
-# define SSD1306_MIRROR_VERT
-# define SSD1306_MIRROR_HORIZ
-*/
-
 /* If your screen horizontal axis does not start in column 0 you can use this define to adjust the
    horizontal offset.
 
    TODO: This is not supported in the code, plus it should be in the device or in the framebuffer. */
 /*
 # define SSD1306_X_OFFSET
-*/
-
-/* Set inverse color if needed.
-
-   TODO: This should be a parameter to the device init, not a global define. */
-/*
-# define SSD1306_INVERSE_COLOR
 */
 
 /* Include only needed fonts */
