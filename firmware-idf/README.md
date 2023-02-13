@@ -1,9 +1,12 @@
-# ESP32-IDF based firmware for SnappySense
+-*- fill-column: 100 -*-
+
+# FreeRTOS (and ESP32-IDF) based firmware for SnappySense
 
 ## Overview
 
-This is a work in progress.  It ports the SnappySense firmware from the Arduino framework to the
-ESP32-IDF framework, which is lower level, higher quality, and C-based.
+This is a work in progress.  It ports the SnappySense firmware from the Arduino framework to
+almost-pure FreeRTOS, with the ESP32-IDF framework only at the device interface level for now.
+FreeRTOS+IDF is at a lower lower level than Arduino but higher quality (as well as C-based).
 
 I'm not using VS Code for this, just emacs; YMMV.
 
@@ -21,17 +24,23 @@ etc.
 
 ## Thoughts
 
-For the IDF firmware I'm being more careful about how the device operates and more constrained in
-how the firmware is constructed.  The Arduino firmware uses a fairly loose tasking system for
-everything; the IDF firmware instead has a single main task that runs a state machine that loops
-through a sleep-monitor-communicate-sleep-... cycle.
+For the FreeRTOS-based firmware I'm being more careful about how the device operates and more
+constrained in how the firmware is constructed.  The Arduino firmware uses a fairly loose tasking
+system for everything; the FreeRTOS firmware instead has a single main task that runs a state
+machine that loops through a sleep-monitor-communicate-sleep-... cycle.  There are a couple of
+helper tasks but these are not strictly necessary.
 
-Also, the IDF firmware is more careful about what it reports, and much more careful about handling
-errors to avoid corrupted or meaningless data.
+Also, the FreeRTOS-based firmware is more careful about what it reports, and much more careful about
+handling errors to avoid corrupted or meaningless data.
 
-Finally, I want the IDF firmware to be non-polling and power-usage-friendly.  This includes input
-coming from the serial line, the network, buttons, the motion sensor, and other infrequent
-"peripherals".
+Finally, I want the FreeRTOS-based firmware to be non-polling and power-usage-friendly.  This
+includes input coming from the serial line, the network, buttons, the motion sensor, and other
+infrequent "peripherals".
+
+There are relatively few and light dependencies on ESP32-IDF so far.  I expect that it would be
+straightforward to move much of the code to an STM32 system, with HAL easily taking the place of
+ESP32-IDF in many places.  Of course for higher-level services (HTTP, TCP, etc) there might be more
+differences.
 
 ## TODO
 
@@ -39,6 +48,9 @@ coming from the serial line, the network, buttons, the motion sensor, and other 
 
 **Piezo player**: this needs to use the ledc library directly, not the ledc superstructure for Arduino
 (which is not supported with ESP32-IDF).
+
+**MEMS (sound sensor)**: this needs to program the ADC directly, not rely on the preprogramming of
+the ADC by the Arduino framework.
 
 ### Unstarted high priority
 
@@ -54,32 +66,10 @@ abstraction; under IDF it'll be something else.  Note it is highly desirable tha
 formats be compatible for the two firmware variants, or completely separate.
 
 **Factory configuration**: The Arduino firmware supports a factory configuration setup where a
-config can be uploaded over the serial line, we need something similar.  We don't need to worry
-about power consumption in this mode.  There are a couple of options:
+config can be uploaded to a web server, we need something similar.  It's a simple UI, it can be used
+the same way for end-user configuration, and there's no reason to do something more complicated.
 
-- Use the serial line; this is probably simplest but it does require a PC with the necessary software
-- Connect via i2c from another dedicated "programming" device; this is sort of sexy but complicated
-- Have the device connect to a pre-configured access point and ask for its configuration
-- Have the device erect an access point and upload the config via the web, this should not be hard and
-  requires only a web browser or indeed a terminal and curl.
-- As the previous one, but don't even listen for web traffic - just listen on a TCP port and receive
-  some text data.  Now all we need is netcat.
-- Upload a file to the device's file system, do not involve application logic.  If the device does not
-  find the file it will show an error and hang.  This reduces the amount of logic on the device.
-  NVRAM settings (for a few things) override or complement the settings in the file.  It looks like
-  this can be accomplished using some combination of spiffsgen.py and parttool.py,
-  https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html#spiffsgen.py
-- NFC, bluetooth
-- SD card
-
-I probably favor the solution where the device either opens an AP or connects to a known AP in
-config mode and then listens on a port for a config file, the necessary information can be displayed
-on the screen.
-
-Of course, *end-user* config also needs some kind of solution and that may be a web server :-/
-
-The preconfigured AP can be provided by another ESP32... but then that one needs to generate data
-and so on, and none of that will work out OK.
+(If the web server *is* too complicated then listening on a TCP port should still be possible.)
 
 **User configuration**: The Arduino firmware supports the user setting upp wifi (and some other
 things) via a web page hosted by the device; we need something similar.
