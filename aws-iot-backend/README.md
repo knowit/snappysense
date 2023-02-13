@@ -31,29 +31,45 @@ It must allow alerts to be viewed and stats to be shown.)
 
 ## Creating a Thing and obtaining its identity documents
 
-- Creating a role for the thing
-- Naming the thing, it is usually `snp_x_y_no_z` for version x.y devices, s/n z within that version.
-- Creating the thing
-- Creating a directory `snp_x_y_no_z` to hold secrets
-- Downloading the information into that directory
-
-
-### Creating certs for an IoT device
-
 (NOT FINISHED)
 
 (This is suitable for a small fleet of devices.  There are other methods.)
+
+Every device ("Thing") needs a unique _Thing name_.  The name format for a SnappySense thing is
+usually `snp_x_y_no_z` for devices with hardware version `x.y` and serial number `z` within that
+version, ie, `snp_1_2_no_37` has hardware v1.2 and serial number 37.  Non-SnappySense things should
+use their own, compact, class designators (eg `rpi` would make sense for Raspberry Pis).
+
+Every thing also has a _Thing type_.  For SnappySense, the thing type is "SnappySense".
+Non-SnappySense things should have type names that are descriptive (eg "RaspberryPi"); stick to
+letters, digits, `-` and `.`.
+
+The thing must be registered in our backend databases; see [DESIGN.md](DESIGN.md).
+
+Every thing has a number of files containing secrets: certificates from AWS, and a configuration
+file containing these certificates as well as WiFi passwords and similar.  As a matter of hygiene,
+these files should all be stored together in a directory that has the same name as the thing.  Also
+see the sections below on "Factory provisioning" and "Saving the secrets for later".
+
+If this is the first time we're creating a thing, then a role will need to be created for the thing
+to assume when ...  (Anyway see below.  But we need the name of the role here so that it can be
+assigned to the thing.) (Or do we need a policy?)
+
+for routing its messages to lambda
+and a role for that rule will need to be created.  
+
+- Creating a role for the thing
+- Creating the thing
+- Downloading the information into that directory
+
+
 
 Open the AWS Management console as **Dataplattform production** if the cert is going to be
 long-lived and not just for testing / prototyping.
 
 Go to AWS IoT.  Under "Manage > Things", ask to create a single thing.
 
-The name of a SnappySense device is `snp_x_y_no_z` where `x.y` is the device type version (1.0 or
-1.1 at the time of writing; it's printed on the front of the circuit board) and `z` is the serial
-number within that type, usually handwritten on the underside of the processor board.
-
-Make sure **Thing Type** is `SnappySense`.
+Give it a Thing name and Thing type as described above.
 
 The thing should have no device shadow, at this point.
 
@@ -62,8 +78,8 @@ On the next screen, auto-generate certificates.
 You need to have created an IoT policy for these devices (see separate section).  On the next
 screen, pick that policy and then "Create Thing".
 
-You'll be presented with a download screen.  In a new directory, called `snp_x_y_no_z` as above,
-store all five files.
+You'll be presented with a download screen.  In your new directory, called `snp_x_y_no_z` as
+described above, store all five files.
 
 ### Klient
 
