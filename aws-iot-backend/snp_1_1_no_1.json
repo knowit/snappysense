@@ -1,0 +1,10 @@
+{
+    "device": {"S": "snp_1_1_no_1"},
+    "class": {"S": "SnappySense"},
+    "location": {"S": "ambulatory"},
+    "enabled": {"N": "1"},
+    "reading_interval": {"N": "3600"},
+    "sensors": {"SS": ["temperature", "humidity", "uv", "light",
+		       "pressure", "airsensor", "airquality", "tvoc",
+		       "co2", "motion", "noise"]}
+}

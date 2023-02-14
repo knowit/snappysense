@@ -186,7 +186,7 @@ In AWS > Management console > Lambda, click "Create function" and give it these 
 
 Next, you're in the function code view.
 
-* Paste in the code from the file `test_lambda.py` in the present directory
+* Paste in the code from the file `echo_lambda.py` in the present directory
 * In the Runtime settings panel, set the handler name to `lambda_function.snappysense_event`
 * Click "Deploy" to update the code
 
@@ -207,8 +207,8 @@ In AWS > Management console > IoT Core > Message Routing > Rules, create a new r
 * For the action, choose "Lambda" and then choose `snappySense` as the lambda function
 * Click "Next" until you're done.
 
-Now **repeat that** with the difference that the rule name is `snappySenseReading`, the topic filter
-is `snappy/reading/+/+`, and that "reading" replaces "startup" in the description.
+Now **repeat those steps** with the difference that the rule name is `snappySenseReading`, the topic
+filter is `snappy/reading/+/+`, and that "reading" replaces "startup" in the description.
 
 (The reason for having two rules is to avoid a wildcard that might accidentally match a message
 coming back from the Lambda, heading to a Thing.)
@@ -224,32 +224,85 @@ class, and device).  Repeat the experiment for `snappy/reading/1/1`.
 
 Once this test passes, you know that message routing works within AWS.
 
+## Setting up the database tables
 
-### Setting up the databases
+### The data model and the tables
 
+There are seven database tables, though only three are used by the backend code as of February 2023:
+`snappy_device`, `snappy_location`, and `snappy_history`.  Their fields and keys are defined
+in [DATA-MODEL.md](DATA-MODEL.md), though being NoSQL the fields don't matter for database creation.
 
-### Server
+To create a table, go to AWS > Management console > DynamoDB.  Then:
 
-(NOT FINISHED)
+* Click on "Tables"
+* Click on "Create table"
+* Table name, partition key and sort key should be as outlined below
+* Table settings can remain at Default
+* Click "Create table"
 
-En server / lambda skal ha lov å lytte på og publisere til alt, antakelig.
+For `snappy_device`, the Paritition key is `device` (String) and the Sort key is `class` (String).
 
-The policy that allows an IoT route to route data to a lambda is created in IAM.  I have one that
-looks like this, called `my-iot-policy`:
+For `snappy_location`, the Partition key is `location` (String) and the Sort key is empty.
+
+For `snappy_history`, the Partition key is `device` (String) and the Sort key is empty.
+
+For `snappy_class`, the Partition key is `class` (String) and the Sort key is empty.
+
+For `snappy_factor`, the Partition key is `factor` (String) and the Sort key is empty.
+
+The remaining two tables we'll get back to when they become relevant.
+
+TODO: How to do this with AWS CLI.
+
+### Adding data to the database without any UI
+
+In particular, we will need to add new Things to `snappy_device` and new locations to
+`snappy_location`, and ideally to view these databases.
+
+Fortunately the [AWS CLI for
+DynamoDB](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/dynamodb/index.html)
+comes to the rescue.  For example, to add a new device record to `snappy_device`, place the record in a file (see
+`snp_1_1_no_1.json` in this directory for an example) and then add it with a shell command:
 
 ```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": "lambda:*",
-            "Resource": "*"
-        }
-    ]
-}
+aws dynamodb put-item --table-name snappy_device --item file://snp_1_1_no_1.json
 ```
 
+TODO: The JSON layout of records must be added to DATA-MODEL.md.
+
+To examine the contents of a table (anyway for small tables), use `scan`:
+```
+aws dynamodb scan --table-name snappy_device
+```
+
+To examine a specific item, you can use `get-item`, which awkwardly requires both the Partition and the Sort key:
+```
+aws dynamodb get-item --table-name snappy_device --key '{"device":{"S":"snp_1_1_no_1"},"class":{"S":"SnappySense"}}'
+```
+
+There are myriad ways to customize the output and to perform selection.  The command language is
+powerful but quite arcane and is best thought of as the target language for a database-operation
+compiler.
+
+TODO: Write that compiler, or at least shell scripts that perform common tasks.
+
+In practice, using the CLI to maintain the database is not really workable, but it is enough for
+some simple prototyping and testing.
+
+### Testing that database access works from the lambda
+
+Open the lambda console and paste in the code from `db_lambda.py` in the present directory to
+replace the earlier test code.  Deploy it.
+
+In the MQTT console, subscribe to `#` if you haven't, then publish a message with the topic
+`snappy/startup/1/1` and a body like this:
+
+```
+{ "query": "snp_1_1_no_1" }
+```
+
+If that device had earlier been entered into the database using the CLI, the contents of the record
+will be echoed back at you in the console now.
 
 ## Factory provisioning a SnappySense device
 

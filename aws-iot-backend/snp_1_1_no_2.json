@@ -1,0 +1,10 @@
+{
+    "device": {"S": "snp_1_1_no_2"},
+    "class": {"S": "SnappySense"},
+    "location": {"S": "Universitetsgata 1"},
+    "enabled": {"N": "1"},
+    "reading_interval": {"N": "1800"},
+    "sensors": {"SS": ["temperature", "humidity", "uv", "light",
+		       "pressure", "airsensor", "airquality", "tvoc",
+		       "co2", "motion", "noise"]}
+}

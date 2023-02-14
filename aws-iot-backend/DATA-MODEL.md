@@ -5,9 +5,10 @@
 This is the data model definition for the SnappySense back-end based on AWS Lambda.  For notes on
 the overall design, see DESIGN.md in this directory.
 
-This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION, DEVICE, CLASS, IDEAL,
-FACTOR, HISTORY, and AGGREGATE.  The first five are mostly static, while HISTORY and AGGREGATE are
-updated in response to data received from the devices.
+This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION (`snappy_location`),
+DEVICE (`snappy_device`), CLASS (`snappy_class`), IDEAL (`snappy_idealfn`), FACTOR (`snappy_factor`),
+HISTORY (`snappy_history`), and AGGREGATE (`snappy_aggregate`).  The first five are mostly static,
+while HISTORY and AGGREGATE are updated in response to data received from the devices.
 
 Right now this is a NoSQL model, and the data stored in HISTORY and AGGREGATE (and to some extent in
 LOCATION) are not uniform, but vary with the device that reported data (or the nature of the

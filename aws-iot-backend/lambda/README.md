@@ -39,19 +39,22 @@ To upload,
 
 ### Phase 2
 
-* Who creates the DB tables and when does that happen?
-* How are new Things added to the DB if we don't have a UI?
-* What else needs to be added to the DB?  So far, snappy_data.py uses LOCATION, DEVICE, and HISTORY.
-* Test that DB access works without running the snappy_reading code yet
+* (done) Who creates the DB tables and when does that happen?
+* (done) How are new Things added to the DB if we don't have a UI?
+* (done) Test that DB access works without running the snappy_reading code yet.  To do this, accept
+  an MQTT msg that has a device ID, and echo back information about it.
 
 ### Phase 3
 
-* `snappy_reading.py`: The snappy_reading.py code is not au courant with the current device
+* BUG: `snappy_reading.py`: The snappy_reading.py code is not au courant with the current device
   firmware.  The firmware sends many sensor readings in a single package, while the code expects
   just one pair of `factor` and `reading` fields.
-* `snappy_reading.py`: The actuator message from looks like it has the wrong syntax.
+* BUG: `snappy_reading.py`: The actuator message from looks like it has the wrong syntax.
+* BUG: db.get_item requires both keys, so how this code passes tests I don't know - maybe it never needs to
+  access the device table.  
 * Upload code
 
-### Phase 3
+### Phase 4 or later
 
+* What else needs to be added to the DB?  So far, snappy_data.py uses LOCATION, DEVICE, and HISTORY.
 * Everything to do with the CLI
