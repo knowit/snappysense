@@ -285,16 +285,16 @@ String format_readings_as_json(const SnappySenseData& data) {
   buf += location_name();
   buf += '"';
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
-    buf += ',';
-    buf += '"';
-    buf += r->json_key;
-    buf += '"';
-    buf += ':';
     // Skip data that are not valid
     if (r->flag_offset > 0 &&
         !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + r->flag_offset)) {
       continue;
     }
+    buf += ',';
+    buf += '"';
+    buf += r->json_key;
+    buf += '"';
+    buf += ':';
     char tmp[256];
     r->format(data, tmp, tmp+sizeof(tmp));
     buf += tmp;
