@@ -39,7 +39,7 @@ void oled_clear_screen() {
   fb_fill(&fb, fb_black);
 # ifdef SNAPPY_I2C_SSD1306
   if (have_ssd1306) {
-    ssd1306_UpdateScreen(&ssd1306, &fb);
+    ssd1306_UpdateScreen(&ssd1306, &fb, 0);
   }
 # endif
 }
@@ -51,7 +51,7 @@ void oled_splash_screen() {
 		 fb_white);
 # ifdef SNAPPY_I2C_SSD1306
   if (have_ssd1306) {
-    ssd1306_UpdateScreen(&ssd1306, &fb);
+    ssd1306_UpdateScreen(&ssd1306, &fb, 0);
   }
 #endif
 }
@@ -79,7 +79,7 @@ void oled_show_text(const char* fmt, ...) {
   }
 # ifdef SNAPPY_I2C_SSD1306
   if (have_ssd1306) {
-    ssd1306_UpdateScreen(&ssd1306, &fb);
+    ssd1306_UpdateScreen(&ssd1306, &fb, 0);
   }
 # endif
 }

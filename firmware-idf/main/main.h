@@ -86,31 +86,16 @@
    https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171 */
 #define SNAPPY_GPIO_SEN0171
 
-/* OLED: SSD1306-based 128x32 pixel display
+/* OLED: SSD1306-based bitmapped display
    Eg https://protosupplies.com/product/oled-0-91-128x32-i2c-white-display/ */
 #define SNAPPY_I2C_SSD1306
 #ifdef SNAPPY_I2C_SSD1306
-/* If your screen horizontal axis does not start in column 0 you can use this define to adjust the
-   horizontal offset.
-
-   TODO: This is not supported in the code, plus it should be in the device or in the framebuffer. */
-/*
-# define SSD1306_X_OFFSET
-*/
-
-/* Include only needed fonts */
 # define INCLUDE_FONT_7x10
-/*
-# define INCLUDE_FONT_6x8
-# define INCLUDE_FONT_11x18
-# define INCLUDE_FONT_16x26
-# define INCLUDE_FONT_16x24
-*/
-
-/* Include graphics primitives */
-/*
-# define FRAMEBUFFER_GRAPHICS
-*/
+/* # define INCLUDE_FONT_6x8 */
+/* # define INCLUDE_FONT_11x18 */
+/* # define INCLUDE_FONT_16x26 */
+/* # define INCLUDE_FONT_16x24 */
+/* # define FRAMEBUFFER_GRAPHICS */ /* Line and arc drawing primitives */
 #endif
 
 /* Piezo speaker: based on the ESP32-IDF "ledc" library */

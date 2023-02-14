@@ -35,8 +35,7 @@ SOFTWARE.
 #include "main.h"
 #include "framebuf.h"
 
-/* This is allocated, with a larger buffer, inside a single memory area.  All fields
-   should be considered private to the driver.  */
+/* All fields should be considered private to the driver.  */
 typedef struct {
   unsigned bus;                 /* I2C bus number */
   unsigned addr;                /* I2C device address, unshifted */
@@ -63,8 +62,10 @@ bool ssd1306_Create(SSD1306_Device_t* mem, unsigned bus, unsigned i2c_addr,
    the device, and will frequently be no-ops if that flag is already set.  Writes outside the buffer
    bounds will silently be ignored.  */
 
-/* Flush the buffer to the OLED device.  Sets device->i2c_failure on failure. */
-void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb);
+/* Flush the buffer to the OLED device.  If your screen horizontal axis does not start in column 0
+   you can use x_offset to adjust the horizontal offset; normally this is zero.  Sets
+   device->i2c_failure on failure. */
+void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb, unsigned x_offset);
 
 /* Set the OLED display contrast.  The contrast increases as the value increases.
    The value 7Fh resets the contrast.  Sets device->i2c_failure on failure.  */

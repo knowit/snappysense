@@ -152,7 +152,9 @@ bool ssd1306_Create(SSD1306_Device_t* device, unsigned bus, unsigned i2c_addr,
   return !device->i2c_failure;
 }
 
-void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb) {
+void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb, unsigned x_offset) {
+  unsigned x_offset_lower = x_offset & 0x0F;
+  unsigned x_offset_upper = (x_offset >> 4) & 0x07;
   // Write data to each page of RAM. Number of pages
   // depends on the screen height:
   //
@@ -161,8 +163,8 @@ void ssd1306_UpdateScreen(SSD1306_Device_t* device, framebuf_t* fb) {
   //  * 128px  ==  16 pages
   for(uint8_t i = 0; i < device->height/8; i++) {
     ssd1306_WriteCommand(device, 0xB0 + i); // Set the current RAM page address.
-    ssd1306_WriteCommand(device, 0x00 /*+ SSD1306_X_OFFSET_LOWER*/);
-    ssd1306_WriteCommand(device, 0x10 /*+ SSD1306_X_OFFSET_UPPER*/);
+    ssd1306_WriteCommand(device, 0x00 + x_offset_lower);
+    ssd1306_WriteCommand(device, 0x10 + x_offset_upper);
     ssd1306_WriteData(device, &fb->buffer[fb->width*i], device->width);
   }
 }
