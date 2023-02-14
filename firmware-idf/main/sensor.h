@@ -48,10 +48,10 @@ typedef struct {
   unsigned sound_level;
 } sensor_state_t;
 
-void sensor_begin();
-void open_monitoring_window();	/* In response to EV_SENSOR_CLOCK */
-void close_monitoring_window();	/* In response to EV_MONITORING_CLOCK */
-void record_motion();		/* In response to EV_MOTION */
+bool sensor_begin() WARN_UNUSED;   /* True on success, false on failure */
+void open_monitoring_window();     /* In response to EV_SENSOR_CLOCK */
+void close_monitoring_window();    /* In response to EV_MONITORING_CLOCK */
+void record_motion();              /* In response to EV_MOTION */
 void record_noise(uint32_t level); /* In response to EV_SOUND_SAMPLE */
 
 /* Global object for current readings */

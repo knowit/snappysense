@@ -27,9 +27,15 @@ QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue = NULL;
 
 static void handle_button(uint32_t state);
 static void panic(const char* msg) NO_RETURN;
+static void snappy_main() NO_RETURN;
 
-void app_main(void)
-{
+void app_main(void) {
+  /* Everyone uses this queue, so make sure it's here. */
+  snappy_event_queue = xQueueCreate(10, sizeof(snappy_event_t));
+  if (snappy_event_queue == NULL) {
+    panic("Could not create event queue");
+  }
+
   /*******************************************************************************
    *
    * Boot level 1: Devices that must work */
@@ -37,8 +43,7 @@ void app_main(void)
   /* Bring the power line up and wait until it stabilizes */
   power_up_peripherals();
 
-  /* Set up interrupts and event queueing. */
-  snappy_event_queue = xQueueCreate(10, sizeof(snappy_event_t));
+  /* Set up interrupt handling, interrupts will be hooked by and by. */
   install_interrupts();
 
   /* Peripherals */
@@ -48,7 +53,7 @@ void app_main(void)
 
 #ifdef SNAPPY_I2C
   if (!initialize_i2c()) {
-    panic("i2c system inoperable; nothing will work");
+    panic("i2c initialization failed; nothing will work");
   }
 #endif
 
@@ -123,18 +128,24 @@ void app_main(void)
   }
 #endif
 
-  /* TODO: Check that this succeeds; otherwise we're sunk */
-  sensor_begin();
+  if (!sensor_begin()) {
+    LOG("Could not start sensor subsystem");
+    panic("Sensor fail");
+  }
+
+  /* Buttons will now send events */
+  enable_onboard_buttons();
+
+  snappy_main();
+}
+
+static void snappy_main() {
+  LOG("Snappysense running!");
 
 #ifdef SNAPPY_SLIDESHOW
   slideshow_begin();
 #endif
 
-  /* Buttons will now send events */
-  enable_onboard_buttons();
-
-  /* And we are up! */
-  LOG("Snappysense running!");
   //  play_song(&melody);
 
   /* Process events forever.
@@ -191,7 +202,7 @@ void app_main(void)
 	break;
       }
     } else {
-      /* WHAT TO DO HERE?  We timed out or there was some bizarre error? */
+      /* Timeout.  Just try again */
     }
   }
 }

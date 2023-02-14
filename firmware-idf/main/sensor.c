@@ -29,13 +29,16 @@ static void monitoring_clock_callback(TimerHandle_t t) {
   xQueueSend(snappy_event_queue, &ev, portMAX_DELAY);
 }
 
-void sensor_begin() {
+bool sensor_begin() {
   /* Create a clock tick used to drive device readings */
   /* TODO: Should we have this instead separate windows by this interval and not
      just blindly start new monitoring this often? */
   sensor_clock = xTimerCreate("sensor", pdMS_TO_TICKS(MONITORING_INTERVAL_S*1000),
                               /* restart= */ pdTRUE,
                               NULL, sensor_clock_callback);
+  if (sensor_clock == NULL) {
+    return false;
+  }
   xTimerStart(sensor_clock, portMAX_DELAY);
 
   /* This one-shot timer is started when the monitoring window opens and signals the
@@ -43,6 +46,10 @@ void sensor_begin() {
   monitoring_clock = xTimerCreate("monitor", pdMS_TO_TICKS(MONITORING_WINDOW_S*1000),
                                   /* restart= */ pdFALSE,
                                   NULL, monitoring_clock_callback);
+  if (monitoring_clock == NULL) {
+    return false;
+  }
+  return true;
 }
 
 /* The following functions read specific sensors when feature ifdefs are enabled without checking
