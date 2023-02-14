@@ -10,17 +10,12 @@ import snappy_data
 import snappy_mqtt
 
 # Input fields
+#   message_type - string, value "reading"
 #   device - string
 #   class - string
 #   time - string
 #   factor - string
 #   reading - number
-
-def reading_event(event, context):
-    db = snappy_data.connect()
-    responses = handle_startup_event(db, event, context)
-    for resp in responses:
-        snappy_mqtt.publish(resp[0], resp[1], resp[2])
 
 # Returns array of mqtt responses: [[topic, payload, qos], ...]
 

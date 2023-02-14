@@ -9,94 +9,224 @@ will be ingested and stored in a database for display and analysis.  Also option
 transmit data back to the device to control it in various ways.
 
 (Devices in the network can be SnappySense devices of various kinds but also sensors connected to
-other types of devices; for simplicity I will only consider the standard SnappySense devices in the
-following.)
+other types of devices; for simplicity I will mainly consider the standard SnappySense devices in
+the following.)
 
 Currently the only communication protocol between a device and AWS IoT is MQTT, a pub/sub protocol.
 The device publishes readings and subscribes to control messages.  The server subscribes to readings
-and publishes control messages.  The protocol is defined in MQTT-PROTOCOL.md.
+and publishes control messages.  The full protocol is defined in MQTT-PROTOCOL.md.
 
 Each device must be configured so that it can connect to AWS IoT: It must be provisioned with an AWS
-"Thing" identity and the necessary certificates for that Thing.  A section below describes how to
+"Thing" identity and the necessary certificates for that Thing.  Sections below describe how to
 create a new Thing, obtain its identity documents, and install them on SnappySense devices.
 
-SnappySense devices communicate by WiFi and need to be configured for the WiFi available where they
-are; they also need to be given a location name appropriate for the location.  This end-user process
-is described in [../UX.md](../UX.md).
+SnappySense devices communicate by WiFi and need to be configured for the WiFi available at their
+location; they also need to be given a location name appropriate for the location.  This end-user
+process is described in [../UX.md](../UX.md).
 
-On the backend, data are stored in a DynamoDB database.  (More here about how to access that from a
-convenient UI, TBD.  This UI must allow the registration of things, locations, factors, and so on.
-It must allow alerts to be viewed and stats to be shown.)
+On the backend, data are stored in a DynamoDB database.  The database is updated by a Lambda when
+readings arrive at AWS IoT.
+
+At present (February 2023) there is no convenient UI for database access.  All work must be done
+from AWS consoles or from the AWS CLI.  In the future the UI must allow the registration of things,
+locations, sensor types, and so on.  It must allow alerts to be viewed and stats to be shown.  All
+of this is TBD.
 
 
 ## Creating a Thing and obtaining its identity documents
 
-(NOT FINISHED)
+(This is suitable for a very small fleet of devices.  There are other methods suitable for larger fleets.)
 
-(This is suitable for a small fleet of devices.  There are other methods.)
+Every device ("Thing") needs a unique _Thing Name_.  The format for a SnappySense Thing name shall
+be `snp_x_y_no_z` for devices with hardware version `x.y` and serial number `z` within that version,
+ie, `snp_1_2_no_37` has hardware v1.2 and serial number 37.  Non-SnappySense Things should use their
+own, compact, class designators (eg `rpi` would make sense for Raspberry Pis).
 
-Every device ("Thing") needs a unique _Thing name_.  The name format for a SnappySense thing is
-usually `snp_x_y_no_z` for devices with hardware version `x.y` and serial number `z` within that
-version, ie, `snp_1_2_no_37` has hardware v1.2 and serial number 37.  Non-SnappySense things should
-use their own, compact, class designators (eg `rpi` would make sense for Raspberry Pis).
+Every Thing also has a _Thing Type_, this aids device management.  For SnappySense Things, the Thing
+type is `SnappySense`.  Non-SnappySense Things should have Thing Types that are descriptive (eg
+`RaspberryPi`); stick to letters, digits, `-` and `.`, or you'll be sorry.
 
-Every thing also has a _Thing type_.  For SnappySense, the thing type is "SnappySense".
-Non-SnappySense things should have type names that are descriptive (eg "RaspberryPi"); stick to
-letters, digits, `-` and `.`.
+In addition to being created in AWS IoT, the Thing must be registered in our backend databases; see
+[DESIGN.md](DESIGN.md) and the "Creating a Thing" section below.
 
-The thing must be registered in our backend databases; see [DESIGN.md](DESIGN.md).
+Every Thing is associated with a number of files containing secrets specific to the Thing:
+certificates from AWS, and a configuration file containing these certificates along with WiFi
+passwords and similar.  As a matter of hygiene, these files should all be stored together in a
+directory that has the same name as the Thing.  Also see the sections below on "Factory
+provisioning" and "Saving the secrets for later".
 
-Every thing has a number of files containing secrets: certificates from AWS, and a configuration
-file containing these certificates as well as WiFi passwords and similar.  As a matter of hygiene,
-these files should all be stored together in a directory that has the same name as the thing.  Also
-see the sections below on "Factory provisioning" and "Saving the secrets for later".
+To create a new Thing in AWS IoT, follow the steps outlined below.  These steps will be the same
+whether you are using the **Dataplattform production console** or your own **Sandbox console**.  If
+the Thing's identity will be long-lived then you should _not_ create it in your sandbox.
 
-If this is the first time we're creating a thing, then a role will need to be created for the thing
-to assume when ...  (Anyway see below.  But we need the name of the role here so that it can be
-assigned to the thing.) (Or do we need a policy?)
+### Creating a security policy
 
-for routing its messages to lambda
-and a role for that rule will need to be created.  
+You need to create a security policy for SnappySense devices if it does not already exist.  It
+should be called `SnappySensePolicy`.  The JSON for the policy is in the file `thing_policy.json` in
+the current directory.
 
-- Creating a role for the thing
-- Creating the thing
-- Downloading the information into that directory
+Go to AWS > Management console > IoT Core > Security > Policies.
 
+To create the policy, click `Create Policy`, then select the JSON option and paste in the JSON from
+`thing_policy.json`, then click to confirm creation.
 
+All things in the SnappySense network, whether SnappySense things or not, can use the same policy.
 
-Open the AWS Management console as **Dataplattform production** if the cert is going to be
-long-lived and not just for testing / prototyping.
+TODO: How to do this with the AWS CLI, including checking whether it needs to be done.
 
-Go to AWS IoT.  Under "Manage > Things", ask to create a single thing.
+### Creating the Thing and obtaining its documents
+  
+Create a new directory somewhere on your PC that will hold the secrets for the new Thing.  This
+directory should have the same name as the Thing you are creating.
 
-Give it a Thing name and Thing type as described above.
+Go to AWS > Management console > IoT Core > All devices > Things.  Then:
 
-The thing should have no device shadow, at this point.
+* Click on "Create things", select "Create single thing", click "Next"
+* The Thing Name has the format `snp_x_y_no_z` as explained in more detail above
+* The Thing Type is `SnappySense`.  (If you have to create the thing type first, then the only thing
+  we care about is the name; the description can be blank or something like "SnappySense devices".)
+* The Thing has no device shadow.
+* Click "Next"
+* Choose to auto-generate certificates; click "Next" again.
+* Now you have to select a policy.  Choose `SnappySensePolicy`, created above.  If you did not
+  create it already, create it now.
+* Click "Create thing".
+* You'll be presented with a download screen.  In the directory for the device, created above, store
+  all five files.
 
-On the next screen, auto-generate certificates.
+Congratulations, you have a new Thing.  For information about how to install the documents on the
+device and how to keep the secrets safe, see "Factory provisioning" and "Saving the secrets for
+later", below.
 
-You need to have created an IoT policy for these devices (see separate section).  On the next
-screen, pick that policy and then "Create Thing".
+TODO: How to do this with the AWS CLI.
 
-You'll be presented with a download screen.  In your new directory, called `snp_x_y_no_z` as
-described above, store all five files.
+### Registering a new Thing with the SnappySense backend
 
-### Klient
+TODO: IMPORTANT: FIXME: How to add the thing to the DynamoDB databases.
 
-(NOT FINISHED)
+### Some notes about the security policy (for the specially interested only)
 
-Hver klient skal ha et sertifikat med en AWS IoT Core Policy som tillater maksimalt:
+The current (February 2023) security policy in `thing_policy.json` very lax.  It would be better to
+restrict it to these actions only:
 
 * `iot:Connect`
-* `iot:Subscribe` til `snappy/control/+`
-* `iot:Subscribe` til `snappy/command/+`
-* `iot:Publish` til `snappy/startup/+/+`
-* `iot:Publish` til `snappy/reading/+/+`.
+* `iot:Subscribe` for `snappy/control/+`
+* `iot:Subscribe` for `snappy/command/+`
+* `iot:Publish` for `snappy/startup/+/+`
+* `iot:Publish` for `snappy/reading/+/+`.
 
-TODO: Aller best ville være om vi kunne kvitte oss med `+` og pub/sub bare kan være med devicets egen klasse
-og ID, men det er foreløpig uklart om dette lar seg gjøre i en stor flåte av devices.  Men i tillegg til
-sikkerhet er det en annen fordel med en mer restriktiv policy: det blir mye mindre datatrafikk i en stor
-flåte av devices.
+The restrictions would be more secure, as it would make it impossible for Things to subscribe to
+non-SnappySense messages flowing through the AWS MQTT broker.
+
+Even better would be if a Thing would only be allowed to subscribe to those messages that are sent
+to itself: this would require a separate policy per Thing however, and might not be practical in a
+large fleet of devices.
+
+## Routing messages from the Things to Lambdas
+
+Now that we have Things that can publish and subscribe to messages, we must route incoming MQTT
+traffic to Lambda functions for processing.
+
+There is a single Lambda function, `snappySense`, that responds to traffic from Things, but two
+routes in AWS IoT to route traffic to it, one for startup messages and one for sensor reading
+messages.  (The reason for this is to avoid wildcards on the second token of the topic, so as to
+avoid every chance of message loops.)
+
+### Setting up the lambdas with test code
+
+The lambda function has to be set up only once per sandbox and once for production; after that it is
+easy to upload new code to it.
+
+#### Creating a role
+
+Every Lambda has a _role_, this is called `snappySense-lambdaRole`.  The Lambda's role has _policies_
+that allow the Lambda to perform AWS actions: logging, DynamoDB access, and AWS IoT message
+publishing.  The JSON for the role is in `snappy_lambda_role.json` in the present directory.
+
+You only need to create the role once (per sandbox or production environment).  But it's a multi-step
+process, first you create the policies, then the role.
+
+First, make a local copy of `snappy_lambda_role.json` in which you replace my user ID (`92..76`) with
+your own.  Call this file `my_snappy_lambda_role.json`.
+
+Next, in AWS > Management console > Identity and Access Management (IAM) > Access Management > Policies:
+
+* Click "Create policy"
+* Click on the "JSON" tab
+* Paste in the contents of the file `my_snappy_lambda_role.json`
+* Click "Next: Tags" and then "Next: Review"
+* For `Name`, enter `snappy-lambda-policy`, and if you like, "Policy for SnappySense lambda functions" 
+  in the description field
+* Check that the permissions look all right
+* Click "Create policy"
+
+Finally, in AWS > Management console > Identity and Access Management (IAM) > Access Management > Roles:
+
+* Click "Create role"
+* Select "AWS service" under Trusted entity type and "Lambda" under use case, press "Next"
+* Select `snappy-lambda-role`
+* Click "Next"
+* Enter the name `snappy-lambda-role` and the description might be "Allows SnappySense Lambda
+  functions to call AWS services on your behalf."
+* Click "Create role"
+
+TODO: How to do this with AWS CLI.
+
+#### Creating a stub lambda functions
+
+There is a single function `snappySense` to handle both startup and reading messages.
+
+In AWS > Management console > Lambda, click "Create function" and give it these parameters:
+
+* Name `snappySense`
+* Python 3.9 
+* Architecture doesn't matter but arm64 is cheaper so choose that
+* Under "Change default execution role" choose "Use an existing role", then choose `snappy-lambda-role`.
+* Click "Create function"
+
+Next, you're in the function code view.
+
+* Paste in the code from the file `test_lambda.py` in the present directory
+* In the Runtime settings panel, set the handler name to `lambda_function.snappysense_event`
+* Click "Deploy" to update the code
+
+TODO: How to do this with AWS CLI.
+
+#### Creating the routes and the SELECT statements
+
+Finally we tie it together by routing MQTT traffic to the Lambda.
+
+In AWS > Management console > IoT Core > Message Routing > Rules, create a new rule:
+
+* The rule name should be `snappySenseStartup`
+* The description should be something like "Route SnappySense startup messages to Lambda"
+* The SQL (with version 2016-03-23) should be 
+  ```
+    SELECT *, topic(2) as message_type, topic(3) as class, topic(4) as device FROM 'snappy/startup/+/+'
+  ```
+* For the action, choose "Lambda" and then choose `snappySense` as the lambda function
+* Click "Next" until you're done.
+
+Now **repeat that** with the difference that the rule name is `snappySenseReading`, the topic filter
+is `snappy/reading/+/+`, and that "reading" replaces "startup" in the description.
+
+(The reason for having two rules is to avoid a wildcard that might accidentally match a message
+coming back from the Lambda, heading to a Thing.)
+
+TODO: How to do this with AWS CLI.
+
+#### Testing it all
+
+Go to AWS > Management console > IoT Core.  Select "MQTT Test client".  Subscribe to '#'.  Go to the
+Publish pane and publish anything you like to `snappy/startup/1/1`.  In the message log you should
+see two messages, the one you sent and the echoed message, with a three fields added (message_type,
+class, and device).  Repeat the experiment for `snappy/reading/1/1`.
+
+Once this test passes, you know that message routing works within AWS.
+
+
+### Setting up the databases
+
 
 ### Server
 
@@ -149,16 +279,16 @@ the installed config to check it, also described in that document.
 
 The configuration file contains secrets and will need to be stored securely.  Also, some of the
 secrets can't be downloaded from AWS more than the once.  We want to keep both the config file and
-the certificate files safely for later use.  Follow this procedure:
+the certificate files in a safe place for later use.  Follow this procedure:
 
 In the parent directory of `snp_x_y_no_z`, create a zip file containing the configuration:
 ```
   zip -r snp_x_y_no_z.zip snp_x_y_no_z/
 ```
 
-If the cert was created under the Dataplattform **production** account then upload the zip file to
-the Dataplattform 1Password account as a new "Document" type with the title `AWS IoT snp_x_y_no_z`.
-If there's anything to note, add it to the Notes field.
+Now **upload that zip file to 1Password** as a new "Document" type with the title `AWS IoT snp_x_y_no_z`.
+If there's anything to note, add it to the Notes field in 1Password.
 
-If the cert was created under your own Dataplattform sandbox account then upload the file instead to
-your own 1Password account.
+If the cert was created under the Dataplattform **production** account then use the Dataplattform
+1Password account; if you used your AWS sandbox account, then upload the file to your own 1Password
+account.

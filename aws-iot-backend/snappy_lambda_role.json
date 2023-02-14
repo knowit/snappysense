@@ -1,0 +1,45 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:eu-central-1:927459574576:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:eu-central-1:927459574576:log-group:/aws/lambda/snappySense:*",
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:GetItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_aggregate",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_class",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_device",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_factor",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_ideal",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_history",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_location"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iot:Publish"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
