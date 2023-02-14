@@ -107,7 +107,7 @@
 
 /********************************************************************************
  *
- * Check that devices are available for all the features that are selected.  This is a little
+ * Check that devices are available for all the features that are selected.  This is overly
  * elaborate right now as we only have a single type of device for each feature, but it's clean and
  * some generalization is probably going to happen.
  */
@@ -173,9 +173,9 @@
  * Miscellaneous definitions.
  */
 
-/* Events are uint32_t values sent from ISRs and monitoring tasks to the main task, on a queue owned
-   by the main task.  Numbers should stay below 16.  Events have an event number in the low 4 bits
-   and payload in the upper 28. */
+/* Events are values sent from ISRs and monitoring tasks to the main task, on a global queue.  Event
+   numbers should stay below 16: Events have an event number in the low 4 bits and payload in the
+   upper 28. */
 enum {
   EV_NONE,
   EV_MOTION,	                /* Payload: nothing, this means "motion detected" */
@@ -191,14 +191,16 @@ typedef uint32_t snappy_event_t; /* EV_ code in low 4 bits, payload in high bits
 extern QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue;
 
 #define WARN_UNUSED __attribute__((warn_unused_result))
+#define NO_RETURN __attribute__ ((noreturn))
 
 #ifdef SNAPPY_LOGGING
-extern void snappy_log(const char* fmt, ...);
+extern void snappy_log(const char* fmt, ...) __attribute__ ((format (printf, 1, 2)));
 # define LOG(...) snappy_log(__VA_ARGS__)
 #else
 # define LOG(...)
 #endif
 
+/* Task priorities for helper tasks. */
 #define SAMPLER_PRIORITY 3
 #define PLAYER_PRIORITY 3
 

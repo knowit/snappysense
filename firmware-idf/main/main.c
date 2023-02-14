@@ -26,7 +26,7 @@ const struct music melody = { 40, notes_5577006791947779410 };
 QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue = NULL;
 
 static void handle_button(uint32_t state);
-static void panic(const char* msg) __attribute__ ((noreturn));
+static void panic(const char* msg) NO_RETURN;
 
 void app_main(void)
 {
