@@ -50,16 +50,18 @@ Lambda and DynamoDB for the prototype.
 ### High-level design
 
 At some _location_ there is a _device_ that senses environmental _factors_ that it reports to a
-backend somewhere.  At the location there may also be _actuators_ that can cause a change to some of
-those factors.  For every factor in a location that has an actuator for that factor there may be an
-_ideal_ value; the actuator seeks to move the factor toward that ideal.  The ideal is a function of
-zero or more factors (for example the ideal for `light` may be "low" if no `movement` has been
+backend somewhere.
+
+(**Not yet implemented**: At the location there may also be _actuators_ that can cause a change to some
+of those factors.  For every factor in a location that has an actuator for that factor there may be
+an _ideal_ value; the actuator seeks to move the factor toward that ideal.  The ideal is a function
+of zero or more factors (for example the ideal for `light` may be "low" if no `movement` has been
 detected in a location for some time).
 
 The goal of the system is perhaps to keep the readings for factors at locations with actuators as
 close to the ideal as it can; and absent actuators, to log the readings of factors over time to
 allow long-term analysis of the quality of the environment at the location, and perhaps to trigger
-alerts if the quality is found to be low.
+alerts if the quality is found to be low.)
 
 ### Architectural parameters
 
