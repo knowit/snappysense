@@ -87,6 +87,7 @@ type Table struct {
 const (
 	TY_S  = "string"
 	TY_I  = "int"
+	TY_B  = "bool"
 	TY_N  = "number"
 	TY_SS = "string list"
 	TY_ST = "server_timestamp"
@@ -109,12 +110,10 @@ var tables = []*Table{
 			&Field{name: "class", ty: TY_S},
 			// The location, if not empty, shall exist in snappy_location
 			&Field{name: "location", ty: TY_S, opt: true},
-			&Field{name: "enabled", ty: TY_I, opt: true, def: "1"},
+			&Field{name: "enabled", ty: TY_B, opt: true, def: "false"},
 			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600"},
-			// Each sensor shall exist in snappy_factor
-			&Field{name: "sensors", ty: TY_SS, opt: true},
-			// Each actuator shall exist in snappy_factor
-			&Field{name: "actuators", ty: TY_SS, opt: true},
+			// Each factor shall exist in snappy_factor
+			&Field{name: "factors", ty: TY_SS, opt: true},
 		}},
 
 	&Table{
@@ -284,13 +283,45 @@ func scan_table(svc *dynamodb.Client, the_table *Table) {
 	}
 }
 
+func format_value(v types.AttributeValue) string {
+	if w, ok := v.(*types.AttributeValueMemberS); ok {
+		return w.Value
+	}
+	if w, ok := v.(*types.AttributeValueMemberN); ok {
+		return w.Value
+	}
+	if w, ok := v.(*types.AttributeValueMemberBOOL); ok {
+		if w.Value {
+			return "true"
+		}
+		return "false"
+	}
+	if w, ok := v.(*types.AttributeValueMemberSS); ok {
+		return fmt.Sprint(w.Value)
+	}
+	if w, ok := v.(*types.AttributeValueMemberL); ok {
+		s := ""
+		for _, x := range w.Value {
+			if s != "" {
+				s += ", "
+			}
+			s += format_value(x)
+		}
+		return "[" + s + "]"
+	}
+	return fmt.Sprint(v)
+}
+
 func display_row(the_table *Table, row map[string]types.AttributeValue) {
-	fmt.Printf("%s %s\n", the_table.short_name, row[the_table.key_name])
+	fmt.Printf("%s %s\n", the_table.short_name, format_value(row[the_table.key_name]))
+	// TODO: Handle the fact that there can be *other* fields than the ones defined by this program,
+	// and we should show those too, with some annotation.
 	for _, f := range the_table.fields {
 		if !f.hide {
 			if v, ok := row[f.name]; ok {
-				// TODO: Here, discriminate by type and extract the appropriate value
-				fmt.Printf("  %s %v\n", f.name, v)
+				if f.name != the_table.key_name {
+					fmt.Printf("  %s: %v\n", f.name, format_value(v))
+				}
 			}
 		}
 	}
@@ -485,6 +516,8 @@ func add_attribute(attrs map[string]types.AttributeValue, f *Field, val string) 
 		attrs[f.name] = &types.AttributeValueMemberS{Value: val}
 	} else if f.ty == TY_N || f.ty == TY_I {
 		attrs[f.name] = &types.AttributeValueMemberN{Value: val}
+	} else if f.ty == TY_B {
+		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: val == "true"}
 	} else {
 		panic("Should not happen")
 	}
@@ -496,8 +529,11 @@ func add_defdef_attribute(attrs map[string]types.AttributeValue, f *Field) {
 		attrs[f.name] = &types.AttributeValueMemberS{Value: ""}
 	} else if f.ty == TY_N || f.ty == TY_I {
 		attrs[f.name] = &types.AttributeValueMemberN{Value: "0"}
+	} else if f.ty == TY_B {
+		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: false}
 	} else if f.ty == TY_SS {
-		attrs[f.name] = &types.AttributeValueMemberSS{Value: []string{}}
+		// DynamoDB disallows empty string sets
+		//attrs[f.name] = &types.AttributeValueMemberSS{Value: []string{}}
 	} else if f.ty == TY_RL {
 		attrs[f.name] = &types.AttributeValueMemberL{Value: []types.AttributeValue{}}
 	} else {
@@ -521,5 +557,5 @@ func usage(msg string) {
 }
 
 func help() {
-	log.Print(helptext)
+	fmt.Fprint(os.Stdout, helptext)
 }
