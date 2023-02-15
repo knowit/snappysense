@@ -16,7 +16,7 @@ def snappysense_event(event, context):
     iot_client = boto3.client('iot-data', region_name='eu-central-1')
 
     device_name = event["query"]
-    probe = db.get_item(TableName='snappy_device', Key={"device":{"S": device_name}, "class":{"S":"SnappySense"}})
+    probe = db.get_item(TableName='snappy_device', Key={"device":{"S": device_name}})
     if probe == None or "Item" not in probe:
         result = {"result": "FAILURE"}
     else:
