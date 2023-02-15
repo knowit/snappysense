@@ -14,29 +14,24 @@ The SnappySense devices perform measurements and hold them for periodic upload b
 topics are routed to AWS Lambda.  The Lambda functions store the data in DynamoDB databases (see
 [`DATA-MODEL.md`](DATA-MODEL.md)).
 
-There exists (or must exist, TBD) a dashboard that allows new devices and locations and other
-metadata to be defined in the databases, and allow the measurements stored in the databases to be
-viewed.
+There must eventually exist a dashboard that allows new devices and locations and other metadata to
+be defined in the databases, and allow the measurements stored in the databases to be viewed.  In
+the mean time, there is a command line program that makes database access bearable; see below.
 
 By way of overview:
 
 - The database has mostly-static tables DEVICE (for device IDs and capabilities), CLASS (for device
-  classes), LOCATION (for known locations where devices can reside), FACTOR (for the types of things
-  that can be measured), and IDEAL (for computing the target settings for devices that can adjust
-  their environment).
+  classes), LOCATION (for known locations where devices can reside), and FACTOR (for the types of
+  things that can be measured).
 
-- The database has dynamic tables HISTORY (for the most recent sensor readings for each device) and
-  AGGREGATE (for aggregated readings).
+- The database has a dynamic tables HISTORY (for the most recent sensor readings for each device)
+  and will in the future have a table for aggregate data.
   
 The tables are described in detail [`DATA-MODEL.md`](DATA-MODEL.md).
 
 When a new device is registered it is always added to DEVICE.  If it belongs to a new device class,
 then CLASS must be updated.  If it has a new type of sensor, then FACTOR must be updated.  If it is
-going to be placed in a not previously known location, then LOCATION must be updated.  IDEAL is
-updated only very rarely, in conjunction with code changes that allow new target setting
-computations to be performed.
-
-(It's possible that IDEAL is a half-baked idea, so ignore that for now.)
+going to be placed in a not previously known location, then LOCATION must be updated.
 
 When a "startup" message arrives from a device, the device's HISTORY entry is updated to record last
 contact, and a control message may be generated to (re)configure the device if the device's reported
@@ -44,10 +39,8 @@ configuration differs from what's desired.  (The desired configuration is stored
 table.)
 
 When a "reading" arrives from a device, the device's HISTORY entry is updated to add the new
-readings, and some old readings may be moved into the device's AGGREGATE table, see below.  Also, if
-a reading differs from the target value of the factor for the device (as computed by any ideal
-function) and the device is able to react to actuator messages, then a command message may be
-generated to trigger the actuator on the device.
+readings.  Occasionally, the HISTORY is going to have to be culled and data moved into some place
+for aggregated data; this is TBD.
 
 ## Is Lambda and DynamoDB what we ought to be using?
 
@@ -64,7 +57,7 @@ TBD - this is a sketch, it's not the current focus.
 There must exist various kinds of triggers or alerts: for readings that indicate a very bad
 environment; for devices that stop communicating.
 
-There must exist some interface that allows for devices, classes, factors, locations, and ideals to
+There must exist some interface that allows for devices, classes, factors, and locations to
 be added.
 
 There must exist some basic interface to inspect all the tables.  At the moment, everything must be
@@ -75,8 +68,10 @@ All of this is some basic REST API, maybe the AWS API Gateway or something like 
 
 ## Aggregation
 
-It's currently undefined what "aggregation" means, and the AGGREGATE table is not properly defined
-in the data model.  Here are some notes:
+This is for future consideration.
+
+It's currently undefined what "aggregation" means, and no aggregate table is defined in the data
+model.  Here are some notes:
 
 - aggregation begs the purpose of gathering the data in the first place
 - we want to record "conditions" and monitor them over time and alternatively also provide an

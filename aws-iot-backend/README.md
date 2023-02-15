@@ -72,7 +72,8 @@ To create the policy, click `Create Policy`, then select the JSON option and pas
 
 All things in the SnappySense network, whether SnappySense things or not, can use the same policy.
 
-TODO: How to do this with the AWS CLI, including checking whether it needs to be done.
+TODO: How to do this with the AWS CLI or something like `dbop`, including checking whether it needs
+to be done.
 
 ### Creating the Thing and obtaining its documents
   
@@ -98,11 +99,11 @@ Congratulations, you have a new Thing.  For information about how to install the
 device and how to keep the secrets safe, see "Factory provisioning" and "Saving the secrets for
 later", below.
 
-TODO: How to do this with the AWS CLI.
+TODO: How to do this with the AWS CLI or something like `dbop`.
 
 ### Registering a new Thing with the SnappySense backend
 
-TODO: IMPORTANT: FIXME: How to add the thing to the DynamoDB databases.
+This is covered below under "Setting up the database tables".
 
 ### Some notes about the security policy (for the specially interested only)
 
@@ -170,7 +171,7 @@ Finally, in AWS > Management console > Identity and Access Management (IAM) > Ac
   functions to call AWS services on your behalf."
 * Click "Create role"
 
-TODO: How to do this with AWS CLI.
+TODO: How to do this with AWS CLI or something like `dbop`.
 
 #### Creating a stub lambda functions
 
@@ -190,7 +191,7 @@ Next, you're in the function code view.
 * In the Runtime settings panel, set the handler name to `lambda_function.snappysense_event`
 * Click "Deploy" to update the code
 
-TODO: How to do this with AWS CLI.
+TODO: How to do this with AWS CLI or something like `dbop`.
 
 #### Creating the routes and the SELECT statements
 
@@ -213,7 +214,7 @@ filter is `snappy/reading/+/+`, and that "reading" replaces "startup" in the des
 (The reason for having two rules is to avoid a wildcard that might accidentally match a message
 coming back from the Lambda, heading to a Thing.)
 
-TODO: How to do this with AWS CLI.
+TODO: How to do this with AWS CLI or something like `dbop`.
 
 #### Testing it all
 
@@ -228,66 +229,42 @@ Once this test passes, you know that message routing works within AWS.
 
 ### The data model and the tables
 
-There are seven database tables, though only three are used by the backend code as of February 2023:
-`snappy_device`, `snappy_location`, and `snappy_history`.  Their fields and keys are defined
-in [DATA-MODEL.md](DATA-MODEL.md), though being NoSQL the fields don't matter for database creation.
+There are five database tables.  Their fields and keys are defined in
+[DATA-MODEL.md](DATA-MODEL.md), though being NoSQL the fields don't matter for database creation.
 
-To create a table, go to AWS > Management console > DynamoDB.  Then:
+The `dbop` program (see later section) is used to initialize the five tables if they don't exist:
 
-* Click on "Tables"
-* Click on "Create table"
-* Table name, partition key and sort key should be as outlined below
-* Table settings can remain at Default
-* Click "Create table"
+```
+   dbop device create-table
+   dbop class create-table
+   dbop factor create-table
+   dbop location create-table
+   dbop history create-table
+```
 
-For `snappy_device`, the Paritition key is `device` (String) and the Sort key is `class` (String).
-
-For `snappy_location`, the Partition key is `location` (String) and the Sort key is empty.
-
-For `snappy_history`, the Partition key is `device` (String) and the Sort key is empty.
-
-For `snappy_class`, the Partition key is `class` (String) and the Sort key is empty.
-
-For `snappy_factor`, the Partition key is `factor` (String) and the Sort key is empty.
-
-The remaining two tables we'll get back to when they become relevant.
-
-TODO: How to do this with AWS CLI.
+Similarly `delete-table` can be used to delete tables that need to be cleaned out before creating
+them afresh.
 
 ### Adding data to the database without any UI
 
-In particular, we will need to add new Things to `snappy_device` and new locations to
-`snappy_location`, and ideally to view these databases.
-
-Fortunately the [AWS CLI for
-DynamoDB](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/dynamodb/index.html)
-comes to the rescue.  For example, to add a new device record to `snappy_device`, place the record in a file (see
-`snp_1_1_no_1.json` in this directory for an example) and then add it with a shell command:
-
+The `dbop` program (see later section) is used to add data to the database and query it:
 ```
-aws dynamodb put-item --table-name snappy_device --item file://snp_1_1_no_1.json
+   dbop class add class=SnappySense 'description=SnappySense 3rd gen prototype device'
+   dbop location add location=takterrassen 'description=Takterrassen i Universitetsgt 1'
+   dbop location add location=akebakken 'description=Hjemmekontoret til Lars T'
+   dbop device add device=snp_1_1_no_1 class=SnappySense location=takterrassen
+   dbop device add device=snp_1_1_no_2 class=SnappySense location=akebakken
 ```
 
-TODO: The JSON layout of records must be added to DATA-MODEL.md.
-
-To examine the contents of a table (anyway for small tables), use `scan`:
+To list the contents of a table:
 ```
-aws dynamodb scan --table-name snappy_device
+   dbop device list
 ```
 
-To examine a specific item, you can use `get-item`, which awkwardly requires both the Partition and the Sort key:
+To examine just one item in a table:
 ```
-aws dynamodb get-item --table-name snappy_device --key '{"device":{"S":"snp_1_1_no_1"},"class":{"S":"SnappySense"}}'
+   dbop device get snp_1_1_no_2
 ```
-
-There are myriad ways to customize the output and to perform selection.  The command language is
-powerful but quite arcane and is best thought of as the target language for a database-operation
-compiler.
-
-TODO: Write that compiler, or at least shell scripts that perform common tasks.
-
-In practice, using the CLI to maintain the database is not really workable, but it is enough for
-some simple prototyping and testing.
 
 ### Testing that database access works from the lambda
 
@@ -345,3 +322,17 @@ If there's anything to note, add it to the Notes field in 1Password.
 If the cert was created under the Dataplattform **production** account then use the Dataplattform
 1Password account; if you used your AWS sandbox account, then upload the file to your own 1Password
 account.
+
+## The `dbop` program
+
+The `dbop` command line utility is a simple Go program that talks to AWS DynamoDB.  You need to have
+`go` on your machine, which you can get from `https://golang.org`, your package manager, and in
+other ways.
+
+To build, go to `aws-iot-backend/dbop` and run `go build`.  The executable should appear in that
+directory.  It is run as explained in earlier sections.
+
+To run it, you must have set up your AWS credentials in the normal way for the AWS CLI, either as
+environment variables or in a ~/.aws/credentials file.
+
+For some general help, run `dbop help`.
