@@ -37,7 +37,7 @@ To upload,
 * (done) Implement a route from MQTT to a `snappySense` lambda function
 * (done) Test that all of that works (no DB access obviously but MQTT and Lambda)
 
-### Phase 2
+### Phase 2 (done)
 
 * (done) Who creates the DB tables and when does that happen?
 * (done) How are new Things added to the DB if we don't have a UI?
@@ -46,13 +46,21 @@ To upload,
 
 ### Phase 3
 
+* BUG: There's no reason for DEVICE to have a secondary key.
+* BUG: the data model does not specify what the JSON structures look like.  To wit, the **test
+  programs** and the **snappy_data code** uses a generic List for the sensors and actuators while I
+  chose a String List for some of the **test code** in the documentation.  This is not going to end
+  well.
 * BUG: `snappy_reading.py`: The snappy_reading.py code is not au courant with the current device
   firmware.  The firmware sends many sensor readings in a single package, while the code expects
   just one pair of `factor` and `reading` fields.
-* BUG: `snappy_reading.py`: The actuator message from looks like it has the wrong syntax.
+* BUG: `snappy_reading.py`: The actuator message looks like it has the wrong syntax.
 * BUG: db.get_item requires both keys, so how this code passes tests I don't know - maybe it never needs to
-  access the device table.  
-* Upload code
+  access the device table.  (Indeed it is so.  Bad.)
+* BUG: Should try to fix the db_lambda.py too.
+* BUG: Why is the field within DEVICE called `sensors` and not `factors`?
+* BUG: Ditto in `location`
+* Document how to upload code for the lambda, and test that this works
 
 ### Phase 4 or later
 

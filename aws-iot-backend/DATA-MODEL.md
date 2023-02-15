@@ -153,6 +153,12 @@ The factors known so far are the ones measured by the SnappySense device:
 
 but there can be others.
 
+TODO: It's probably a bug that the `airsensor` value is a weird number and not a string.
+
+TODO: The ranges shown above for some of the factors (notably `tvoc`, `co2`, `uv`) are device-specific.
+
+TODO: Booleans are a thing, for `motion`.
+
 ## HISTORY
 
 There is one entry in `HISTORY` for each device.  The entry holds the last readings from the device,
