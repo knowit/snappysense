@@ -7,15 +7,15 @@
 
 import boto3
 
-# Default reading interval, in seconds.
-# TODO: Make this sensible, 5s is much too often.
-DEFAULT_READING_INTERVAL = 5
+# There shall be default values for all optional scalar fields in the data model (../dbop/dbop.go)
+# and these values shall agree with the values in that program.  Optional list fields have the empty
+# list as type always.
 
-# Number of readings to keep per factor per device.
-MAX_FACTOR_HISTORY = 10
-
-# Number of actuator commands to keep per factor per device.
-MAX_ACTION_HISTORY = 5
+DEFAULT_DEV_READING_INTERVAL = 3600
+DEFAULT_DEV_LOCATION = ""
+DEFAULT_DEV_LAST_CONTACT = 0
+DEFAULT_DEV_ENABLED = True
+DEFAULT_LOC_TIMEZONE = ""
 
 # Connect to the database and return the object representing it
 
@@ -24,157 +24,104 @@ def connect():
 
 ################################################################################
 #
-# LOCATION
-                        
-# Lookup a location record and return it if found, otherwise return None.
+# Helpers
 
-def get_location_entry(db, location):
-    probe = db.get_item(TableName='snappy_location', Key={"location": {"S": location}})
+# Lookup by string key and return it, return None if not found
+
+def standard_lookup(db, table_name, key_name, key_value):
+    probe = db.get_item(TableName=table_name, Key={key_name: {"S": key_value}})
     if probe == None or "Item" not in probe:
         return None
     return probe["Item"]
 
-# If there is an actuator for the factor at the location, return the device name
-# and the ideal function.  Otherwise return None, None
+def string_field(item, name):
+    return item[name]["S"]
 
-def find_actuator_device(location_entry, factor):
-    actuator_entry = None
-    for a in location_entry["actuators"]["L"]:
-        if a["M"]["factor"]["S"] == factor:
-            return a["M"]["device"]["S"], a["M"]["idealfn"]["S"]
-    return None, None
+def opt_string_field(item, name, defval):
+    if name in item:
+        return item[name]["S"]
+    return defval
+
+def opt_int_field(item, name, defval):
+    if name in item:
+        return int(item[name]["N"])
+    return defval
+
+def opt_bool_field(item, name, defval):
+    if name in item:
+        return item[name]["BOOL"]
+    return defval
+
+def string_list(item, name):
+    ds = []
+    if name in item:
+        for d in item[name]["L"]:
+            ds.append(d["S"])
+    return ds
 
 ################################################################################
 #
 # DEVICE
 
-# Lookup a device record and return it if found, otherwise return None.
-
 def get_device(db, device_name):
-    probe = db.get_item(TableName='snappy_device', Key={"device":{"S": device_name}})
-    if probe == None or "Item" not in probe:
-        return None
-    return probe["Item"]
+    return standard_lookup(db, "snappy_device", "device", device_name)
 
 def device_class(device_entry):
-    return device_entry["class"]["S"]
+    return string_field(device_entry, "class")
 
 def device_location(device_entry):
-    return device_entry["location"]["S"]
+    return opt_string_field(device_entry, "location", DEFAULT_DEV_LOCATION)
 
-def device_is_disabled(device_entry):
-    return "enabled" in device_entry and device_entry["enabled"]["N"] == "0"
+def device_last_contact(device_entry):
+    return opt_int_field(device_entry, "last_contact", DEFAULT_DEV_LAST_CONTACT)
+
+def device_enabled(device_entry):
+    return opt_bool_field(device_entry, "enabled", DEFAULT_DEV_ENABLED)
 
 def device_reading_interval(device_entry):
-    if "reading_interval" in device_entry:
-        return int(device_entry["reading_interval"]["N"])
-    return DEFAULT_READING_INTERVAL
+    return opt_int_field(device_entry, "reading_interval", DEFAULT_DEV_READING_INTERVAL)
+
+def device_factors(device_entry):
+    return string_list(device_entry, "factors")
+
 
 ################################################################################
 #
-# HISTORY
-
-# Lookup a history record and return it if found, otherwise return None.
-
-def get_history_entry(db, device):
-    probe = db.get_item(TableName='snappy_history', Key={"device":{"S": device}})
-    if probe == None or "Item" not in probe:
-        return None
-    return probe["Item"]
-
-# Write the history entry to disk.
-# TODO: Can this fail?  Do we care?
-
-def write_history_entry(db, history_entry):
-    db.put_item(TableName='snappy_history', Item=history_entry)
-
-# This will get the history entry if it exists, otherwise it will create a new one, but it will
-# *not* persist that entry in the database.
-
-def get_history_entry_or_create(db, device):
-    history_entry = get_history_entry(db, device)
-    if history_entry == None:
-        history_entry = {"device":       {"S": device},
-                         "last_contact": {"S":""},
-                         "readings":     {"L": []},
-                         "actions":      {"L":[]}}
-    return history_entry
-
-def history_last_contact(history_entry):
-    return history_entry["last_contact"]["S"]
-
-def set_history_last_contact(history_entry, time):
-    history_entry["last_contact"]["S"] = time
-
-# These nested structures are hellish.
-#
-# history ::= {
-#   ...,
-#   "readings": {
-#       "L": [ { "M": { "factor": {"S", str},
-#                       "last":   {"L": [ {"M": {"time":  {"S",str},
-#                                                "value": {"N",str}}}, ... ]}}} ] },
-#   "actions": {
-#       "L": [ { "M": { "factor": {"S", str},
-#                       "last":   {"L": [ {"M": {"time":    {"S",str},
-#                                                "reading": {"N",str}}},
-#                                                "ideal":   {"N",str}}}, ... ]}}} ] }
-# }
-
-# This creates a sensible structure: a list of objects with keys "temperature", "time", say
-def history_readings(history_entry):
-    res = []
-    for reading in history_entry["readings"]["L"]:
-        factor_name = reading["M"]["factor"]["S"]
-        for last in reading["M"]["last"]["L"]:
-            res.append({"time":      last["M"]["time"]["S"],
-                        factor_name: int(last["M"]["value"]["N"])})
-    return res
-
-def history_entry_add_reading(history_entry, factor, time, reading):
-    factor_entry = find_for_factor(history_entry, "readings", factor)
-
-    # Push the new one onto the front and retire old ones from the end
-    factor_entry.insert(0, {"M": {"time":  {"S": time},
-                                  "value": {"N": str(reading)}}})
-
-    while len(factor_entry) > MAX_FACTOR_HISTORY:
-        factor_entry.pop()
-
-def history_actions(history_entry):
-    res = []
-    for reading in history_entry["actions"]["L"]:
-        factor_name = reading["M"]["factor"]["S"]
-        for last in reading["M"]["last"]["L"]:
-            res.append({"time":      last["M"]["time"]["S"],
-                        factor_name: int(last["M"]["reading"]["N"]),
-                        "ideal":     int(last["M"]["ideal"]["N"])})
-    return res
-
-def history_entry_add_action(history_entry, factor, time, reading, ideal):
-    factor_entry = find_for_factor(history_entry, "actions", factor)
-
-    # Push the new one onto the front and retire old ones from the end
-    factor_entry.insert(0, {"M": {"time":    {"S": time},
-                                  "reading": {"N": str(reading)},
-                                  "ideal":   {"N": str(ideal)}}})
-    while len(factor_entry) > MAX_ACTION_HISTORY:
-        factor_entry.pop()
-
-def find_for_factor(history_entry, which, factor):
-    factor_entry = None
-    for f in history_entry[which]["L"]:
-        if f["M"]["factor"]["S"] == factor:
-            factor_entry = f
-            break
-
-    if factor_entry == None:
-        factor_entry = {"M": {"factor": {"S": factor},
-                              "last":   {"L":[]}}}
-        history_entry[which]["L"].append(factor_entry)
-
-    return factor_entry["M"]["last"]["L"]
-
-
-
+# CLASS
                         
+def get_class(db, class_name):
+    return standard_lookup(db, "snappy_class", "class", class_name)
+
+def class_description(class_entry):
+    return string_field(class_entry, "description")
+
+
+################################################################################
+#
+# FACTOR
+                        
+def get_factor(db, factor_name):
+    return standard_lookup(db, "snappy_factor", "factor", factor_name)
+
+def factor_description(factor_entry):
+    return string_field(factor_entry, "description")
+
+
+################################################################################
+#
+# LOCATION
+                        
+def get_location(db, location):
+    return standard_lookup(db, "snappy_location", "location", location)
+
+def location_description(location_entry):
+    return string_field(location_entry, "description")
+
+def location_devices(location_entry):
+    return string_list(location_entry, "devices")
+
+def location_timezone(location_entry):
+    return opt_string_field(location_entry, "timezone", DEFAULT_LOC_TIMEZONE)
+
+
+# And for OBSERVATION we never look up anything yet
