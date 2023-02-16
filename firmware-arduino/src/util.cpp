@@ -87,19 +87,10 @@ String fmt(const char* format, ...) {
   return String(buf);
 }
 
-String format_time(const struct tm& time) {
-  static const char* const weekdays[] = {
-    "sun", "mon", "tue", "wed", "thu", "fri", "sat"
-  };
-  char buf[256];
+String format_timestamp(time_t time) {
   // Timestamp format defined in aws-iot-backend/MQTT-PROTOCOL.md.
-  snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d/%s",
-           time.tm_year + 1900,     // year number
-           time.tm_mon + 1,         // month, 1-12
-           time.tm_mday,            // day of the month, 1-31
-           time.tm_hour,            // hour, 0-23
-           time.tm_min,             // minute, 0-59
-           weekdays[time.tm_wday]); // day of the week
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%llu", (unsigned long long) time);
   return String(buf);
 }
 

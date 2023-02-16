@@ -22,10 +22,10 @@
 #else
 # define IF_DEVEL(x, y) y
 #endif
-#if defined(DEVELOPMENT) && defined(TIMESTAMP)
-# define IF_TIMESTAMP(x, y) x
+#if defined(DEVELOPMENT) && defined(TIMESERVER)
+# define IF_TIMESERVER(x, y) x
 #else
-# define IF_TIMESTAMP(x, y) y
+# define IF_TIMESERVER(x, y) y
 #endif
 #if defined(DEVELOPMENT) && defined(WEB_UPLOAD)
 # define IF_HTTP_UP(x, y) x
@@ -49,8 +49,8 @@ static Pref factory_prefs[] = {
   {"password1",               "p1",    Pref::Str|Pref::Passwd, 0, IF_DEVEL(WIFI_PASSWORD, ""),           "Password for the first WiFi network"},
   {"password2",               "p2",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the second WiFi network"},
   {"password3",               "p3",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the third WiFi network"},
-  {"time-server-host",        "tsh",   Pref::Str,              0, IF_TIMESTAMP(TIME_SERVER_HOST, ""),    "Host name of ad-hoc time server"},
-  {"time-server-port",        "tsp",   Pref::Int,              IF_TIMESTAMP(TIME_SERVER_PORT, 8086), "", "Port name on the ad-hoc time server"},
+  {"time-server-host",        "tsh",   Pref::Str,              0, IF_TIMESERVER(TIME_SERVER_HOST, ""),   "Host name of ad-hoc time server"},
+  {"time-server-port",        "tsp",   Pref::Int,              IF_TIMESERVER(TIME_SERVER_PORT, 8086), "","Port name on the ad-hoc time server"},
   {"http-upload-host",        "huh",   Pref::Str,              0, IF_HTTP_UP(WEB_UPLOAD_HOST, ""),       "Host name of ad-hoc http sensor-reading upload server"},
   {"http-upload-port",        "hup",   Pref::Int,              IF_HTTP_UP(WEB_UPLOAD_PORT, 8086), "",    "Port number on the ad-hoc http sensor-reading upload server"},
   {"web-config-access-point", "wcap",  Pref::Str,              0, "",                                    "Unique access point name for end-user web config"},
@@ -227,7 +227,7 @@ void set_access_point_password(int n, const char* value) {
   }
 }
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
 const char* time_server_host() {
   return get_string_pref("time-server-host");
 }

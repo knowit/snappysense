@@ -16,11 +16,9 @@ static void format_sequenceno(const SnappySenseData& data, char* buf, char* bufl
   snprintf(buf, buflim - buf, "%u", data.sequence_number);
 }
 
-#ifdef TIMESTAMP
-static void format_time(const SnappySenseData& data, char* buf, char* buflim) {
-  snprintf(buf, buflim-buf, "\"%s\"", format_time(data.time).c_str());
+static void format_timestamp(const SnappySenseData& data, char* buf, char* buflim) {
+  snprintf(buf, buflim-buf, "\"%s\"", format_timestamp(data.time).c_str());
 }
-#endif
 
 #ifdef SENSE_TEMPERATURE
 static void format_temp(const SnappySenseData& data, char* buf, char* buflim) {
@@ -137,16 +135,14 @@ SnappyMetaDatum snappy_metadata[] = {
    .flag_offset      = 0,
    .display         = nullptr,
    .format           = format_sequenceno },
-#ifdef TIMESTAMP
-  {.json_key         = "time",
+  {.json_key         = "sent",
    .explanatory_text = "Local time of reading",
    .display_unit     = "",
    .unit_text        = "",
    .icon             = nullptr,
-   .flag_offset      = offsetof(SnappySenseData, have_time),
+   .flag_offset      = 0,
    .display         = nullptr,
-   .format           = format_time},
-#endif
+   .format           = format_timestamp},
 #ifdef SENSE_TEMPERATURE
   {.json_key         = "temperature",
    .explanatory_text = "Temperature",

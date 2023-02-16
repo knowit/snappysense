@@ -25,7 +25,7 @@ static const char WEB_UPLOAD_HOST[] = "...";    // FIXME
 static const int WEB_UPLOAD_PORT = 8086;        // Useful default
 #endif // WEB_UPLOAD
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
 // -------------------------------------------------------------------------------
 //
 // Time server address

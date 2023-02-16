@@ -55,11 +55,6 @@ int probe_i2c_devices(Stream* output);
 void test_mems();
 #endif
 
-#ifdef TIMESTAMP
-// Set the current time, represented as the number of seconds since epoch.
-
-void configure_clock(unsigned long t);
-
 // Return the number of seconds since epoch.
 //
 // NOTE: If time configuration has not completed then the device clock will
@@ -67,13 +62,10 @@ void configure_clock(unsigned long t);
 
 time_t get_time();
 
-// Return the local time (based on get_time(), above) broken out into the
-// standard fields.
-//
-// NOTE: If time configuration has not completed then the device clock will
-// not have been set and the time will be sometime in January, 1970.
+#ifdef TIMESERVER
+// Set the current time, represented as the number of seconds since epoch.
 
-struct tm snappy_local_time();
+void configure_clock(unsigned long t);
 #endif
 
 #ifdef SNAPPY_PIEZO

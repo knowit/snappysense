@@ -44,7 +44,7 @@
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
 // has to be provisioned.  See snappytime.h.
-#define TIMESTAMP
+#define TIMESERVER
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
 // every so often.  See mqtt_upload.h.
@@ -88,7 +88,7 @@
 
 // With SERIAL_COMMAND_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-#define SERIAL_COMMAND_SERVER
+//#define SERIAL_COMMAND_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.

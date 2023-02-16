@@ -218,10 +218,7 @@ void get_sensor_values(SnappySenseData* data) {
   memset(data, 0, sizeof(SnappySenseData));
   data->sequence_number = sequence_number++;
 
-#ifdef TIMESTAMP
-  data->time = snappy_local_time();
-  data->have_time = true;
-#endif
+  data->time = get_time();
 
 #ifdef SENSE_TEMPERATURE
   if (have_environment) {
@@ -365,25 +362,17 @@ void test_mems() {
 }
 #endif
 
-#ifdef TIMESTAMP
 static unsigned long timebase;
-
-void configure_clock(unsigned long t) {
-  timebase = t;
-}
 
 time_t get_time() {
   return time(nullptr) + timebase;
 }
 
-struct tm snappy_local_time() {
-  time_t the_time = get_time();
-  // FIXME: Issue 7: localtime wants a time zone to be set...
-  struct tm the_local_time;
-  localtime_r(&the_time, &the_local_time);
-  return the_local_time;
+#ifdef TIMESERVER
+void configure_clock(unsigned long t) {
+  timebase = t;
 }
-#endif // TIMESTAMP
+#endif // TIMESERVER
 
 #ifdef SNAPPY_PIEZO
 void setup_sound() {

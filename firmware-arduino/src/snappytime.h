@@ -5,7 +5,7 @@
 
 #include "main.h"
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
 #include "microtask.h"
 #include "util.h"
 

@@ -15,7 +15,7 @@
 #include "network.h"
 #include "util.h"
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
 
 #include <WiFi.h>
 #include <WiFiClient.h>
@@ -71,4 +71,4 @@ void ConfigureTimeTask::execute(SnappySenseData*) {
   handle = nullptr;
 }
 
-#endif // TIMESTAMP
+#endif // TIMESERVER

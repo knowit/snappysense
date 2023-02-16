@@ -85,12 +85,8 @@ void StartMqttTask::execute(SnappySenseData* data) {
 
   body += "{\"reading_interval\":";
   body += sensor_poll_interval_s();
-#ifdef TIMESTAMP
-  if (data->have_time) {
-    body += ",\"time\":\"";
-    body += format_time(snappy_local_time());
-  }
-#endif
+  body += ",\"sent\":\"";
+  body += format_timestamp(get_time());
   body += "\"}";
 
   mqtt_enqueue(std::move(topic), std::move(body));
@@ -194,12 +190,23 @@ bool MqttCommsTask::connect() {
   // Subscriptions used to be conditional on mqtt_first_time.  However,
   // at least for AWS and the Arduino MQTT stack, it seems like we have to
   // resubscribe every time, even if session is not marked as clean.
-  String control_msg("snappy/control/");
-  control_msg += mqtt_device_id();
+  if (*mqtt_device_id() != 0) {
+    String control_msg("snappy/control/");
+    control_msg += mqtt_device_id();
+    mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
+  }
+  if (*mqtt_device_class() != 0) {
+    String control_msg("snappy/control-class/");
+    control_msg += mqtt_device_class();
+    mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
+  }
+  String control_msg("snappy/control-all");
   mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
-  String command_msg("snappy/command/");
-  command_msg += mqtt_device_id();
-  mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
+  if (*mqtt_device_id() != 0) {
+    String command_msg("snappy/command/");
+    command_msg += mqtt_device_id();
+    mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
+  }
   first_time = false;
   return true;
 }

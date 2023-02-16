@@ -37,7 +37,7 @@ void set_access_point_password(int n, const char* val);
 bool device_enabled();
 void set_device_enabled(bool flag);
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
 // Host name of remote web server used for web upload and time service.
 const char* time_server_host();
 

@@ -17,11 +17,8 @@ struct SnappySenseData {
   // is never 0.
   unsigned sequence_number;
 
-#ifdef TIMESTAMP
-  // Current local time when the reading was taken
-  struct tm time;
-  bool have_time;
-#endif
+  // Current device timestamp (seconds since epoch, UTC) when the reading was taken
+  time_t time;
 
 #ifdef SENSE_ALTITUDE
   // Altitude of device, meters above (below) sea level

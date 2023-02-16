@@ -153,7 +153,7 @@ void setup() {
 
   // Normal mode.
 
-#ifdef TIMESTAMP
+#ifdef TIMESERVER
   // Configure time as soon as we can, so run this task first.  It will reschedule itself
   // (with backoff) if it fails to connect to wifi.
   sched_microtask_after(new ConfigureTimeTask, 0);

@@ -35,7 +35,7 @@ bool get_posted_field(const char** p, String* key, String* value);
 
 // Format the timestamp in a standard way.
 
-String format_time(const struct tm& time);
+String format_timestamp(time_t t);
 
 // Emit message on possible channels and do not return.
 
