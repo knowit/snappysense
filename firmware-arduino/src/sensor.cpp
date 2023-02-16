@@ -17,7 +17,7 @@ static void format_sequenceno(const SnappySenseData& data, char* buf, char* bufl
 }
 
 static void format_timestamp(const SnappySenseData& data, char* buf, char* buflim) {
-  snprintf(buf, buflim-buf, "\"%s\"", format_timestamp(data.time).c_str());
+  snprintf(buf, buflim-buf, "%s", format_timestamp(data.time).c_str());
 }
 
 #ifdef SENSE_TEMPERATURE
@@ -288,6 +288,12 @@ String format_readings_as_json(const SnappySenseData& data) {
     }
     buf += ',';
     buf += '"';
+    // This is a hack.  Factor names are prefixed by F# to avoid name clashes, while fields like
+    // sent and sequenceno should not be prefixed.  The flag_offset doubles of an indicator for
+    // whether the prefix is needed.
+    if (r->flag_offset > 0) {
+      buf += "F#";
+    }
     buf += r->json_key;
     buf += '"';
     buf += ':';
