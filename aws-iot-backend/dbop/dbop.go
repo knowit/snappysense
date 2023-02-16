@@ -8,6 +8,8 @@
 
 // Useful links:
 //
+// https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/service/dynamodb
+//
 // https://github.com/aws/aws-sdk-go-v2/tree/main/service/dynamodb
 // https://github.com/aws/aws-sdk-go-v2/blob/main/service/dynamodb/types/types.go
 // https://github.com/aws/aws-sdk-go-v2/blob/main/service/dynamodb/types/enums.go
@@ -71,7 +73,7 @@ For example
 // Names in Field are short to make some of the tables below legible
 type Field struct {
 	name  string // `device`, etc
-	ty    string // `S`, `N`, `SS`, etc
+	ty    string // one of the TY_ values defined below
 	hide  bool   // true if omitted in a listing
 	opt   bool   // True if optional
 	def   string // Optional default value if optional; even for numbers this is a string
@@ -86,14 +88,21 @@ type Table struct {
 	gloss      string	// What the table is for
 }
 
+// For timestamps the epoch is *always* the Unix epoch, 1/1/1970 00:00:00 UTC.  This means in
+// particular that devices on LoRaWAN, where the epoch is the GPS epoch 1/1/1980 00:00:00 UTC, will
+// have to make a local adjustment before transmitting.
+//
+// Device timestamps before 1676531699 (16 February 2023 07:15:xx UTC) are definitely from
+// mis-configured or un-configured devices.
+
 const (
-	TY_S  = "string"
-	TY_I  = "int"
-	TY_B  = "bool"
-	TY_N  = "number"
-	TY_SS = "string list"
-	TY_ST = "server_timestamp"
-	TY_DT = "device_timestamp"
+	TY_S  = "string"							// "S"
+	TY_I  = "int"									// "N"
+	TY_B  = "bool"								// "BOOL"
+	TY_N  = "number"							// "N"
+	TY_SL = "string list"					// "L" holding "S" nodes, because AWS disallows empty "SS"
+	TY_ST = "server_timestamp"		// "N", seconds since epoch server-side
+	TY_DT = "device_timestamp"		// "N", seconds since epoch client-side
 )
 
 var tables = []*Table{
@@ -107,6 +116,9 @@ var tables = []*Table{
 			&Field{name: "class", ty: TY_S,
 				gloss: "Class ID, shall exist in CLASS"},
 
+			&Field{name: "last_contact", ty: TY_ST, opt: true, def: "0",
+				gloss: "Timestamp (server time) of last message from the device, seconds since epoch"},
+
 			&Field{name: "location", ty: TY_S, opt: true,
 				gloss: "Location ID, shall exist in LOCATION"},
 
@@ -116,7 +128,7 @@ var tables = []*Table{
 			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600",
 				gloss: "Interval between observations, in seconds"},
 
-			&Field{name: "factors", ty: TY_SS, opt: true,
+			&Field{name: "factors", ty: TY_SL, opt: true,
 				gloss: "Factors observable by device, all shall exist in FACTOR"},
 		},
 		gloss: "Defines the devices, holds information about each device"},
@@ -155,8 +167,11 @@ var tables = []*Table{
 			&Field{name: "description", ty: TY_S,
 				gloss: "Arbitrary description of the location"},
 
-			&Field{name: "devices", ty: TY_SS,
+			&Field{name: "devices", ty: TY_SL,
 				gloss: "Devices at this location, all shall exist in DEVICE"},
+
+			&Field{name: "timezone", ty: TY_S, opt: true, def: "",
+				gloss: "A time zone area name (eg Europe/Berlin), as from iana.org/time-zones or timezonedb.com"},
 		},
 		gloss: "Defines the locations where devices can be" },
 
@@ -170,14 +185,17 @@ var tables = []*Table{
 			&Field{name: "device", ty: TY_S,
 				gloss: "The device that reported this observation, it shall exist in DEVICE"},
 
+			&Field{name: "location", ty: TY_S, opt: true, def: "",
+				gloss: "The location self-reported by the device, if present it shall exist in LOCATION"},
+
 			&Field{name: "sequenceno", ty: TY_I,
-				gloss: "The sequence# reported by the device for this observation"},
+				gloss: "The sequence number reported by the device for this observation"},
 
 			&Field{name: "received", ty: TY_ST,
-				gloss: "Timestamp (server time) when the observation was received"},
+				gloss: "Timestamp (server time) when the observation was received, seconds since epoch"},
 
 			&Field{name: "sent", ty: TY_DT,
-				gloss: "Timestamp (device time) when the observation was made"},
+				gloss: "Timestamp (device time) when the observation was made, seconds since epoch"},
 		},
 		gloss: `Log of incoming observations.  Note, there are additional fields here, one per factor
   observed by the device, each factor name prefixed by 'F#', eg, 'F#temperature'.`},
@@ -187,11 +205,6 @@ var tables = []*Table{
 const (
 	PROVISIONED_READ_CAPACITY_UNITS  = 5
 	PROVISIONED_WRITE_CAPACITY_UNITS = 5
-)
-
-const (
-	// year=$1, month=$2, day=$3, hour=$4, minute=$5, second=$6, weekday=$7
-	TIMESTAMP_RE = `^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/((sun)|(mon)|(tue)|(wed)|(thu)|(fri)|(sat))$`
 )
 
 const (
@@ -343,9 +356,6 @@ func format_value(v types.AttributeValue) string {
 			return "true"
 		}
 		return "false"
-	}
-	if w, ok := v.(*types.AttributeValueMemberSS); ok {
-		return fmt.Sprint(w.Value)
 	}
 	if w, ok := v.(*types.AttributeValueMemberL); ok {
 		s := ""
@@ -552,7 +562,7 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 }
 
 func type_is_list(ty string) bool {
-	return ty == TY_SS
+	return ty == TY_SL
 }
 
 func type_is_time(ty string) bool {
@@ -587,9 +597,8 @@ func add_defdef_attribute(attrs map[string]types.AttributeValue, f *Field) {
 		attrs[f.name] = &types.AttributeValueMemberN{Value: "0"}
 	} else if f.ty == TY_B {
 		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: false}
-	} else if f.ty == TY_SS {
-		// DynamoDB disallows empty string sets
-		//attrs[f.name] = &types.AttributeValueMemberSS{Value: []string{}}
+	} else if f.ty == TY_SL {
+		attrs[f.name] = &types.AttributeValueMemberL{Value: []types.AttributeValue{}}
 	} else {
 		log.Fatalf("Should not happen\n%v", f.ty)
 	}

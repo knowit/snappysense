@@ -30,6 +30,7 @@ a JSON payload:
 
 ```
   { sent: <integer, seconds since epoch UTC or seconds since boot>,
+    location: <string, location-id>,
     sequenceno: <nonnegative integer, reading sequence number since startup>
     ... }
 ```
@@ -41,26 +42,12 @@ in the sequence number hence indicates a reboot (but since not every observation
 not possible to detect all reboots using this fact).
 
 The payload contains fields that represent the last valid readings of the sensors that are on the
-device.  The defined fields are currently:
+device.  Each factor is reported by the device under the field name `F#<factor-name>` to avoid name
+clashes.  See the FACTOR table of DATA-MODEL.md for the `<factor-name>` values.
 
-```
-  temperature: <float, degrees celsius, OPTIONAL>
-  humidity: <float, relative in interval 0..100, OPTIONAL>
-  uv: <float, UV index 0..15, OPTIONAL>
-  light: <float, luminous intensity in lux, range unclear, OPTIONAL>
-  altitude: <float, meters relative to sea level, OPTIONAL>
-  pressure: <integer, hecto-Pascals, OPTIONAL>
-  airquality: <integer, 1..5, air quality index, OPTIONAL>
-  airsensor: <integer, 0..3, air sensor status, OPTIONAL>
-  tvoc: <integer, 0..65000, total volatile organic content in ppb, OPTIONAL>
-  co2: <integer, 400..65000, equivalent co2 content in ppm, OPTIONAL>
-  noise: <integer, range unclear, unit unclear, OPTIONAL>
-  motion: <integer, 0 or 1, whether motion was detected during last measurement window, OPTIONAL>
-  
-```
-
-Note that the possible sensor readings that may be reported are defined by the FACTOR table, see
-DATA-MODEL.md.
+TODO: One might ask whether `location` is not redundant, since the location of the device should be
+recorded in the back-end databases, but since the user can change it independently of that it is OK
+to send it, for the time being.
 
 ## Control message
 

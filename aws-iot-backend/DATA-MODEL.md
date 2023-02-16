@@ -33,6 +33,8 @@ DynamoDB table name: `snappy_location`.  Primary key: `location`.
 LOCATION
     location: <string: location-id>
     description: <string: human-readable, fairly specific>
+	devices: <list of string: device IDs at this location>
+	timezone: <string, time location eg "Europe/Berlin", see iana.org/time-zones or timezonedb.com>
 ```
 
 Example:
@@ -42,10 +44,6 @@ Example:
 ```
 
 TODO: This could have geolocation, modulo privacy issues.
-
-TODO: This could have time zone or really, the political time domain, so that computing eg "work
-time" vs "non-work time" is possible.  `https://timezonedb.com/time-zones` has time zone names
-on the format `Continent/Subdivision/Location`, probably it's this we need.
 
 ## DEVICE
 
@@ -136,6 +134,9 @@ values carried are always numbers, even when bools or strings might make more se
 
 There can be more factors than these.
 
+Factor names may not start with the character sequence `F#`, as this is used for internal name
+mangling purposes.
+
 ## OBSERVATIONS
 
 The `OBSERVATIONS` table is a mostly-append-only log of the most recent observations.  When a report
@@ -152,7 +153,7 @@ OBSERVATIONS
     received: <string, server timestamp>
 	sent: <string, device timestamp>
 	sequenceno: <integer, device's observation sequence number since boot>
-    F#<factor>: <number, observation value for <factor>>
+    F#<factor-name>: <number, observation value for <factor-name>>
     ...
 ```
 
