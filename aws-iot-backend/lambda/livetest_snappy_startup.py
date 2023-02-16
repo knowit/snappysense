@@ -1,7 +1,7 @@
-# Live test of snappy_startup
+# Live test of the main snappysense event handler
 #
 # This assumes you've set up test data with ../snappysense-demo-data.sh and that you've run
-# and passed livetest_snappy_data.py
+# and passed livetest_snappy_data.py, livetest_snappy_startup.py, and livetest_snappy_reading.py
 
 import snappy_data
 import snappy_startup
