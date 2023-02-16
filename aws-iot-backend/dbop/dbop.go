@@ -585,9 +585,9 @@ func required_but_not_expressible(f *Field) bool {
 }
 
 func add_attribute(attrs map[string]types.AttributeValue, f *Field, val string) {
-	if f.ty == TY_S || f.ty == TY_ST || f.ty == TY_DT {
+	if f.ty == TY_S {
 		attrs[f.name] = &types.AttributeValueMemberS{Value: val}
-	} else if f.ty == TY_N || f.ty == TY_I {
+	} else if f.ty == TY_N || f.ty == TY_I || f.ty == TY_ST || f.ty == TY_DT {
 		attrs[f.name] = &types.AttributeValueMemberN{Value: val}
 	} else if f.ty == TY_B {
 		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: val == "true"}
@@ -604,9 +604,9 @@ func add_attribute(attrs map[string]types.AttributeValue, f *Field, val string) 
 
 // "default default"
 func add_defdef_attribute(attrs map[string]types.AttributeValue, f *Field) {
-	if f.ty == TY_S || f.ty == TY_ST || f.ty == TY_DT {
+	if f.ty == TY_S {
 		attrs[f.name] = &types.AttributeValueMemberS{Value: ""}
-	} else if f.ty == TY_N || f.ty == TY_I {
+	} else if f.ty == TY_N || f.ty == TY_I || f.ty == TY_ST || f.ty == TY_DT {
 		attrs[f.name] = &types.AttributeValueMemberN{Value: "0"}
 	} else if f.ty == TY_B {
 		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: false}
