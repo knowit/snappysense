@@ -7,47 +7,51 @@
 # See ../DATA-MODEL.md for a description of the databases.
 
 import snappy_data
-import snappy_mqtt
+import math
+import time
 
 # Startup event
 #
 # Input fields
-#   message_type - string, value "startup"
-#   device - string
-#   class - string
-#   time - string
-#   reading_interval - integer(may eventually be absent but for now assume it's 0 if irrelevant)
+#   message_type     - string, value "startup"
+#   device           - string, device ID from snappy_device table
+#   class            - string, class ID from snappy_class table
+#   sent             - integer, device timestamp (seconds since epoch, or junk)
+#   reading_interval - integer
 
 # Returns array of mqtt responses: [[topic, payload, qos], ...]
 
 def handle_startup_event(db, event, context):
     device = event["device"]
     device_class = event["class"]
-    time = event["time"]
+    sent = event["sent"]
     reading_interval = event["reading_interval"]
+    received = math.floor(time.time())
 
     device_entry = snappy_data.get_device(db, device)
-    if device_entry == None:
+    if not device_entry:
         # Device does not exist, this is an error.  TODO: Logging?
         return []
 
-    # Update the history entry for the device, creating it if necessary.
+    # Update the device entry with time of last contact.  We assume server time is monotonic...
 
-    history_entry = snappy_data.get_history_entry_or_create(db, device)
-    snappy_data.set_history_last_contact(history_entry, time)
-    snappy_data.write_history_entry(db, history_entry)
+    snappy_data.device_set_last_contact(device_entry, received)
+    snappy_data.write_device_entry(db, device_entry)
 
     # Configure the device if necessary.
-    #
-    # Send the configuration with QoS1 to ensure that the message is received.  The device needs to
-    # be prepared to receive several config commands after it connects, as a lingering command may
-    # be delivered first followed by a new command.
 
-    if snappy_data.device_is_disabled(device_entry):
-        return [[f"snappy/control/{device_class}/{device}", {"enabled": 0}, 1]]
+    payload = {}
+    if not snappy_data.device_enabled(device_entry):
+        payload["enabled"] = 0
 
     ri = snappy_data.device_reading_interval(device_entry)
     if reading_interval != 0 and reading_interval != ri:
-        return [[f"snappy/control/{device_class}/{device}", {"reading_interval": ri}, 1]]
+        payload["reading_interval"] = ri
+    
+    # Send the configuration with QoS1 to ensure that the message is received.  The device needs to
+    # be prepared to receive several config commands after it connects, as a retained or queued
+    # command may be delivered first followed by a new command.
 
+    if payload:
+        return [[f"snappy/control/{device}", payload, 1]]
     return []

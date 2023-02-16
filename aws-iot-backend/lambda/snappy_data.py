@@ -47,6 +47,9 @@ def opt_int_field(item, name, defval):
         return int(item[name]["N"])
     return defval
 
+def set_opt_int_field(item, name, val):
+    item[name]["N"] = str(val)
+
 def opt_bool_field(item, name, defval):
     if name in item:
         return item[name]["BOOL"]
@@ -66,6 +69,9 @@ def string_list(item, name):
 def get_device(db, device_name):
     return standard_lookup(db, "snappy_device", "device", device_name)
 
+def write_device_entry(db, device_entry):
+    db.put_item(TableName="snappy_device", Item=device_entry)
+    
 def device_class(device_entry):
     return string_field(device_entry, "class")
 
@@ -74,6 +80,9 @@ def device_location(device_entry):
 
 def device_last_contact(device_entry):
     return opt_int_field(device_entry, "last_contact", DEFAULT_DEV_LAST_CONTACT)
+
+def device_set_last_contact(device_entry, lc):
+    set_opt_int_field(device_entry, "last_contact", lc)
 
 def device_enabled(device_entry):
     return opt_bool_field(device_entry, "enabled", DEFAULT_DEV_ENABLED)
@@ -124,4 +133,19 @@ def location_timezone(location_entry):
     return opt_string_field(location_entry, "timezone", DEFAULT_LOC_TIMEZONE)
 
 
-# And for OBSERVATION we never look up anything yet
+################################################################################
+#
+# OBSERVATION
+
+def put_observation(db, key, device, location, sequenceno, received, sent, factors):
+    record = {"key":        {"S":key},
+              "device":     {"S":device},
+              "location":   {"S":location},
+              "sequenceno": {"N":str(sequenceno)},
+              "received":   {"N":str(received)},
+              "sent":       {"N":str(sent)}}
+    for k in factors:
+        record[k] = {"N":str(factors[k])}
+    db.put_item(TableName="snappy_observations", Item=record)
+
+

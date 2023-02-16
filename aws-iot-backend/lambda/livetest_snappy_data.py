@@ -10,6 +10,9 @@ print(snappy_data.location_description(loc))
 print(snappy_data.location_devices(loc))
 print(snappy_data.location_timezone(loc))
 
+# TODO (these are tested by livetest_snappy_startup, so no real harm)
+# - test setting of last contact
+# - test writing
 dev = snappy_data.get_device(db, "snp_1_1_no_2")
 print(snappy_data.device_class(dev))
 print(snappy_data.device_location(dev))
