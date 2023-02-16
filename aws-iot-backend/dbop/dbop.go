@@ -31,7 +31,7 @@ Usage:
  dbop help
  dbop <table> <verb> <argument> ...
 
-The 'table' is one of 'device', 'location', 'class', 'factor', 'history'
+The 'table' is one of 'device', 'location', 'class', 'factor', 'observations'
 
 The 'verb' and 'argument' combinations are as follows.
 
@@ -70,11 +70,12 @@ For example
 
 // Names in Field are short to make some of the tables below legible
 type Field struct {
-	name string // `device`, etc
-	ty   string // `S`, `N`, `SS`, etc
-	hide bool   // true if omitted in a listing
-	opt  bool   // True if optional
-	def  string // optional default value if optional; even for numbers this is a string
+	name  string // `device`, etc
+	ty    string // `S`, `N`, `SS`, etc
+	hide  bool   // true if omitted in a listing
+	opt   bool   // True if optional
+	def   string // Optional default value if optional; even for numbers this is a string
+	gloss string // What the field is for
 }
 
 type Table struct {
@@ -82,6 +83,7 @@ type Table struct {
 	real_name  string // `snappy_table`, etc
 	key_name   string // primary key field name
 	fields     []*Field
+	gloss      string	// What the table is for
 }
 
 const (
@@ -92,62 +94,100 @@ const (
 	TY_SS = "string list"
 	TY_ST = "server_timestamp"
 	TY_DT = "device_timestamp"
-	TY_RL = "list of { \"factor\": " + TY_S + ", \"time\": device_timestamp, \"value\": number }"
-)
-
-// For table creation.  The value "5" is from the AWS DynamoDB dashboard, good enough?
-const (
-	PROVISIONED_READ_CAPACITY_UNITS  = 5
-	PROVISIONED_WRITE_CAPACITY_UNITS = 5
 )
 
 var tables = []*Table{
 	&Table{
 		short_name: "device", real_name: "snappy_device", key_name: "device",
 		fields: []*Field{
-			&Field{name: "device", ty: TY_S},
-			// The class shall exist in snappy_class
-			&Field{name: "class", ty: TY_S},
-			// The location, if not empty, shall exist in snappy_location
-			&Field{name: "location", ty: TY_S, opt: true},
-			&Field{name: "enabled", ty: TY_B, opt: true, def: "false"},
-			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600"},
-			// Each factor shall exist in snappy_factor
-			&Field{name: "factors", ty: TY_SS, opt: true},
-		}},
+
+			&Field{name: "device", ty: TY_S,
+				gloss: "Unique device ID, defined by this table"},
+
+			&Field{name: "class", ty: TY_S,
+				gloss: "Class ID, shall exist in CLASS"},
+
+			&Field{name: "location", ty: TY_S, opt: true,
+				gloss: "Location ID, shall exist in LOCATION"},
+
+			&Field{name: "enabled", ty: TY_B, opt: true, def: "true",
+				gloss: "Whether device should report observation data or not"},
+
+			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600",
+				gloss: "Interval between observations, in seconds"},
+
+			&Field{name: "factors", ty: TY_SS, opt: true,
+				gloss: "Factors observable by device, all shall exist in FACTOR"},
+		},
+		gloss: "Defines the devices, holds information about each device"},
 
 	&Table{
 		short_name: "class", real_name: "snappy_class", key_name: "class",
 		fields: []*Field{
-			&Field{name: "class", ty: TY_S},
-			&Field{name: "description", ty: TY_S},
-		}},
+
+			&Field{name: "class", ty: TY_S,
+				gloss: "Unique class ID, defined by this table"},
+
+			&Field{name: "description", ty: TY_S,
+				gloss: "Arbitrary description of the class"},
+		},
+		gloss: "Defines the device class"},
 
 	&Table{
 		short_name: "factor", real_name: "snappy_factor", key_name: "factor",
 		fields: []*Field{
-			&Field{name: "factor", ty: TY_S},
-			&Field{name: "description", ty: TY_S},
-		}},
+
+			&Field{name: "factor", ty: TY_S,
+				gloss: "Unique factor name, defined by this table"},
+
+			&Field{name: "description", ty: TY_S,
+				gloss: "Arbitrary description of the factor"},
+		},
+		gloss: "Defines the environmental factors that can be observed by the devices"},
 
 	&Table{
 		short_name: "location", real_name: "snappy_location", key_name: "location",
 		fields: []*Field{
-			&Field{name: "location", ty: TY_S},
-			// Each device shall exist in snappy_device
-			&Field{name: "devices", ty: TY_SS},
-		}},
+
+			&Field{name: "location", ty: TY_S,
+				gloss: "Unique location ID, defined by this table"},
+
+			&Field{name: "description", ty: TY_S,
+				gloss: "Arbitrary description of the location"},
+
+			&Field{name: "devices", ty: TY_SS,
+				gloss: "Devices at this location, all shall exist in DEVICE"},
+		},
+		gloss: "Defines the locations where devices can be" },
 
 	&Table{
-		short_name: "history", real_name: "snappy_history", key_name: "device",
+		short_name: "observations", real_name: "snappy_observations", key_name: "key",
 		fields: []*Field{
-			// The device shall exist in snappy_device
-			&Field{name: "device", ty: TY_S},
-			&Field{name: "last_seen", ty: TY_ST},
-			// Each factor named in a reading shall exist in snappy_factor
-			&Field{name: "readings", ty: TY_RL},
-		}},
+
+			&Field{name: "key", ty: TY_S,
+				gloss: "Synthesized unique key, combining device ID, arrival time, and other things"},
+
+			&Field{name: "device", ty: TY_S,
+				gloss: "The device that reported this observation, it shall exist in DEVICE"},
+
+			&Field{name: "sequenceno", ty: TY_I,
+				gloss: "The sequence# reported by the device for this observation"},
+
+			&Field{name: "received", ty: TY_ST,
+				gloss: "Timestamp (server time) when the observation was received"},
+
+			&Field{name: "sent", ty: TY_DT,
+				gloss: "Timestamp (device time) when the observation was made"},
+		},
+		gloss: `Log of incoming observations.  Note, there are additional fields here, one per factor
+  observed by the device, each factor name prefixed by 'F#', eg, 'F#temperature'.`},
 }
+
+// For table creation.  The value "5" is from the AWS DynamoDB dashboard, good enough?
+const (
+	PROVISIONED_READ_CAPACITY_UNITS  = 5
+	PROVISIONED_WRITE_CAPACITY_UNITS = 5
+)
 
 const (
 	// year=$1, month=$2, day=$3, hour=$4, minute=$5, second=$6, weekday=$7
@@ -215,15 +255,23 @@ func main() {
 
 func show_table_info(the_table *Table) {
 	fmt.Printf("Table %s\n", the_table.short_name)
-	fmt.Printf("  Primary key '%s'\n", the_table.key_name)
+  if the_table.gloss != "" {
+		fmt.Printf("  %s\n", the_table.gloss)
+	}
 	for _, f := range the_table.fields {
 		req := "Required field"
 		if f.opt {
 			req = "Optional field"
 		}
 		fmt.Printf("  %s '%s', %s\n", req, f.name, f.ty)
+    if f.name == the_table.key_name {
+			fmt.Printf("    Primary key\n");
+		}
 		if f.opt && f.def != "" {
 			fmt.Printf("    Default '%s'\n", f.def)
+		}
+		if f.gloss != "" {
+			fmt.Printf("    %s\n", f.gloss);
 		}
 	}
 }
@@ -313,17 +361,25 @@ func format_value(v types.AttributeValue) string {
 }
 
 func display_row(the_table *Table, row map[string]types.AttributeValue) {
+	handled := make(map[string]bool, 10)
+	handled[the_table.key_name] = true
 	fmt.Printf("%s %s\n", the_table.short_name, format_value(row[the_table.key_name]))
-	// TODO: Handle the fact that there can be *other* fields than the ones defined by this program,
-	// and we should show those too, with some annotation.
 	for _, f := range the_table.fields {
 		if !f.hide {
 			if v, ok := row[f.name]; ok {
 				if f.name != the_table.key_name {
 					fmt.Printf("  %s: %v\n", f.name, format_value(v))
+					handled[f.name] = true
 				}
 			}
 		}
+	}
+	for k, v := range row {
+		if handled[k] {
+			continue;
+		}
+		fmt.Printf("  %s: %v\n", k, format_value(v))
+		handled[k] = true
 	}
 }
 
@@ -496,7 +552,7 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 }
 
 func type_is_list(ty string) bool {
-	return ty == TY_SS || ty == TY_RL
+	return ty == TY_SS
 }
 
 func type_is_time(ty string) bool {
@@ -534,8 +590,6 @@ func add_defdef_attribute(attrs map[string]types.AttributeValue, f *Field) {
 	} else if f.ty == TY_SS {
 		// DynamoDB disallows empty string sets
 		//attrs[f.name] = &types.AttributeValueMemberSS{Value: []string{}}
-	} else if f.ty == TY_RL {
-		attrs[f.name] = &types.AttributeValueMemberL{Value: []types.AttributeValue{}}
 	} else {
 		log.Fatalf("Should not happen\n%v", f.ty)
 	}

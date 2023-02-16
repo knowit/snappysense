@@ -239,7 +239,7 @@ The `dbop` program (see later section) is used to initialize the five tables if 
    dbop class create-table
    dbop factor create-table
    dbop location create-table
-   dbop history create-table
+   dbop observations create-table
 ```
 
 Similarly `delete-table` can be used to delete tables that need to be cleaned out before creating

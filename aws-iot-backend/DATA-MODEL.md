@@ -6,12 +6,13 @@ This is the data model definition for the SnappySense back-end based on AWS Lamb
 the overall design, see DESIGN.md in this directory.
 
 This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION (`snappy_location`),
-DEVICE (`snappy_device`), CLASS (`snappy_class`), FACTOR (`snappy_factor`), and HISTORY
-(`snappy_history`).  The first four are mostly static, while HISTORY is updated in response to data
-received from the devices.
+DEVICE (`snappy_device`), CLASS (`snappy_class`), FACTOR (`snappy_factor`), and OBSERVATIONS
+(`snappy_observations`).  The first four are mostly static, while OBSERVATIONS is updated in
+response to data received from the devices.
 
-Right now this is a NoSQL model, and the data stored in HISTORY (and to some extent in LOCATION) are
-not uniform, but vary with the device that reported data (or the nature of the location).
+Right now this is a NoSQL model, and the data stored in OBSERVATIONS (and to some extent in
+LOCATION) are not uniform, but vary with the device that reported data (or the nature of the
+location).
 
 Technically speaking the data model is defined not here, but jointly by two programs: the AWS Lambda
 code in `lambda/`, and the database command-line interface in `dbop/`.  Those programs MUST be in
@@ -21,10 +22,6 @@ something is an "N" number or an "S" string that happens always to have a numeri
 
 Whatever is in the present document is therefore only human-level documentation (though it should
 agree with the programs, of course).
-
-(Previously there were two other tables, IDEAL and AGGREGATE.  Those have been removed, and prose
-referring to them should be ignored.  Also, this data model has been simplified significantly from
-some earlier drafts.)
 
 ## LOCATION
 
@@ -47,7 +44,8 @@ Example:
 TODO: This could have geolocation, modulo privacy issues.
 
 TODO: This could have time zone or really, the political time domain, so that computing eg "work
-time" vs "non-work time" is possible.
+time" vs "non-work time" is possible.  `https://timezonedb.com/time-zones` has time zone names
+on the format `Continent/Subdivision/Location`, probably it's this we need.
 
 ## DEVICE
 
@@ -80,13 +78,6 @@ Example:
 	          "airquality","tvoc","co2","motion","noise"],
 ```
 
-TODO: It is a bug that a device name cannot match any device class name or the string `all`; the bug is
-really in the control message protocol and should be fixed there.
-
-TODO: It's possible that the `reading_interval` on a device should be per environmental factor and
-not for the device as a whole, and that the default `reading_interval` for a factor should be stored
-in `FACTOR`.
-
 
 ## CLASS
 
@@ -107,9 +98,6 @@ Examples:
     class: "rpi2b+", description: "Raspberry Pi 2 Model B+"
     class: "rpi1b+", description: "Raspberry Pi 1 Model B+"
 ```
-
-TODO: It is a bug that a class name cannot match any device name or the string `all`; the bug is
-really in the control message protocol and should be fixed there.
 
 ## FACTOR
 
@@ -148,66 +136,27 @@ values carried are always numbers, even when bools or strings might make more se
 
 There can be more factors than these.
 
-## HISTORY
+## OBSERVATIONS
 
-There is one entry in `HISTORY` for each device.  The entry holds the "last" readings from the device
-and information about the time of last contact.  These attributes are logically part of `DEVICE` but
-are very busy, while `DEVICE` is highly connected and mostly static.
+The `OBSERVATIONS` table is a mostly-append-only log of the most recent observations.  When a report
+arrives from a device it is lightly processed and added to `OBSERVATIONS` under a unique,
+synthesized key.  The intent is that this table is culled every so often, with data being processed
+and moved into som aggregate table.
 
-DynamoDB table name: `snappy_history`.  Primary key: `device`.
+DynamoDB table name: `snappy_observations`.  Primary key: `key`.
 
 ```
-HISTORY
+OBSERVATIONS
+    key: <string: device + # + received + # + sequenceno + # + random integer>
     device: <string, device-id>
-    last_seen: <string, server timestamp>
-    readings: [{factor: <string, factor-id>,
-                time: <string, client timestamp>,
-                value: <number, value of reading>}, ...]
+    received: <string, server timestamp>
+	sent: <string, device timestamp>
+	sequenceno: <integer, device's observation sequence number since boot>
+    F#<factor>: <number, observation value for <factor>>
+    ...
 ```
 
-The readings are unsorted (for now) and the list is flat to keep the data model simple (as opposed
-to organized under `factor`).  When the backend wants to expire old entries it needs to do the work
-to sort and organize the values at that time.  A sensible strategy might be to do the work whenever
-the first reading arrives after midnight, aggregating the previous day's entries in some TBD
-fashion.
-
-TODO: An alternative and even simpler model is that the primary key is synthetic and that `HISTORY`
-functions mostly as a log.  Readings are added blindly to the log.  Once a day, or every so often,
-the log is consolidated into aggregate data and cleared; this can happen concurrently with new
-entries arriving.  In this model, the `device` and `last_seen` fields are moved into the record of
-readings.
-
-Are there DynamoDB synthesized keys or something like that?  Note, there is really not a "primary"
-key in DynamoDB, only "partition" keys that need not be unique.  We have made them unique.  But they
-don't have to be.  The "partition" key could be a random number, and that would work fine.  For
-small data volumes it could even be the timestamp, which is not guaranteed to be unique.  And for an
-append-only log this is just fine - we'll never really search it.  When we need to remove something,
-though, we'll possibly need to be careful...  But this is no worse than giving each record a field
-that is initially blank and is set to "X" in records that are to be deleted?  Indeed this field
-could be the timestamp field....
-
-DynamoDB uses "primary key" about the combination of partition key and sort key.  So perhaps these
-really need to be a unique pair.  But that's not a hard requirement to contend with.  The expiration
-process can just set unique integer values in a sort key and use that.
-
-This leads to this design:
-
-DynamoDB table name: `snappy_history`.  Primary key: `key`.
-
-```
-HISTORY
-    key: <string, device + '#' + last_seen + '#' + sequenceno from device>
-    device: <string, device-id>
-    last_seen: <string, server timestamp>
-    time: <string, client timestamp>
-	<mangled-factor-name>: <number, value of reading>
-	...
-```
-
-A mangled factor name has the prefix `F#` added to whatever the device supplied.  This avoids 
-
-Every reading is blindly added to the table using PutItem.
-
-There is an error source here, in that a fast-booting device that makes a reading with sequenceno 0,
-reboots, and makes another reading within the same second will only have one of them recorded, BUT I
-CAN LIVE WITH THAT.
+There is a minuscule chance that there can be a duplicate key, if the device boots very quickly and
+manages to send two observations with the same low sequence number (probably only 0) under the same
+time stamp.  In this case, the later observation overwrites the former in the table.  I CAN LIVE
+WITH THAT.

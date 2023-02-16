@@ -34,6 +34,13 @@ To upload,
 
 ### Phase 3 (make it all hang together)
 
+* BUG: It's sort of nuts for the device to send a formatted timestamp, when it could just send
+  seconds since epoch + time zone (if configured on the device and not in the backend) (and why not
+  in the backend? the backend has access to a good timezone database.)
+* BUG? The SS type is a nonempty list, this is going to cause trouble?  Should use L instead?
+  Something else?
+* BUG: Most tables have changed quite a bit.  The HISTORY table has changed the most; a lot of logic
+  has to be rewritten here.
 * BUG: `snappy_reading.py`: The snappy_reading.py code is not au courant with the current device
   firmware.  The firmware sends many sensor readings in a single package, while the code expects
   just one pair of `factor` and `reading` fields.

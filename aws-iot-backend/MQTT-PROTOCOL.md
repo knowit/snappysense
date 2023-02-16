@@ -14,19 +14,13 @@ At startup the device sends a message with topic `snappy/startup/<device-class>/
 JSON payload:
 
 ```
-  { time: <string, timestamp, OPTIONAL>,
-    reading_interval: <integer, seconds between readings, OPTIONAL> }
+  { sent: <integer, seconds since epoch UTC or seconds since boot>,
+    reading_interval: <integer, seconds between readings> }
 ```
 
 where `reading_interval` is only sent if the device is a sensor (as opposed to only an actuator).
 At startup, the device is usually enabled, that is, it will report readings if it is not told
 otherwise.
-
-A `timestamp` is a string derived from the ISO date format: `yyyy-mm-ddThh:ss/xxx` where the date
-and time fields are obvious and `xxx` is a string from the set `{sun,mon,tue,wed,thu,fri,sat}`, ie,
-the weekday name.  The field `time` can be absent from messages if the device is not configured for
-time.  The time stamp normally represents the local time at the location of the device, if the
-device is properly configured.
 
 ## Observation message
 
@@ -35,16 +29,16 @@ until a communication window is open) has the topic `snappy/reading/<device-clas
 a JSON payload:
 
 ```
-  { time: <string, timestamp, OPTIONAL>,
-    sequenceno: <nonnegative integer, reading sequence number since startup, REQUIRED>
+  { sent: <integer, seconds since epoch UTC or seconds since boot>,
+    sequenceno: <nonnegative integer, reading sequence number since startup>
     ... }
 ```
 
-For `time`, se over.  The sequence number allows the server to organize the incoming data in case
-the time stamp is missing.  It is reset to 0 every time the device is rebooted.  Messages are
-uploaded (and received) in increasing sequence number order, though not all observations are
-necessarily uploaded.  A drop in the sequence number hence indicates a reboot (but since not every
-observation is uploaded it is not possible to detect all reboots using this fact).
+The sequence number allows the server to organize the incoming data in case the time stamp is
+missing.  It is reset to 0 every time the device is rebooted.  Messages are uploaded (and received)
+in increasing sequence number order, though not all observations are necessarily uploaded.  A drop
+in the sequence number hence indicates a reboot (but since not every observation is uploaded it is
+not possible to detect all reboots using this fact).
 
 The payload contains fields that represent the last valid readings of the sensors that are on the
 device.  The defined fields are currently:
@@ -71,7 +65,7 @@ DATA-MODEL.md.
 ## Control message
 
 AWS IoT can send a control message to the device via the topics `snappy/control/<device-id>`,
-`snappy/control/<device-class>` and `snappy/control/all`, to which the device can subscribe.  The
+`snappy/control-class/<device-class>` and `snappy/control-all`, to which the device can subscribe.  The
 message has a JSON payload with at least these fields:
 
 ```
@@ -82,24 +76,8 @@ message has a JSON payload with at least these fields:
 where `enable` controls whether the device performs and reports measurements, and `reading_interval`
 controls how often the measurements are taken.
 
-(TODO: This protocol is buggy and pointlessly restricts the names of devices and classes.  More
-sensibly, the topics would be `snappy/control-device/<device-id>`,
-`snappy/control-class/<device-class>`, and `snappy/control-all`, or the format could be
-`snappy/control/<device-class>/<device-id>` where the class and ID could both be a wildcard
-character.)
-
 ## Command message
 
 AWS IoT can send a command message to the device via the topic `snappy/command/<device-id>` (and
-unlike control message, not to the class or to all devices) with a JSON payload of the following
-form, other forms TBD:
-
-```
-  { actuator: <string>, reading: <value>, ideal: <value> }
-```
-
-The intent of this message is that the named actuator, if it exists, shall be triggered in such a
-way that the difference beteen the `reading` and the `ideal` is decreaed.  (This is very
-preliminary, but the effect can range from actually manipulating some environmental control, via
-flashing a message to the operator prompting her to do something, to just dropping the message on
-the floor.)
+unlike control message, not to the class or to all devices) with a JSON payload.  There are not currently
+anny command messages.
