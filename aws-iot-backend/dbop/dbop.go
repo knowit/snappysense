@@ -128,7 +128,7 @@ var tables = []*Table{
 			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600",
 				gloss: "Interval between observations, in seconds"},
 
-			&Field{name: "factors", ty: TY_SL, opt: true,
+			&Field{name: "factors", ty: TY_SL,
 				gloss: "Factors observable by device, all shall exist in FACTOR"},
 		},
 		gloss: "Defines the devices, holds information about each device"},
@@ -318,6 +318,7 @@ func create_table(svc *dynamodb.Client, the_table *Table) {
 	if err != nil {
 		log.Fatalf("failed to create table %s\n%v", the_table.short_name, err)
 	}
+	fmt.Printf("Table %s added\n", the_table.short_name)
 }
 
 func delete_table(svc *dynamodb.Client, the_table *Table) {
@@ -327,7 +328,7 @@ func delete_table(svc *dynamodb.Client, the_table *Table) {
 	if err != nil {
 		log.Fatalf("failed to delete table %s\n%v", the_table.short_name, err)
 	}
-	fmt.Println("Table deleted")
+	fmt.Printf("Table %s deleted\n", the_table.short_name)
 }
 
 func scan_table(svc *dynamodb.Client, the_table *Table) {
@@ -393,19 +394,24 @@ func display_row(the_table *Table, row map[string]types.AttributeValue) {
 	}
 }
 
+func has_value(m map[string]string, v string) bool {
+	_, found := m[v]
+	return found
+}
+
 func add_table_element(svc *dynamodb.Client, the_table *Table, params map[string]string) {
 	items := make(map[string]types.AttributeValue, 10)
 	for _, f := range the_table.fields {
 		if required_but_not_expressible(f) {
 			add_defdef_attribute(items, f)
-		} else if f.opt {
+		} else if !f.opt || has_value(params, f.name) {
+			add_attribute(items, f, params[f.name])
+		} else {
 			if f.def != "" {
 				add_attribute(items, f, f.def)
 			} else {
 				add_defdef_attribute(items, f)
 			}
-		} else {
-			add_attribute(items, f, params[f.name])
 		}
 	}
 	_, err := svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
@@ -570,7 +576,8 @@ func type_is_time(ty string) bool {
 }
 
 func not_expressible(f *Field) bool {
-	return type_is_list(f.ty)
+	// Currently all fields are expressible, but it used to not be so
+	return false
 }
 
 func required_but_not_expressible(f *Field) bool {
@@ -584,6 +591,12 @@ func add_attribute(attrs map[string]types.AttributeValue, f *Field, val string) 
 		attrs[f.name] = &types.AttributeValueMemberN{Value: val}
 	} else if f.ty == TY_B {
 		attrs[f.name] = &types.AttributeValueMemberBOOL{Value: val == "true"}
+	} else if f.ty == TY_SL {
+		attrvals := []types.AttributeValue{}
+		for _, v := range strings.Split(val, ",") {
+			attrvals = append(attrvals, &types.AttributeValueMemberS{Value: v})
+		}
+		attrs[f.name] = &types.AttributeValueMemberL{Value: attrvals}
 	} else {
 		panic("Should not happen")
 	}
