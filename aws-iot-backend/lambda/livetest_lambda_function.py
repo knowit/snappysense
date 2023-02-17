@@ -16,7 +16,7 @@ lambda_function.snappysense_event({"message_type": "startup",
                                    "device": "snp_1_1_no_1",
                                    "class": "SnappySense",
                                    "sent": 12345,
-                                   "reading_interval": 5},
+                                   "interval": 5},
                                   None)
 print(lambda_function.mocked_outgoing)
 dev1 = snappy_data.get_device(db, "snp_1_1_no_1")
@@ -24,7 +24,7 @@ print(snappy_data.device_last_contact(dev1))
 
 items0 = db.scan(TableName="snappy_observation")["Items"]
 print(len(items0))
-lambda_function.snappysense_event({"message_type": "reading",
+lambda_function.snappysense_event({"message_type": "observation",
                                    "device": "snp_1_1_no_" + str(random.randint(1,3)),
                                    "class": "SnappySense",
                                    "sent": random.randint(100000, 1000000),

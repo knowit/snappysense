@@ -11,7 +11,7 @@ import boto3
 # and these values shall agree with the values in that program.  Optional list fields have the empty
 # list as type always.
 
-DEFAULT_DEV_READING_INTERVAL = 3600
+DEFAULT_DEV_INTERVAL = 3600
 DEFAULT_DEV_LOCATION = ""
 DEFAULT_DEV_LAST_CONTACT = 0
 DEFAULT_DEV_ENABLED = True
@@ -87,8 +87,8 @@ def device_set_last_contact(device_entry, lc):
 def device_enabled(device_entry):
     return opt_bool_field(device_entry, "enabled", DEFAULT_DEV_ENABLED)
 
-def device_reading_interval(device_entry):
-    return opt_int_field(device_entry, "reading_interval", DEFAULT_DEV_READING_INTERVAL)
+def device_interval(device_entry):
+    return opt_int_field(device_entry, "interval", DEFAULT_DEV_INTERVAL)
 
 def device_factors(device_entry):
     return string_list(device_entry, "factors")

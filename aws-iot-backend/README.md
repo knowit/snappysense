@@ -4,7 +4,7 @@
 
 ## High-level SnappySense network architecture
 
-Each device in the SnappySense network can optionally report its readings to AWS IoT, where they
+Each device in the SnappySense network can optionally report its observations to AWS IoT, where they
 will be ingested and stored in a database for display and analysis.  Also optionally, AWS IoT can
 transmit data back to the device to control it in various ways.
 
@@ -13,7 +13,7 @@ other types of devices; for simplicity I will mainly consider the standard Snapp
 the following.)
 
 Currently the only communication protocol between a device and AWS IoT is MQTT, a pub/sub protocol.
-The device publishes readings and subscribes to control messages.  The server subscribes to readings
+The device publishes observatins and subscribes to control messages.  The server subscribes to observations
 and publishes control messages.  The full protocol is defined in MQTT-PROTOCOL.md.
 
 Each device must be configured so that it can connect to AWS IoT: It must be provisioned with an AWS
@@ -25,7 +25,7 @@ location; they also need to be given a location name appropriate for the locatio
 process is described in [../UX.md](../UX.md).
 
 On the backend, data are stored in a DynamoDB database.  The database is updated by a Lambda when
-readings arrive at AWS IoT.
+observations arrive at AWS IoT.
 
 At present (February 2023) there is no convenient UI for database access.  All work must be done
 from AWS consoles or from the AWS CLI.  In the future the UI must allow the registration of things,
@@ -114,7 +114,7 @@ restrict it to these actions only:
 * `iot:Subscribe` for `snappy/control/+`
 * `iot:Subscribe` for `snappy/command/+`
 * `iot:Publish` for `snappy/startup/+/+`
-* `iot:Publish` for `snappy/reading/+/+`.
+* `iot:Publish` for `snappy/observation/+/+`.
 
 The restrictions would be more secure, as it would make it impossible for Things to subscribe to
 non-SnappySense messages flowing through the AWS MQTT broker.
@@ -129,7 +129,7 @@ Now that we have Things that can publish and subscribe to messages, we must rout
 traffic to Lambda functions for processing.
 
 There is a single Lambda function, `snappySense`, that responds to traffic from Things, but two
-routes in AWS IoT to route traffic to it, one for startup messages and one for sensor reading
+routes in AWS IoT to route traffic to it, one for startup messages and one for sensor observation
 messages.  (The reason for this is to avoid wildcards on the second token of the topic, so as to
 avoid every chance of message loops.)
 
@@ -175,7 +175,7 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 
 #### Creating a stub lambda functions
 
-There is a single function `snappySense` to handle both startup and reading messages.
+There is a single function `snappySense` to handle both startup and observation messages.
 
 In AWS > Management console > Lambda, click "Create function" and give it these parameters:
 
@@ -208,8 +208,8 @@ In AWS > Management console > IoT Core > Message Routing > Rules, create a new r
 * For the action, choose "Lambda" and then choose `snappySense` as the lambda function
 * Click "Next" until you're done.
 
-Now **repeat those steps** with the difference that the rule name is `snappySenseReading`, the topic
-filter is `snappy/reading/+/+`, and that "reading" replaces "startup" in the description.
+Now **repeat those steps** with the difference that the rule name is `snappySenseObservation`, the topic
+filter is `snappy/observation/+/+`, and that "observation" replaces "startup" in the description.
 
 (The reason for having two rules is to avoid a wildcard that might accidentally match a message
 coming back from the Lambda, heading to a Thing.)
@@ -221,7 +221,7 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 Go to AWS > Management console > IoT Core.  Select "MQTT Test client".  Subscribe to '#'.  Go to the
 Publish pane and publish anything you like to `snappy/startup/1/1`.  In the message log you should
 see two messages, the one you sent and the echoed message, with a three fields added (message_type,
-class, and device).  Repeat the experiment for `snappy/reading/1/1`.
+class, and device).  Repeat the experiment for `snappy/observation/1/1`.
 
 Once this test passes, you know that message routing works within AWS.
 

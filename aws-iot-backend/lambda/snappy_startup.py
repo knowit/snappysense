@@ -13,11 +13,11 @@ import time
 # Startup event
 #
 # Input fields
-#   message_type     - string, value "startup"
-#   device           - string, device ID from snappy_device table
-#   class            - string, class ID from snappy_class table
-#   sent             - integer, device timestamp (seconds since epoch, or junk)
-#   reading_interval - integer
+#   message_type  - string, value "startup"
+#   device        - string, device ID from snappy_device table
+#   class         - string, class ID from snappy_class table
+#   sent          - integer, device timestamp (seconds since epoch, or junk)
+#   interval      - integer
 
 # Returns array of mqtt responses: [[topic, payload, qos], ...]
 
@@ -25,7 +25,7 @@ def handle_startup_event(db, event, context):
     device = event["device"]
     device_class = event["class"]
     sent = event["sent"]
-    reading_interval = event["reading_interval"]
+    reported_interval = event["interval"]
     received = math.floor(time.time())
 
     device_entry = snappy_data.get_device(db, device)
@@ -44,9 +44,9 @@ def handle_startup_event(db, event, context):
     if not snappy_data.device_enabled(device_entry):
         payload["enabled"] = 0
 
-    ri = snappy_data.device_reading_interval(device_entry)
-    if reading_interval != 0 and reading_interval != ri:
-        payload["reading_interval"] = ri
+    set_interval = snappy_data.device_interval(device_entry)
+    if reported_interval != 0 and reported_interval != set_interval:
+        payload["interval"] = set_interval
     
     # Send the configuration with QoS1 to ensure that the message is received.  The device needs to
     # be prepared to receive several config commands after it connects, as a retained or queued

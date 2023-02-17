@@ -3,7 +3,7 @@
 # Overall event handling for SnappySense
 
 import snappy_startup
-import snappy_reading
+import snappy_observation
 import snappy_mqtt
 import snappy_data
 
@@ -18,7 +18,7 @@ def snappysense_event(event, context):
     if event["message_type"] == "startup":
         responses = snappy_startup.handle_startup_event(db, event, context)
     else:
-        responses = snappy_reading.handle_reading_event(db, event, context)
+        responses = snappy_observation.handle_observation_event(db, event, context)
     if mock_mqtt:
         mocked_outgoing = responses
     else:

@@ -1,6 +1,6 @@
 # -*- fill-column: 100 -*-
 #
-# Respond to a SnappySense "reading" message by recording the reading in the history for the device
+# Respond to a SnappySense "observation" message by recording the observation in the OBSERVATION table
 # and computing and sending relevant actuator commands for the location of the device.
 #
 # See ../MQTT-PROTOCOL.md for a description of the messages.
@@ -12,7 +12,7 @@ import math
 import random
 
 # Input fields
-#   message_type - string, value "reading"
+#   message_type - string, value "observation"
 #   device       - string
 #   class        - string
 #   sent         - integer, seconds since epoch device time
@@ -24,7 +24,7 @@ import random
 
 # Returns array of mqtt responses: [[topic, payload, qos], ...]
 
-def handle_reading_event(db, event, context):
+def handle_observation_event(db, event, context):
     device = event["device"]
     device_class = event["class"]
     sent = event["sent"]

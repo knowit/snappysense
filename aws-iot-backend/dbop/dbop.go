@@ -125,7 +125,7 @@ var tables = []*Table{
 			&Field{name: "enabled", ty: TY_B, opt: true, def: "true",
 				gloss: "Whether device should report observation data or not"},
 
-			&Field{name: "reading_interval", ty: TY_I, opt: true, def: "3600",
+			&Field{name: "interval", ty: TY_I, opt: true, def: "3600",
 				gloss: "Interval between observations, in seconds"},
 
 			&Field{name: "factors", ty: TY_SL,

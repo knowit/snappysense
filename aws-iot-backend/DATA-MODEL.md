@@ -48,7 +48,7 @@ TODO: This could have geolocation, modulo privacy issues.
 ## DEVICE
 
 An entry in `DEVICE` represents a single sensor device, possibly containing many distinct sensors
-for environmental factors.  The default for `enabled` is 1.  The default for `reading_interval` is
+for environmental factors.  The default for `enabled` is 1.  The default for `interval` is
 something sensible, on the order of 1 hour.
 
 DynamoDB table name: `snappy_device`.  Primary key: `device`.
@@ -59,7 +59,7 @@ DEVICE
     class: <string, class-id>
     location: <string, location-id>
     enabled: <boolean>
-    reading_interval: <positive integer, seconds>
+    interval: <positive integer, seconds>
     factors: [<string: factor-id>, ...]
 ```
 

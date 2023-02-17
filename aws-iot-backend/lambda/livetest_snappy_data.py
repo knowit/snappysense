@@ -18,7 +18,7 @@ print(snappy_data.device_class(dev))
 print(snappy_data.device_location(dev))
 print(snappy_data.device_last_contact(dev))
 print(snappy_data.device_enabled(dev))
-print(snappy_data.device_reading_interval(dev))
+print(snappy_data.device_interval(dev))
 print(snappy_data.device_factors(dev))
 
 cls = snappy_data.get_class(db, "SnappySense")

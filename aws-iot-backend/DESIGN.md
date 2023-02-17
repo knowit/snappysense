@@ -24,7 +24,7 @@ By way of overview:
   classes), LOCATION (for known locations where devices can reside), and FACTOR (for the types of
   things that can be measured).
 
-- The database has a dynamic tables OBSERVATION (for the most recent sensor readings for each
+- The database has a dynamic tables OBSERVATION (for the most recent sensor observations for each
   device) and will in the future have a table for aggregate data.
   
 The tables are described in detail [`DATA-MODEL.md`](DATA-MODEL.md).
@@ -37,7 +37,7 @@ When a "startup" message arrives from a device, a control message may be generat
 the device if the device's reported configuration differs from what's desired.  (The desired
 configuration is stored in the DEVICE table.)
 
-When a "reading" arrives from a device, a new OBSERVATION entry is created to add the new readings.
+When an "observation" arrives from a device, a new OBSERVATION entry is created to add the new observation.
 Occasionally, the OBSERVATION table is going to have to be culled and data moved into some place
 for aggregated data; this is TBD.
 
@@ -47,13 +47,13 @@ Possibly not, but it's a prototype.
 
 Likely, some container running on an EC2 instance, a relational DB and a relational data model make
 for a better solution if we ever get to the point where we have some real volume of devices and
-readings, and/or we get the UI people to develop proper UIs and backend support for them.
+observations, and/or we get the UI people to develop proper UIs and backend support for them.
 
 ## Dashboards and UIs
 
 TBD - this is a sketch, it's not the current focus.
 
-There must exist various kinds of triggers or alerts: for readings that indicate a very bad
+There must exist various kinds of triggers or alerts: for observations that indicate a very bad
 environment; for devices that stop communicating.
 
 There must exist some interface that allows for devices, classes, factors, and locations to
@@ -79,9 +79,9 @@ model.  Here are some notes:
   comparing mondays to mondays than january 1 to january 1
 - so there may be a table that is indexed by (location, day-of-the-week) and for each entry there is
   a table going back some number of weeks (TBD, but maybe 100?), and in each table element there is
-  an object (factor, [{time, reading, ...}, ...])  where the exact fields of the inner structures
+  an object (factor, [{time, observation, ...}, ...])  where the exact fields of the inner structures
   are tbd.  This should be sorted with most recent timestamp first in the inner list.
-- there could be a lot of data here if we have one reading per factor per hour, this should be a
+- there could be a lot of data here if we have one observation per factor per hour, this should be a
   consideration.  In principle, the table could be indexed by a triple, (location, day-of-the-week,
   hour-of-the-day)
 - this all makes it easy to report per-location and per-hour and/or per-day-of-the-week.

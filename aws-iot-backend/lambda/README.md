@@ -8,8 +8,8 @@ This is prototype AWS Lambda code for the SnappySense back-end.
 AWS iot-data.
 
 Application logic is in `snappy_startup.py`, which handles `snappy/startup/+/+` events (device
-startup messages), and in `snappy_reading.py`, which handles `snappy/reading/+/+` events (device
-reading messages).
+startup messages), and in `snappy_observation.py`, which handles `snappy/observation/+/+` events
+(device observation messages).
 
 See various `*.md` files in the parent directory for design documents.
 
