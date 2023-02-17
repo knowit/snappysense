@@ -6,11 +6,11 @@ This is the data model definition for the SnappySense back-end based on AWS Lamb
 the overall design, see DESIGN.md in this directory.
 
 This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION (`snappy_location`),
-DEVICE (`snappy_device`), CLASS (`snappy_class`), FACTOR (`snappy_factor`), and OBSERVATIONS
-(`snappy_observations`).  The first four are mostly static, while OBSERVATIONS is updated in
+DEVICE (`snappy_device`), CLASS (`snappy_class`), FACTOR (`snappy_factor`), and OBSERVATION
+(`snappy_observation`).  The first four are mostly static, while OBSERVATION is updated in
 response to data received from the devices.
 
-Right now this is a NoSQL model, and the data stored in OBSERVATIONS (and to some extent in
+Right now this is a NoSQL model, and the data stored in OBSERVATION (and to some extent in
 LOCATION) are not uniform, but vary with the device that reported data (or the nature of the
 location).
 
@@ -137,17 +137,17 @@ There can be more factors than these.
 Factor names may not start with the character sequence `F#`, as this is used for internal name
 mangling purposes.
 
-## OBSERVATIONS
+## OBSERVATION
 
-The `OBSERVATIONS` table is a mostly-append-only log of the most recent observations.  When a report
-arrives from a device it is lightly processed and added to `OBSERVATIONS` under a unique,
+The `OBSERVATION` table is a mostly-append-only log of the most recent observations.  When a report
+arrives from a device it is lightly processed and added to `OBSERVATION` under a unique,
 synthesized key.  The intent is that this table is culled every so often, with data being processed
 and moved into som aggregate table.
 
-DynamoDB table name: `snappy_observations`.  Primary key: `key`.
+DynamoDB table name: `snappy_observation`.  Primary key: `key`.
 
 ```
-OBSERVATIONS
+OBSERVATION
     key: <string: device + # + received + # + sequenceno + # + random integer>
     device: <string, device-id>
     received: <string, server timestamp>

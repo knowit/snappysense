@@ -26,7 +26,7 @@
                 "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_class",
                 "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_device",
                 "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_factor",
-                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_observations",
+                "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_observation",
                 "arn:aws:dynamodb:eu-central-1:927459574576:table/snappy_location"
             ]
         },

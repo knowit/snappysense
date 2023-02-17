@@ -9,7 +9,7 @@ $DBOP device delete-table
 $DBOP location delete-table
 $DBOP factor delete-table
 $DBOP class delete-table
-$DBOP observations delete-table
+$DBOP observation delete-table
 
 echo "Please wait"
 sleep 10
@@ -19,7 +19,7 @@ $DBOP device create-table
 $DBOP location create-table
 $DBOP factor create-table
 $DBOP class create-table
-$DBOP observations create-table
+$DBOP observation create-table
 
 echo "Please wait some more"
 sleep 10

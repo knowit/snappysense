@@ -17,7 +17,7 @@ msg = snappy_reading.handle_reading_event(db, {"message_type": "reading",
                                                "F#tvoc": random.randint(200, 2000)},
                                           None)
 print(msg) # Should be empty
-items = db.scan(TableName="snappy_observations")["Items"]
+items = db.scan(TableName="snappy_observation")["Items"]
 for i in items:
     print(i)
 

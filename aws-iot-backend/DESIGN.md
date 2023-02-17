@@ -24,7 +24,7 @@ By way of overview:
   classes), LOCATION (for known locations where devices can reside), and FACTOR (for the types of
   things that can be measured).
 
-- The database has a dynamic tables OBSERVATIONS (for the most recent sensor readings for each
+- The database has a dynamic tables OBSERVATION (for the most recent sensor readings for each
   device) and will in the future have a table for aggregate data.
   
 The tables are described in detail [`DATA-MODEL.md`](DATA-MODEL.md).
@@ -37,8 +37,8 @@ When a "startup" message arrives from a device, a control message may be generat
 the device if the device's reported configuration differs from what's desired.  (The desired
 configuration is stored in the DEVICE table.)
 
-When a "reading" arrives from a device, a new OBSERVATIONS entry is created to add the new readings.
-Occasionally, the OBSERVATIONS table is going to have to be culled and data moved into some place
+When a "reading" arrives from a device, a new OBSERVATION entry is created to add the new readings.
+Occasionally, the OBSERVATION table is going to have to be culled and data moved into some place
 for aggregated data; this is TBD.
 
 ## Is Lambda and DynamoDB what we ought to be using?

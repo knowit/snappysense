@@ -146,6 +146,6 @@ def put_observation(db, key, device, location, sequenceno, received, sent, facto
               "sent":       {"N":str(sent)}}
     for k in factors:
         record[k] = {"N":str(factors[k])}
-    db.put_item(TableName="snappy_observations", Item=record)
+    db.put_item(TableName="snappy_observation", Item=record)
 
 

@@ -22,7 +22,7 @@ print(lambda_function.mocked_outgoing)
 dev1 = snappy_data.get_device(db, "snp_1_1_no_1")
 print(snappy_data.device_last_contact(dev1))
 
-items0 = db.scan(TableName="snappy_observations")["Items"]
+items0 = db.scan(TableName="snappy_observation")["Items"]
 print(len(items0))
 lambda_function.snappysense_event({"message_type": "reading",
                                    "device": "snp_1_1_no_" + str(random.randint(1,3)),
@@ -32,7 +32,7 @@ lambda_function.snappysense_event({"message_type": "reading",
                                    "F#temperature": random.randint(150,300)/10.0,
                                    "F#tvoc": random.randint(200, 2000)},
                                   None)
-items1 = db.scan(TableName="snappy_observations")["Items"]
+items1 = db.scan(TableName="snappy_observation")["Items"]
 print(len(items1))
 
 

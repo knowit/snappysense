@@ -33,7 +33,7 @@ Usage:
  dbop help
  dbop <table> <verb> <argument> ...
 
-The 'table' is one of 'device', 'location', 'class', 'factor', 'observations'
+The 'table' is one of 'device', 'location', 'class', 'factor', 'observation'
 
 The 'verb' and 'argument' combinations are as follows.
 
@@ -176,7 +176,7 @@ var tables = []*Table{
 		gloss: "Defines the locations where devices can be" },
 
 	&Table{
-		short_name: "observations", real_name: "snappy_observations", key_name: "key",
+		short_name: "observation", real_name: "snappy_observation", key_name: "key",
 		fields: []*Field{
 
 			&Field{name: "key", ty: TY_S,
