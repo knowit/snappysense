@@ -171,4 +171,11 @@
 
 extern bool slideshow_mode;
 
+extern QueueHandle_t/*<int>*/ main_event_queue;
+enum {
+  EV_BUTTON_DOWN = 1,
+  EV_BUTTON_UP = 2,
+  EV_CLOCK = 4,
+};
+
 #endif // !main_h_included

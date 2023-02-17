@@ -129,7 +129,18 @@ bool slideshow_mode = true;
 bool slideshow_mode = false;
 #endif // SLIDESHOW_MODE
 
+QueueHandle_t/*<int>*/ main_event_queue;
+
+static TimerHandle_t scheduler_timer;
+
+static void sched_clock_callback(TimerHandle_t t) {
+  int ev = EV_CLOCK;
+  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
+}
+
 void setup() {
+  main_event_queue = xQueueCreate(10, sizeof(int));
+
   // Power up the device.
 
   bool do_interactive_configuration = false;
@@ -193,6 +204,8 @@ void setup() {
     sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
   }
 
+  scheduler_timer = xTimerCreate("sched", pdMS_TO_TICKS(100), pdFALSE, NULL, sched_clock_callback);
+
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
 # if defined(STARTUP_SONG)
@@ -214,7 +227,25 @@ void loop() {
     log("Power down: %u seconds to wait\n", (unsigned)(wait_time_ms / 1000));
     power_peripherals_off();
   }
-  delay(wait_time_ms);
+
+  // Wait until our delay expires or a button press arrives.
+  xTimerChangePeriod(scheduler_timer, pdMS_TO_TICKS(wait_time_ms), portMAX_DELAY);
+again:
+  int ev;
+  while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
+  switch (ev) {
+  case EV_CLOCK:
+    break;
+  case EV_BUTTON_DOWN:
+    log("Button down\n");
+    goto again;
+  case EV_BUTTON_UP:
+    log("Button up\n");
+    goto again;
+  default:
+    panic("Unknown event");
+  }
+
   if (power_down) {
     log("Power up\n");
     power_peripherals_on();

@@ -113,6 +113,11 @@ static bool have_environment = false;
 static bool have_air = false;
 static bool air_is_primed = false;
 
+static void button_handler() {
+  int state = digitalRead(BUTTON_PIN) ? EV_BUTTON_DOWN : EV_BUTTON_UP;
+  xQueueSendFromISR(main_event_queue, &state, nullptr);
+}
+
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
 
@@ -146,6 +151,8 @@ void device_setup(bool* do_interactive_configuration) {
     }
   }
 #endif
+
+  attachInterrupt(BUTTON_PIN, button_handler, CHANGE);
 }
 
 void power_peripherals_on() {
