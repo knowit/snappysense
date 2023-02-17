@@ -93,7 +93,7 @@ static void format_noise(const SnappySenseData& data, char* buf, char* buflim) {
 // The "displayers" format the data so that they can be shown on the unit's
 // display.  There may be some information loss.  Where there's a formatter
 // that would produce the same string, we use that.
-// "Displayers" display for SLIDESHOW_MODE use, if the "formatted" display has too much
+// "Displayers" display for slideshow use, if the "formatted" display has too much
 // information.
 
 #ifdef SENSE_TEMPERATURE
@@ -120,12 +120,6 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
 }
 #endif
 
-#ifdef SLIDESHOW_MODE
-#define ICON(x) x
-#else
-#define ICON(x) nullptr
-#endif
-
 SnappyMetaDatum snappy_metadata[] = {
   {.json_key         = "sequenceno",
    .explanatory_text = "Sequence number",
@@ -148,7 +142,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Temperature",
    .display_unit     = "C",
    .unit_text        = "C",
-   .icon             = ICON(temperature_icon),
+   .icon             = temperature_icon,
    .flag_offset      = offsetof(SnappySenseData, have_temperature),
    .display         = display_temp,
    .format           = format_temp},
@@ -158,7 +152,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Humidity",
    .display_unit     = "%",
    .unit_text        = "%",
-   .icon             = ICON(humidity_icon),
+   .icon             = humidity_icon,
    .flag_offset      = offsetof(SnappySenseData, have_humidity),
    .display          = display_humidity,
    .format           = format_humidity},
@@ -168,7 +162,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Ultraviolet intensity",
    .display_unit     = "",
    .unit_text        = "mW/cm^2",
-   .icon             = ICON(uv_icon),
+   .icon             = uv_icon,
    .flag_offset      = offsetof(SnappySenseData, have_uv),
    .display          = format_uv,
    .format           = format_uv},
@@ -178,7 +172,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Luminous intensity",
    .display_unit     = "lx",
    .unit_text        = "lx",
-   .icon             = ICON(lux_icon),
+   .icon             = lux_icon,
    .flag_offset      = offsetof(SnappySenseData, have_lux),
    .display          = display_light,
    .format           = format_light},
@@ -188,7 +182,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Atmospheric pressure",
    .display_unit     = "hpa",
    .unit_text        = "hpa",
-   .icon             = ICON(hpa_icon),
+   .icon             = hpa_icon,
    .flag_offset      = offsetof(SnappySenseData, have_hpa),
    .display          = format_pressure,
    .format           = format_pressure},
@@ -198,7 +192,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Altitude",
    .display_unit     = "m",
    .unit_text        = "m",
-   .icon             = ICON(elevation_icon),
+   .icon             = elevation_icon,
    .flag_offset      = offsetof(SnappySenseData, have_altitude),
    .display          = display_altitude,
    .format           = format_altitude},
@@ -216,7 +210,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Air quality index",
    .display_unit     = "",
    .unit_text        = "",
-   .icon             = ICON(aqi_icon),
+   .icon             = aqi_icon,
    .flag_offset      = offsetof(SnappySenseData, have_aqi),
    .display          = format_air_quality,
    .format           = format_air_quality},
@@ -226,7 +220,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Concentration of total volatile organic compounds",
    .display_unit     = "ppb",
    .unit_text        = "ppb",
-   .icon             = ICON(aqi_icon),
+   .icon             = aqi_icon,
    .flag_offset      = offsetof(SnappySenseData, have_tvoc),
    .display          = format_tvoc,
    .format           = format_tvoc},
@@ -236,7 +230,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Carbon dioxide equivalent concentration",
    .display_unit     = "ppm",
    .unit_text        = "ppm",
-   .icon             = ICON(co2_icon),
+   .icon             = co2_icon,
    .flag_offset      = offsetof(SnappySenseData, have_eco2),
    .display          = format_co2,
    .format           = format_co2},
@@ -246,7 +240,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Motion detected",
    .display_unit     = "",
    .unit_text        = "",
-   .icon             = ICON(motion_icon),
+   .icon             = motion_icon,
    .flag_offset      = offsetof(SnappySenseData, have_motion),
    .display          = format_motion,
    .format           = format_motion},
@@ -256,7 +250,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .explanatory_text = "Noise value",
    .display_unit     = "",
    .unit_text        = "",
-   .icon             = ICON(noise_icon),
+   .icon             = noise_icon,
    .flag_offset      = offsetof(SnappySenseData, have_noise),
    .display          = format_noise,
    .format           = format_noise},

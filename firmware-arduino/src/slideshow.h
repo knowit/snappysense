@@ -3,8 +3,6 @@
 
 #include "main.h"
 
-#ifdef SLIDESHOW_MODE
-
 #include "microtask.h"
 #include "sensor.h"
 #include "util.h"
@@ -40,6 +38,5 @@ public:
     this->wifi_ok = wifi_ok;
   }
 };
-#endif
 
 #endif // !slideshow_h_included

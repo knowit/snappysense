@@ -94,10 +94,7 @@ const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif
 
-#ifdef SLIDESHOW_MODE
-// Note, SLIDESHOW_MODE will keep the device continually on.
 unsigned long slideshow_update_interval_s();
-#endif
 
 #ifdef SNAPPY_SERIAL_INPUT
 // How long to wait between looking for input on the serial channel.

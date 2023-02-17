@@ -67,19 +67,21 @@
 //
 // MODES and CONFIGURATION.
 //
-// SnappySense can be compile-time configured to several modes, in main.h.  These are:
+// SnappySense can run in one of two modes, selectable at run-time by a button press.
 //
-//  - SLIDESHOW_MODE, in which the device reads the sensors often, keeps the display on,
-//    and displays the sensor variables on the display in a never-ending loop.
-//    Slideshow mode is power-hungry.
-//  - Monitoring mode, aka !SLIDESHOW_MODE, in which the device reads the sensors much
-//    less often and turns off the display and the peripherals when they are not needed.
-//    This mode conserves power (relatively).
-//  - DEVELOPER mode, which can be combined with the other two modes and which
-//    allows for interactivity over the serial line, configuration values that are
-//    compiled into the code, more frequent activity, and other things.
+// In SLIDESHOW MODE it reads the sensors often, keeps the display on, and displays
+// the sensor variables on the display in a never-ending loop.  Slideshow mode is
+// power-hungry.
 //
-// When the device is powered on it can also be brought up in a "provisioning" mode,
+// In MONITORING MODE the device reads the sensors much less often and turns off the
+// display and the peripherals when they are not needed.  It uploads data rarely.
+// This mode conserves power (relatively).
+//
+// SnappySense can also be configured at compile time to run in DEVELOPER mode, which
+// usually allows for interactivity over the serial line, configuration values that are
+// compiled into the code, more frequent observation and upload activity, and other things.
+//
+// When the device is powered on it can also be brought up in a PROVISIONING MODE,
 // to set configuration variables.  See CONFIG.md at the root for more information.
 //
 // The device may be configured to fetch the current time from a time server.
@@ -117,6 +119,15 @@
 // those that update it and those that consume it.
 
 static SnappySenseData snappy;
+
+// The default is to start the slideshow on startup.  It can be toggled to monitoring mode by a press
+// on the wake button.
+
+#ifdef SLIDESHOW_MODE
+bool slideshow_mode = true;
+#else
+bool slideshow_mode = false;
+#endif // SLIDESHOW_MODE
 
 void setup() {
   // Power up the device.
@@ -178,9 +189,9 @@ void setup() {
 #ifdef WEB_COMMAND_SERVER
   sched_microtask_periodically(new WebCommandTask, web_command_poll_interval_s() * 1000);
 #endif
-#ifdef SLIDESHOW_MODE
-  sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
-#endif // SLIDESHOW_MODE
+  if (slideshow_mode) {
+    sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
+  }
 
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)

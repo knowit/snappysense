@@ -312,7 +312,6 @@ void show_splash() {
   display.display();
 }
 
-#ifdef SLIDESHOW_MODE
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units) {
   if (!peripherals_powered_on) {
     return;
@@ -331,7 +330,6 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
   display.print(units);
   display.display();
 }
-#endif
 
 void render_text(const char* value) {
   if (!peripherals_powered_on) {

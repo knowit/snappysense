@@ -115,34 +115,39 @@ void set_string_pref(const char* name, const char* value) {
 #define MINUTE(s) ((s)*60)
 #define HOUR(s) ((s)*60*60)
 
-#if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
-static const unsigned long SENSOR_POLL_INTERVAL_S = 15;
+static const unsigned long SENSOR_POLL_SLIDESHOW_INTERVAL_S = 15;
+#if defined(DEVELOPMENT)
+static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = 15;
 #else
 # ifdef TEST_POWER_MANAGEMENT
-static const unsigned long SENSOR_POLL_INTERVAL_S = MINUTE(5);
+static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = MINUTE(5);
 # else
-static const unsigned long SENSOR_POLL_INTERVAL_S = HOUR(1);
+static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = HOUR(1);
 # endif
 #endif
 
+
 #ifdef MQTT_UPLOAD
-# if defined(SLIDESHOW_MODE) || defined(DEVELOPMENT)
-static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_UPLOAD_INTERVAL_S = MINUTE(2);
+# if defined(DEVELOPMENT)
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(2);
+static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
 #  ifdef TEST_POWER_MANAGEMENT
-static const unsigned long MQTT_CAPTURE_INTERVAL_S = MINUTE(5);
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(5);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(5);
 #  else
-static const unsigned long MQTT_CAPTURE_INTERVAL_S = HOUR(1);
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
 #  endif
-static const unsigned long MQTT_UPLOAD_INTERVAL_S = MQTT_CAPTURE_INTERVAL_S;
+static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
+static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
 # endif
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
-#ifdef SLIDESHOW_MODE
 static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 4;
-#endif
 
 #ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
@@ -163,18 +168,22 @@ static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
 
 static struct {
 #ifdef MQTT_UPLOAD
-  unsigned long mqtt_capture_interval_s;
+  unsigned long mqtt_monitoring_capture_interval_s;
 #endif
 } builtin_cfg = {
 #ifdef MQTT_UPLOAD
-  .mqtt_capture_interval_s = MQTT_CAPTURE_INTERVAL_S
+  .mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S
 #endif
 };
 
 // Preference accessors
 
 unsigned long sensor_poll_interval_s() {
-  return SENSOR_POLL_INTERVAL_S;
+  if (slideshow_mode) {
+    return SENSOR_POLL_SLIDESHOW_INTERVAL_S;
+  } else {
+    return SENSOR_POLL_MONITORING_INTERVAL_S;
+  }
 }
 
 bool device_enabled() {
@@ -253,11 +262,15 @@ unsigned long web_upload_interval_s() {
 
 #ifdef MQTT_UPLOAD
 unsigned long mqtt_capture_interval_s() {
-  return builtin_cfg.mqtt_capture_interval_s;
+  if (slideshow_mode) {
+    return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
+  } else {
+    return builtin_cfg.mqtt_monitoring_capture_interval_s;
+  }
 }
 
 void set_mqtt_capture_interval_s(unsigned long interval) {
-  builtin_cfg.mqtt_capture_interval_s = interval;
+  builtin_cfg.mqtt_monitoring_capture_interval_s = interval;
 }
 
 unsigned long mqtt_max_idle_time_s() {
@@ -265,7 +278,11 @@ unsigned long mqtt_max_idle_time_s() {
 }
 
 unsigned long mqtt_upload_interval_s() {
-  return MQTT_UPLOAD_INTERVAL_S;
+  if (slideshow_mode) {
+    return MQTT_SLIDESHOW_UPLOAD_INTERVAL_S;
+  } else {
+    return MQTT_MONITORING_UPLOAD_INTERVAL_S;
+  }
 }
 
 const char* mqtt_endpoint_host() {
@@ -297,11 +314,9 @@ const char* mqtt_device_private_key() {
 }
 #endif
 
-#ifdef SLIDESHOW_MODE
 unsigned long slideshow_update_interval_s() {
   return SLIDESHOW_UPDATE_INTERVAL_S;
 }
-#endif
 
 #ifdef WEB_SERVER
 int web_server_listen_port() {

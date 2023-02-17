@@ -121,7 +121,7 @@ struct SnappyMetaDatum {
   // The offset within the structure of a bool that denotes whether the data is valid.
   off_t flag_offset;
 
-  // `display` is for the unit's display when running SLIDESHOW_MODE, it loses some information.
+  // `display` is for the unit's display when running the slide show; it loses some information.
   // This may be null, if it is it's because we don't want to display this.
   void (*display)(const SnappySenseData& data, char* buf, char* buflim);
 

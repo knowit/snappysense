@@ -138,9 +138,6 @@
 #endif
 
 #if !defined(DEVELOPMENT)
-//# ifdef SLIDESHOW_MODE
-//#  warning "SLIDESHOW_MODE not usually enabled in production"
-//# endif
 # ifdef SERIAL_COMMAND_SERVER
 #  warning "SERIAL_COMMAND_SERVER not usually enabled in production"
 # endif
@@ -155,8 +152,7 @@
 # endif
 #endif
 
-#if defined(TEST_POWER_MANAGEMENT) && (defined(SLIDESHOW_MODE) || \
-                                       defined(DEVELOPMENT) || \
+#if defined(TEST_POWER_MANAGEMENT) && (defined(DEVELOPMENT) || \
                                        defined(SNAPPY_SERIAL_LINE) || \
                                        defined(SNAPPY_WEB_SERVER))
 # error "Power management test won't work when the device is mostly busy"
@@ -172,5 +168,7 @@
 #if defined(HARDWARE_1_0_0) || defined(HARDWARE_1_1_0)
 # undef SENSE_ALTITUDE
 #endif
+
+extern bool slideshow_mode;
 
 #endif // !main_h_included

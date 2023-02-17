@@ -1,7 +1,5 @@
 #include "slideshow.h"
 
-#ifdef SLIDESHOW_MODE
-
 #include "device.h"
 
 SlideshowTask* SlideshowTask::handle;
@@ -31,7 +29,7 @@ void SlideshowTask::execute(SnappySenseData* data) {
       // At end, wrap around
       next_view = -1;
     } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field is not for SLIDESHOW_MODE display
+      // Field is not for slide show display
       next_view++;
     } else if (snappy_metadata[next_view].flag_offset > 0 &&
                !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(data) + snappy_metadata[next_view].flag_offset)) {
@@ -46,4 +44,3 @@ void SlideshowTask::execute(SnappySenseData* data) {
   }
   next_view++;
 }
-#endif // SLIDESHOW_MODE
