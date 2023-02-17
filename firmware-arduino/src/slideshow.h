@@ -7,6 +7,8 @@
 #include "sensor.h"
 #include "util.h"
 
+// This is a periodic task that is blocked while !slideshow_mode.
+
 class SlideshowTask final : public MicroTask {
   // -1 means the splash screen; values 0..whatever refer to the entries
   // in the SnappyMetaData array.

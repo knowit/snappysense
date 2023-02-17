@@ -22,11 +22,16 @@
 // finished, or *one-shot*, scheduled at a fixed point in future.  One-shot tasks can
 // reschedule themselves and thus become a third type, *aperiodic*.
 //
-// One-shot tasks that are not rescheduled are deleted by the runloop after having been run.
+// Periodic tasks can be *blocked*; they are not deleted but are not runnable.  They must be
+// explicitly unblocked to run again.
 //
-// At this time, tasks are either RUNNING (at most one of these), RUNNABLE (their deadline has
-// expired), or WAITING (their deadline is in the future).  No tasks can be BLOCKED waiting
-// for an event.  This is a weakness that should be remedied.
+// One-shot tasks that are not rescheduled are deleted by the runloop after having been run.
+// One-shot tasks can't be *blocked*.
+//
+// Thus tasks are either RUNNING (at most one of these), RUNNABLE (their deadline has
+// expired), BLOCKED (if periodic but explicitly stopped from running) or WAITING
+// (their deadline is in the future).  There is no event system in the scheduler, block_microtask()
+// and unblock_microtask() must be called explicitly.
 
 struct SnappySenseData;
 
@@ -38,7 +43,7 @@ public:
   bool periodic = false;
 
   // For periodic tasks, this is the interval between the end of one execution and
-  // the start of the next.  For one-shot tasks it is currently unused.
+  // the start of the next; it is never 0.  For one-shot tasks it is guaranteed to be 0.
   unsigned long delay_ms = 0;
 
   // When the task is on the run list, the time after which it should be executed.
@@ -50,6 +55,11 @@ public:
   // This is set by the scheduler to prevent the object from being deleted if it
   // is rescheduled by the execute() function.
   bool rescheduled = false;
+
+  // For periodic tasks, this is set when the task becomes blocked and is unset when
+  // the task becomes unblocked again.
+  bool blocked = false;
+  bool on_blocked_queue = false;
 
 public:
   // These methods are for use by derived task types.
@@ -69,6 +79,10 @@ public:
   virtual bool only_when_device_enabled() {
     return false;
   }
+
+  bool is_blocked() {
+    return blocked;
+  }
 };
 
 // Returns the delay, in ms, until the next task should be run.  This should be called
@@ -82,5 +96,13 @@ extern void sched_microtask_after(MicroTask* t, unsigned long delay_ms);
 // This will schedule the task to be run now, and then periodically `delay_ms` after
 // it completes henceforth.
 extern void sched_microtask_periodically(MicroTask* t, unsigned long delay_ms);
+
+// Signal the task as blocked.  If it is currently running it will run until it's done.
+extern void block_microtask(MicroTask* t);
+
+// Signal the task as unblocked, moving it onto the run queue.  The task is necessarily
+// periodic (or this is an error).  It will be scheduled to be immediately runnable and
+// will resume its normal cadence after that.
+extern void unblock_microtask(MicroTask* t);
 
 #endif // !microtask_h_included
