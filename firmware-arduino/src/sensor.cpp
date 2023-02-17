@@ -136,7 +136,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .display         = nullptr,
    .format           = format_sequenceno },
   {.json_key         = "sent",
-   .explanatory_text = "Local time of reading",
+   .explanatory_text = "Local time of observation",
    .display_unit     = "",
    .unit_text        = "",
    .icon             = nullptr,
@@ -313,6 +313,7 @@ void EnableDeviceTask::execute(SnappySenseData*) {
   set_device_enabled(flag);
 }
 
+#ifdef MQTT_COMMAND_MESSAGES
 void RunActuatorTask::execute(SnappySenseData*) {
   // TODO: Issue 21: Display something, if the display is going
   // TODO: Issue 22: Manipulate an actuator, if we have one (we don't, really)
@@ -329,6 +330,7 @@ void RunActuatorTask::execute(SnappySenseData*) {
   }
   // and so on
 }
+#endif
 
 void PowerOnTask::execute(SnappySenseData*) {
   power_peripherals_on();

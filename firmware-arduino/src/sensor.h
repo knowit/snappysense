@@ -159,6 +159,7 @@ public:
   void execute(SnappySenseData*) override;
 };
 
+#ifdef MQTT_COMMAND_MESSAGES
 // A one-shot task that interacts with an actuator to change an environmental factor.
 class RunActuatorTask final : public MicroTask {
   String actuator;
@@ -176,6 +177,7 @@ public:
   }
   void execute(SnappySenseData*) override;
 };
+#endif
 
 class PowerOnTask final : public MicroTask {
 public:

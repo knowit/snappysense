@@ -2,10 +2,11 @@
 
 High pri
 
+* Repeat until it works:
+  * Upload code
+  * Live test the devices
+  * Fix anything broken
 * Document how to upload code for the lambda, somewhere findable
-* Fix the firmware so that it uses the topic 'snappy/observation/...'
-* Fix the firmware so that it sends the location with the observation
-* Live test the devices
 
 Then in fairly random order:
 

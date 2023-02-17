@@ -7,10 +7,10 @@
 // Summary:
 //
 // On startup, we publish to topic snappy/startup/<device-class>/<device-id> with
-// fields "time" (timestamp, string) and "reading_interval" (reading interval,
+// fields "time" (timestamp, string) and "interval" (observation interval,
 // positive integer seconds).
 //
-// On a reading, we publish to topic snappy/reading/<device-class>/<device-id> with
+// Following an observation, we publish to topic snappy/observation/<device-class>/<device-id> with
 // all the fields in the sensor object.
 //
 // DESIGN: There might also be snappy/distress/<device-class>/<device-id> to report problems, or
@@ -83,7 +83,7 @@ void StartMqttTask::execute(SnappySenseData* data) {
   topic += "/";
   topic += mqtt_device_id();
 
-  body += "{\"reading_interval\":";
+  body += "{\"interval\":";
   body += sensor_poll_interval_s();
   body += ",\"sent\":\"";
   body += format_timestamp(get_time());
@@ -97,7 +97,7 @@ void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
   String body;
 
   // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
-  topic += "snappy/reading/";
+  topic += "snappy/observation/";
   topic += mqtt_device_class();
   topic += "/";
   topic += mqtt_device_id();
@@ -202,11 +202,13 @@ bool MqttCommsTask::connect() {
   }
   String control_msg("snappy/control-all");
   mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
+#ifdef MQTT_COMMAND_MESSAGES
   if (*mqtt_device_id() != 0) {
     String command_msg("snappy/command/");
     command_msg += mqtt_device_id();
     mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
   }
+#endif
   first_time = false;
   return true;
 }
@@ -279,6 +281,7 @@ static void mqtt_handle_message(int payload_size) {
     if (fields == 0) {
       log("Mqtt: invalid control message\n%s\n", buf);
     }
+#ifdef MQTT_COMMAND_MESSAGES
   } else if (topic.startsWith("snappy/command/")) {
     if (json.hasOwnProperty("actuator") &&
         json.hasOwnProperty("reading") &&
@@ -291,6 +294,7 @@ static void mqtt_handle_message(int payload_size) {
     } else {
       log("Mqtt: invalid command message\n%s\n", buf);
     }
+#endif
   } else {
     log("Mqtt: unknown incoming message\n%s\n%s\n", topic.c_str(), buf);
   }

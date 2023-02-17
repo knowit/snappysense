@@ -50,6 +50,10 @@
 // every so often.  See mqtt_upload.h.
 #define MQTT_UPLOAD
 
+// Accept 'snappy/command/<device-name> messages from the server.  Currently none are
+// defined, so we don't normally accept them.
+//#define MQTT_COMMAND_MESSAGES
+
 // Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
 // connected then log messages will appear there, otherwise they will be discarded.
 #define LOGGING
