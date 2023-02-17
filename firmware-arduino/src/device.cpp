@@ -218,7 +218,7 @@ void get_sensor_values(SnappySenseData* data) {
   memset(data, 0, sizeof(SnappySenseData));
   data->sequence_number = sequence_number++;
 
-  data->time = get_time();
+  data->time = time(nullptr);
 
 #ifdef SENSE_TEMPERATURE
   if (have_environment) {
@@ -362,15 +362,10 @@ void test_mems() {
 }
 #endif
 
-static unsigned long timebase;
-
-time_t get_time() {
-  return time(nullptr) + timebase;
-}
-
 #ifdef TIMESERVER
-void configure_clock(unsigned long t) {
-  timebase = t;
+void configure_clock(time_t t) {
+  struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
+  settimeofday(&tv, nullptr);
 }
 #endif // TIMESERVER
 

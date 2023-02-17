@@ -41,6 +41,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_Json.h>
+#include <time.h>
 
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.
@@ -86,7 +87,7 @@ void StartMqttTask::execute(SnappySenseData* data) {
   body += "{\"interval\":";
   body += sensor_poll_interval_s();
   body += ",\"sent\":\"";
-  body += format_timestamp(get_time());
+  body += format_timestamp(time(nullptr));
   body += "\"}";
 
   mqtt_enqueue(std::move(topic), std::move(body));

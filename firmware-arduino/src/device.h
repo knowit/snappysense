@@ -5,6 +5,7 @@
 
 #include "main.h"
 #include "sensor.h"
+#include <time.h>
 
 // Initialize the hardware.  If `*interactive_configuration` is set on return,
 // then a request for config mode was detected during bootup.
@@ -55,17 +56,10 @@ int probe_i2c_devices(Stream* output);
 void test_mems();
 #endif
 
-// Return the number of seconds since epoch.
-//
-// NOTE: If time configuration has not completed then the device clock will
-// not have been set and the time will be sometime in January, 1970.
-
-time_t get_time();
-
 #ifdef TIMESERVER
 // Set the current time, represented as the number of seconds since epoch.
 
-void configure_clock(unsigned long t);
+void configure_clock(time_t t);
 #endif
 
 #ifdef SNAPPY_PIEZO
