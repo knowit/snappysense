@@ -2,9 +2,10 @@
 
 High pri
 
-* Live test lambda_handler.py also
-* Document how to upload code for the lambda, and test that the lambda works by sending mqtt to it,
-  then checking the database
+* Document how to upload code for the lambda, somewhere findable
+* Why is the table called 'observations' and not 'observation', when the table for devices is called
+  'device'?
+* Rename 'reading' as 'observation', this is going to hurt, it affects a lot
 * Fix the firmware so that it sends the location with the reading
 * Live test the devices
 
