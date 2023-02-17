@@ -22,6 +22,6 @@ To upload,
 
 ```
   rm -f snappy.zip
-  zip snappy.zip snappy_*.py
-  aws update-function-code --function-name snappySense --zip-file fileb://$(pwd)/snappy.zip
+  zip snappy.zip lambda_function.py snappy_*.py
+  aws lambda update-function-code --function-name snappySense --zip-file fileb://$(pwd)/snappy.zip
 ```
