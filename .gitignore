@@ -9,4 +9,5 @@ firmware-idf/build
 music-compiler/musiccomp
 test-server/httpsrv
 aws-iot-backend/dbop/dbop
+aws-iot-backend/lambda/snappy.zip
 *~

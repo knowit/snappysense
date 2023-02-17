@@ -18,10 +18,4 @@ To run application logic regression tests, execute in this directory:
 python3 -m pytest
 ```
 
-To upload,
-
-```
-  rm -f snappy.zip
-  zip snappy.zip lambda_function.py snappy_*.py
-  aws lambda update-function-code --function-name snappySense --zip-file fileb://$(pwd)/snappy.zip
-```
+To upload, either run `make` in this directory or duplicate the actions in Makefile.
