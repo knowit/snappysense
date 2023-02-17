@@ -24,16 +24,19 @@ Passwords are represented by their first letter and certificates by their first 
 To configure the device, run
 
 ```
-   curl --data-binary @snp_x_y_no_z.cfg http://192.168.a.b/config
+   curl -i --data-binary @snp_x_y_no_z.cfg http://192.168.a.b/config
 ```
 
 where `snp_x_y_no_z.cfg` is the name of the configuration file for the device whose name is
 `snp_x_y_no_z`, see `aws-iot-backend/README.md`, and `192.168.a.b` is the IP address printed on the
 device screen.
 
-Note (Issue #47) that there is currently no sensible reporting of errors in the config file.  To
-check that the device has been configured properly you can use the `/show` command as outlined above
-while still connected to the AP.
+The `-i` argument to `curl` ensures that the server response is shown.  For a successful upload, the
+response is a 200 header.  Otherwise it is a 405 header with an error message pinpointing the
+problem.  An error message will also be shown on the device screen.
+
+To check that the device has been configured properly you can also use the `/show` command as
+outlined above while still connected to the AP.
 
 ### Config syntax
 
