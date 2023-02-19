@@ -1,17 +1,11 @@
 # TODO
 
-High pri
-
-* Repeat until it works:
-  * Upload code
-  * Live test the devices
-  * Fix anything broken
-* Document how to upload code for the lambda, somewhere findable
-
-Then in fairly random order:
+Short term:
 
 * Rename cli as 'snappydb'
-* moto test cases - revamp, test other things?
+* moto test cases - revamp
+* moto test cases - test other things?
+* live test cases - document, clean up
 * live test cases - use assertions, not print?
 
 Longer term:
