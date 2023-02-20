@@ -114,8 +114,7 @@ static bool have_air = false;
 static bool air_is_primed = false;
 
 static void button_handler() {
-  int state = digitalRead(BUTTON_PIN) ? EV_BUTTON_DOWN : EV_BUTTON_UP;
-  xQueueSendFromISR(main_event_queue, &state, nullptr);
+  put_main_event_from_isr(digitalRead(BUTTON_PIN) ? EvCode::BUTTON_DOWN : EvCode::BUTTON_UP);
 }
 
 // This must NOT depend on the configuration because the configuration may not
@@ -356,16 +355,6 @@ void enter_end_state(const char* msg, bool is_error) {
   for(;;) { }
   /*NOTREACHED*/
 }
-
-#ifdef TEST_MEMS
-void test_mems() {
-  if (!peripherals_powered_on) {
-    return;
-  }
-  Serial.println(analogRead(MIC_PIN));
-  delay(10);
-}
-#endif
 
 #ifdef TIMESERVER
 void configure_clock(time_t t) {

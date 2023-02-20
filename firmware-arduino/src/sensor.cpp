@@ -299,15 +299,53 @@ String format_readings_as_json(const SnappySenseData& data) {
   return buf;
 }
 
-void ReadSensorsTask::execute(SnappySenseData* data) {
-  get_sensor_values(data);
+static TimerHandle_t monitoring_timer;
+static bool monitoring_is_on = false;
+
+void monitoring_timer_tick(TimerHandle_t t) {
+  if (monitoring_is_on) {
+    put_main_event(EvCode::MONITOR_TICK);
+  }
 }
 
+void start_monitoring() {
+  if (monitoring_timer == nullptr) {
+    monitoring_timer = xTimerCreate("monitor", 1, pdFALSE, nullptr, monitoring_timer_tick);
+  }
+  // Wait 15s to let sensors warm up.  The monitoring window should be longer than this!
+  // FIXME: 15s not 5
+  xTimerChangePeriod(monitoring_timer, pdMS_TO_TICKS(5000), portMAX_DELAY);
+  monitoring_is_on = true;
+}
+
+static void monitoring_report() {
+  SnappySenseData* data = new SnappySenseData();
+  get_sensor_values(data);
+  put_main_event(EvCode::MONITOR_DATA, data);
+}
+
+void monitoring_tick() {
+  if (monitoring_is_on) {
+    monitoring_is_on = false;
+    monitoring_report();
+    // Don't restart the timer.  In the future we'll have more complicated logic for
+    // handling the MEMS and the motion sensor.
+  }
+}
+void stop_monitoring() {
+  if (monitoring_is_on) {
+    // Somebody asked to stop before the timer expired
+    monitoring_is_on = false;
+    xTimerStop(monitoring_timer, portMAX_DELAY);
+    monitoring_report();
+  }
+}
+
+#ifdef MQTT_COMMAND_MESSAGES
 void EnableDeviceTask::execute(SnappySenseData*) {
   set_device_enabled(flag);
 }
 
-#ifdef MQTT_COMMAND_MESSAGES
 void RunActuatorTask::execute(SnappySenseData*) {
   // TODO: Issue 21: Display something, if the display is going
   // TODO: Issue 22: Manipulate an actuator, if we have one (we don't, really)
@@ -325,11 +363,3 @@ void RunActuatorTask::execute(SnappySenseData*) {
   // and so on
 }
 #endif
-
-void PowerOnTask::execute(SnappySenseData*) {
-  power_peripherals_on();
-}
-
-void PowerOffTask::execute(SnappySenseData*) {
-  power_peripherals_off();
-}

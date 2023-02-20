@@ -4,7 +4,6 @@
 #define sensor_h_included
 
 #include "main.h"
-#include "microtask.h"
 
 // This is the model of the sensor unit.
 
@@ -135,63 +134,8 @@ extern SnappyMetaDatum snappy_metadata[];
 
 String format_readings_as_json(const SnappySenseData& data);
 
-// This task is used both for periodic reading and one-shot reading.
-class ReadSensorsTask final : public MicroTask {
-public:
-  const char* name() override {
-    return "Read sensors";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData* data) override;
-};
+void start_monitoring();
+void monitoring_tick();
+void stop_monitoring();
 
-// A one-shot task that enables or disables the device.  When the device is disabled,
-// tasks that respond `true` to only_when_device_enabled() are skipped.
-class EnableDeviceTask final : public MicroTask {
-  bool flag;
-public:
-  EnableDeviceTask(bool flag) : flag(flag) {}
-  const char* name() override {
-    return "Enable/disable device";
-  }
-  void execute(SnappySenseData*) override;
-};
-
-#ifdef MQTT_COMMAND_MESSAGES
-// A one-shot task that interacts with an actuator to change an environmental factor.
-class RunActuatorTask final : public MicroTask {
-  String actuator;
-  double reading;
-  double ideal;
-public:
-  RunActuatorTask(String&& actuator, double reading, double ideal)
-    : actuator(std::move(actuator)), reading(reading), ideal(ideal)
-  {}
-  const char* name() override {
-    return "Run actuator";
-  }
-  virtual bool only_when_device_enabled() {
-    return true;
-  }
-  void execute(SnappySenseData*) override;
-};
-#endif
-
-class PowerOnTask final : public MicroTask {
-public:
-  const char* name() override {
-    return "Power on";
-  }
-  void execute(SnappySenseData*) override;
-};
-
-class PowerOffTask final : public MicroTask {
-public:
-  const char* name() override {
-    return "Power off";
-  }
-  void execute(SnappySenseData*) override;
-};
 #endif // !sensor_h_included

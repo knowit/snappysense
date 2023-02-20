@@ -2,13 +2,13 @@
 
 #include "command.h"
 
+#ifdef SNAPPY_COMMAND_PROCESSOR
+
 #include "config.h"
 #include "device.h"
 #include "network.h"
 #include "util.h"
 #include "web_server.h"
-
-#ifdef SNAPPY_COMMAND_PROCESSOR
 
 struct Command {
   const char* command;

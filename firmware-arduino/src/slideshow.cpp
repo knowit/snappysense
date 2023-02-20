@@ -1,46 +1,99 @@
 #include "slideshow.h"
 
 #include "device.h"
+#include "sensor.h"
+#include "util.h"
 
-SlideshowTask* SlideshowTask::handle;
+// -1 means the splash screen; values 0..whatever refer to the entries
+// in the SnappyMetaData array.
+static int next_view = -1;
+static bool wifi_ok = true;
+static bool pending_error = false;
+static SnappySenseData* current_data;
+static SnappySenseData* next_data;
+static String* current_message;
 
-// This state machine is a little messy since -1 is special and pending_error
-// is special.  The idea, anyway, is that after the splash screen we can
-// display pending errors.  Thus during slideshow operations any error display
-// for a recoverable error is integrated in the slideshow.
+void slideshow_new_data(SnappySenseData* new_data) {
+  assert(new_data != nullptr);
+  delete next_data;
+  next_data = new_data;
+  //log("Got data\n");
+  //log("%s\n", format_readings_as_json(*new_data).c_str());
+}
 
-void SlideshowTask::execute(SnappySenseData* data) {
-  bool done = false;
-  while (!done) {
-    if (next_view == -1) {
-      show_splash();
-      if (!wifi_ok) {
-        pending_error = true;
-      }
-      done = true;
-    } else if (next_view == 0 && pending_error) {
-      if (!wifi_ok) {
-        render_text("No WiFi");
-      }
-      pending_error = false;
-      next_view--;  // To offset the increment below
-      done = true;
-    } else if (snappy_metadata[next_view].json_key == nullptr) {
-      // At end, wrap around
-      next_view = -1;
-    } else if (snappy_metadata[next_view].display == nullptr) {
-      // Field is not for slide show display
-      next_view++;
-    } else if (snappy_metadata[next_view].flag_offset > 0 &&
-               !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(data) + snappy_metadata[next_view].flag_offset)) {
-      // Field has invalid data
-      next_view++;
-    } else {
-      char buf[32];
-      snappy_metadata[next_view].display(*data, buf, buf+sizeof(buf));
-      render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
-      done = true;
-    }
+// Show the message immediately, for a normal time slot (or until a new message arrives)
+// The main loop will reset the slideshow timer after calling this fn, taking care
+// of display.
+
+void slideshow_show_message_once(String* msg) {
+  assert(msg != nullptr);
+  delete current_message;  // Overwrite another one that wasn't shown yet (for now)
+  current_message = msg;
+}
+
+void slideshow_next() {
+again:
+  if (current_message != nullptr) {
+    // Message pending.  Do not advance the pointer; deleting the message will
+    // allow us to advance next time around
+    render_text(current_message->c_str());
+    delete current_message;
+    current_message = nullptr;
+    return;
   }
+
+  if (next_view == -1) {
+    // Display the splash, slot in new data, set error flags if needed
+    show_splash();
+    if (next_data != nullptr) {
+      delete current_data;
+      current_data = next_data;
+      next_data = nullptr;
+    }
+    if (!wifi_ok) {
+      pending_error = true;
+    }
+    next_view++;
+    return;
+  }
+
+  if (next_view == 0 && pending_error) {
+    // Display the error, do not advance the pointer
+    if (!wifi_ok) {
+      render_text("No WiFi");
+    }
+    pending_error = false;
+    return;
+  }
+
+  if (current_data == nullptr) {
+    // No data, wrap around
+    next_view = -1;
+    goto again;
+  }
+
+  if (snappy_metadata[next_view].json_key == nullptr) {
+    // At end of data, wrap around
+    next_view = -1;
+    goto again;
+  }
+
+  if (snappy_metadata[next_view].display == nullptr) {
+    // Field is not for slide show display, try the next one
+    next_view++;
+    goto again;
+  }
+
+  if (snappy_metadata[next_view].flag_offset > 0 &&
+      !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(current_data) + snappy_metadata[next_view].flag_offset)) {
+    // Field has invalid data, try the next one
+    next_view++;
+    goto again;
+  }
+
+  // Valid field, display it and advance the pointer
+  char buf[32];
+  snappy_metadata[next_view].display(*current_data, buf, buf+sizeof(buf));
+  render_oled_view(snappy_metadata[next_view].icon, buf, snappy_metadata[next_view].display_unit);
   next_view++;
 }

@@ -44,11 +44,11 @@
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
 // has to be provisioned.  See snappytime.h.
-#define TIMESERVER
+//#define TIMESERVER
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
 // every so often.  See mqtt_upload.h.
-#define MQTT_UPLOAD
+//#define MQTT_UPLOAD
 
 // Accept 'snappy/command/<device-name> messages from the server.  Currently none are
 // defined, so we don't normally accept them.
@@ -63,7 +63,7 @@
 // factory provisioning of ID, certificates, and so on, as well as user provisioning
 // of network names and other local information.  See CONFIG.md at the root of the
 // repo.
-#define WEB_CONFIGURATION
+//#define WEB_CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  The device and
 // display are on continually, and the device uses a lot of power.  It is useful in
@@ -103,12 +103,6 @@
 // for / or /help to see a directory of the possible requests.
 //#define WEB_COMMAND_SERVER
 
-// (Obscure) This tests the sensitivity and readings of the MEMS unit, if you know
-// what you're looking at.
-//
-// Note, on Hardware 1.0.0 this requires all wifi functionality to be disabled.
-//#define TEST_MEMS
-
 // (Obscure) This sets the power-off interval artificially low so that it's
 // easier to test it during development.
 //#define TEST_POWER_MANAGEMENT
@@ -134,7 +128,7 @@
 #endif
 
 #if !defined(HARDWARE_1_0_0)
-# define SNAPPY_PIEZO
+//# define SNAPPY_PIEZO
 #endif
 
 #if !defined(DEVELOPMENT)
@@ -146,9 +140,6 @@
 # endif
 # ifdef WEB_COMMAND_SERVER
 #  warning "WEB_COMMAND_SERVER not usually enabled in production"
-# endif
-# ifdef TEST_MEMS
-#  error "TEST_MEMS is incompatible with production mode"
 # endif
 #endif
 
@@ -171,11 +162,60 @@
 
 extern bool slideshow_mode;
 
-extern QueueHandle_t/*<int>*/ main_event_queue;
-enum {
-  EV_BUTTON_DOWN = 1,
-  EV_BUTTON_UP = 2,
-  EV_CLOCK = 4,
+// Event codes for events posted to main_event_queue
+
+enum class EvCode {
+  NONE = 0,
+
+  // Main task
+  START_CYCLE,
+  COMM_START,
+  COMM_FAILED,
+  COMM_ACTIVITY,
+  COMM_ACTIVITY_EXPIRED,
+  POST_COMM,
+  SLEEP_START,
+  POST_SLEEP,
+  MONITOR_START,
+  MONITOR_STOP,
+  MONITOR_DATA,
+  MONITOR_TICK,
+  BUTTON_PRESS,
+  BUTTON_LONG_PRESS,
+  AP_MODE,
+
+  // Communication work
+  COMM_POLL,
+
+  // Slideshow/display work
+  MESSAGE,
+  SLIDESHOW_START,
+  SLIDESHOW_STOP,
+  SLIDESHOW_TICK,
+
+  // Button listener
+  BUTTON_DOWN,
+  BUTTON_UP,
+
+  // Serial listener
+  SERIAL_POLL,
 };
+
+struct SnappyEvent {
+  SnappyEvent() : code(EvCode::NONE), pointer_data(nullptr) {}
+  SnappyEvent(EvCode code) : code(code), pointer_data(nullptr) {}
+  SnappyEvent(EvCode code, void* data) : code(code), pointer_data(data) { assert(data != nullptr); }
+  SnappyEvent(EvCode code, uint32_t data) : code(code), scalar_data(data) {}
+  EvCode code;
+  union {
+    void* pointer_data;
+    uint32_t scalar_data;
+  };
+};
+
+void put_main_event(EvCode code);
+void put_main_event_from_isr(EvCode code);
+void put_main_event(EvCode code, void* data);
+void put_main_event(EvCode code, int payload);
 
 #endif // !main_h_included

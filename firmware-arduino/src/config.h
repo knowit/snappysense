@@ -6,7 +6,6 @@
 #define config_h_included
 
 #include "main.h"
-#include "microtask.h"
 #include "serial_input.h"
 #include "util.h"
 

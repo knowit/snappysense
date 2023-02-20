@@ -104,7 +104,6 @@
 #include "device.h"
 #include "icons.h"
 #include "log.h"
-#include "microtask.h"
 #include "mqtt_upload.h"
 #include "piezo.h"
 #include "sensor.h"
@@ -113,98 +112,44 @@
 #include "web_server.h"
 #include "web_upload.h"
 
-// Currently we have only one copy of sensor data globally but the code's properly parameterized
-// and there could be several of these (useful in a threaded world or when snapshots of the data
-// are useful).  Hence the `snappy` object is private to main.cpp and is passed around to
-// those that update it and those that consume it.
-
-static SnappySenseData snappy;
-
-// The default is to start the slideshow on startup.  It can be toggled to monitoring mode by a press
-// on the wake button.
-
+// Whether the slideshow mode is enabled or not.  The default is to start the slideshow on startup.
+// It can be toggled to monitoring mode by a press on the wake button.  Slideshow mode really only
+// affects what we do after communication and before monitoring, and for how long.
 #ifdef SLIDESHOW_MODE
 bool slideshow_mode = true;
 #else
 bool slideshow_mode = false;
 #endif // SLIDESHOW_MODE
 
-QueueHandle_t/*<int>*/ main_event_queue;
+// The timer driving the main loop
+static TimerHandle_t main_task_timer;
 
-static TimerHandle_t scheduler_timer;
+// The timer driving the slideshow / display task
+static TimerHandle_t slideshow_timer;
 
-static void sched_clock_callback(TimerHandle_t t) {
-  int ev = EV_CLOCK;
-  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
-}
+#ifdef SNAPPY_SERIAL_INPUT
+// The timer driving the serial line poller, when serial line input is enabled
+static TimerHandle_t serial_timer;
+#endif
+
+// The event queue that drives all activity except within the music player task
+static QueueHandle_t/*<int>*/ main_event_queue;
 
 void setup() {
-  main_event_queue = xQueueCreate(10, sizeof(int));
+  main_event_queue = xQueueCreate(10, sizeof(SnappyEvent));
 
   // Power up the device.
 
   bool do_interactive_configuration = false;
   device_setup(&do_interactive_configuration);
-  log("SnappySense ready!\n");
 
   // Serial port and display are up now and can be used for output.
-
-  // Always show the splash on startup.  The delay is for aesthetic reasons - it means
-  // the display will not immediately be cleared by other operations.
-  show_splash();
-  delay(1000);
 
   // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
 
   // We sometimes need random numbers, try to seed the stream.
   randomSeed(entropy());
-
-  // We are up.  Choose between config mode and normal mode.
-
-#ifdef WEB_CONFIGURATION
-  if (do_interactive_configuration) {
-    render_text("Configuration mode");
-#ifdef WEB_CONFIGURATION
-    sched_microtask_periodically(new WebConfigTask, web_command_poll_interval_s() * 1000);
-    log("Web configuration is running!\n");
-#endif
-    return;
-  }
-#endif
-
-  // Normal mode.
-
-#ifdef TIMESERVER
-  // Configure time as soon as we can, so run this task first.  It will reschedule itself
-  // (with backoff) if it fails to connect to wifi.
-  sched_microtask_after(new ConfigureTimeTask, 0);
-#endif
-
-  // Configure tasks.
-
-  // TODO: Issue 9 / Issue 33: This task works for most sensors but not for
-  // noise and motion.
-  sched_microtask_periodically(new ReadSensorsTask, sensor_poll_interval_s() * 1000);
-#ifdef SERIAL_COMMAND_SERVER
-  sched_microtask_periodically(new SerialCommandTask, serial_input_poll_interval_s() * 1000);
-#endif
-#ifdef MQTT_UPLOAD
-  sched_microtask_after(new StartMqttTask, 0);
-  sched_microtask_after(new MqttCommsTask, 0);
-  sched_microtask_periodically(new CaptureSensorsForMqttTask, mqtt_capture_interval_s() * 1000);
-#endif
-#ifdef WEB_UPLOAD
-  sched_microtask_periodically(new WebUploadTask, web_upload_interval_s() * 1000);
-#endif
-#ifdef WEB_COMMAND_SERVER
-  sched_microtask_periodically(new WebCommandTask, web_command_poll_interval_s() * 1000);
-#endif
-  if (slideshow_mode) {
-    sched_microtask_periodically(new SlideshowTask, slideshow_update_interval_s() * 1000);
-  }
-
-  scheduler_timer = xTimerCreate("sched", pdMS_TO_TICKS(100), pdFALSE, NULL, sched_clock_callback);
 
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
@@ -217,39 +162,450 @@ void setup() {
 #endif
 }
 
-void loop() {
-#ifdef TEST_MEMS
-  test_mems();
-#else
-  unsigned long wait_time_ms = run_scheduler(&snappy);
-  bool power_down = wait_time_ms >= 60*1000;
-  if (power_down) {
-    log("Power down: %u seconds to wait\n", (unsigned)(wait_time_ms / 1000));
-    power_peripherals_off();
-  }
+// In normal mode there are conceptually many concurrent tasks:
+//
+// The main loop
+// The display / slideshow task
+// The short button press listener
+// The long button press listener
+// The serial port listener (if the serial port command processor is present)
+// The socket listener for mqtt
+// The socket listener for web upload
+// The socket listener for web commands
+// The music player
+//
+// All but the music player are integrated into the Arduino main loop, driven by several timers.
+// The music player is an actual FreeRTOS concurrent task with a higher priority.  They could all
+// have been different tasks but this would not have been a simplification.
+//
+// The MAIN LOOP goes through a number of states as follows:
+//
+//        Boot
+//
+//        Start slideshow task
+//        Start button listeners
+//        Start serial port listener, if applicable
+//
+//    L1  Open the communications window
+//          bring up wifi
+//          configure time, if not already done
+//          unless upload is disabled
+//            communicate with mqtt or web server, depending on what's selected
+//            this means polling; ticks on polling timer cause callbacks to network code
+//          set the comms timeout
+//          while the timeout not expired
+//            await notifications about comms activity
+//            reset the comms timeout every time there is activity
+//
+//        Close the communication window
+//          bring down wifi
+//
+//    L2  Play the slideshow for a little while
+//
+//    L3  If device is in monitoring mode & we don't have a serial listener, go to sleep for a while
+//          Power down
+//          Halt the slideshow
+//          If while sleeping, the button is pressed
+//            Wake up
+//            Flash "Monitoring mode" on the screen for a couple seconds
+//            Go to L2 (a second press during L2 will bring us into slideshow mode,
+//              see button tasks below)
+//        Otherwise
+//          Let the slide show play for a while without doing anything else
+//
+//    L4  If in monitoring mode, Wake up (otherwise we're awake)
+//          Power up
+//          Start slideshow task
+//
+//        Open the monitoring window
+//          (takes a while to monitor)
+//        Close the monitoring window
+//
+//        Monitoring data arrive, they are distributed to slideshow and comms
+//
+//        Goto L1
+//
+// The SHORT-PRESS BUTTON LISTENER task:
+//
+//    The buttons are interrupt-driven.  Button press and release are delivered to the main loop
+//    and decoded.  The main loop calls short/long press handlers when appropriate.
+//
+// The SERIAL LINE LISTENER task:
+//
+//    This is a polling listener that runs often, keeps the device awake, and reads input from
+//    the serial port.  When there is some input, it is handled in a manner TBD.
+//
+// The SOCKET LISTENER FOR MQTT and SOCKET LISTENER FOR WEB UPLOAD tasks:
+//
+//    These are active only during the comms window.
+//
+// The SOCKET LISTENER FOR WEB SERVER task:
+//
+//    This should probably go away, but it's like the serial port listener: it keeps the device
+//    on and listens actively.
 
-  // Wait until our delay expires or a button press arrives.
-  xTimerChangePeriod(scheduler_timer, pdMS_TO_TICKS(wait_time_ms), portMAX_DELAY);
-again:
-  int ev;
-  while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
-  switch (ev) {
-  case EV_CLOCK:
-    break;
-  case EV_BUTTON_DOWN:
-    log("Button down\n");
-    goto again;
-  case EV_BUTTON_UP:
-    log("Button up\n");
-    goto again;
-  default:
-    panic("Unknown event");
-  }
-
-  if (power_down) {
-    log("Power up\n");
-    power_peripherals_on();
-    show_splash();
-  }
+#ifdef SNAPPY_WIFI
+void start_communicating();
+void stop_communicating();
+void set_no_wifi_error();
 #endif
+
+void put_main_event(EvCode code) {
+  SnappyEvent ev(code);
+  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
+}
+
+void put_main_event(EvCode code, void* data) {
+  SnappyEvent ev(code, data);
+  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
+}
+
+void put_main_event_from_isr(EvCode code) {
+  SnappyEvent ev(code);
+  xQueueSendFromISR(main_event_queue, &ev, nullptr);
+}
+
+static void main_timer_tick(TimerHandle_t t) {
+  put_main_event(EvCode((uint32_t)pvTimerGetTimerID(t)));
+}
+
+static void reset_main_timer(unsigned timeout_ms, EvCode payload) {
+  vTimerSetTimerID(main_task_timer, (void*)payload);
+  xTimerChangePeriod(main_task_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+}
+
+static void slideshow_timer_tick(TimerHandle_t t) {
+  put_main_event(EvCode::SLIDESHOW_TICK);
+}
+
+static void start_slideshow_task() {
+  slideshow_timer_tick(slideshow_timer);
+}
+
+static void stop_slideshow_task() {
+  xTimerStop(slideshow_timer, portMAX_DELAY);
+}
+
+static void advance_slideshow_task() {
+  xTimerChangePeriod(slideshow_timer, pdMS_TO_TICKS(2000), portMAX_DELAY);
+}
+
+#ifdef SNAPPY_SERIAL_INPUT
+static void serial_timer_tick(TimerHandle_t t) {
+  put_main_event(EvCode::SERIAL_POLL);
+}
+#endif
+
+#ifdef SNAPPY_WIFI
+// Comm window remains open 1min after last activity
+static unsigned constexpr COMM_ACTIVITY_TIMEOUT = 60000;
+
+// Let the slideshow run 1min after comm window closes
+static unsigned constexpr COMM_RELAXATION_TIMEOUT = 60000;
+#endif
+
+// How long to wait in the sleep window in monitoring mode
+static unsigned constexpr MONITORING_MODE_SLEEP = 60*60*1000;  // ms
+
+// How long to wait in the sleep window in slideshow mode
+static unsigned constexpr SLIDESHOW_MODE_SLEEP = 5*60*1000;    // ms
+
+// This never returns.  The Arduino main loop does nothing interesting for us.  Our main loop
+// is based on FreeRTOS and is not busy-waiting.
+
+void loop() {
+  /////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // Main task's state
+
+#ifdef SNAPPY_WIFI
+  // True iff the main loop is in the communication window
+  static bool in_communication_window = false;
+#endif
+
+  // True iff the main loop is in the monitoring window (see below)
+  bool in_monitoring_window = false;
+
+  // True when the peripherals have been powered up
+  bool is_powered_up = true;
+
+  // This starts out the same as slideshow_mode but can be changed by a button press,
+  // and is acted upon at a specific point in the state machine
+  bool slideshow_next_mode = slideshow_mode;
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // Slideshow / display task's state state
+
+  // True iff the device is in slideshow mode and the slideshow is running, this flag
+  // is used to discard spurious slideshow ticks when the show is not supposed to
+  // be running
+  bool is_slideshow_running = false;
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // Button listener task's state
+  struct timeval button_down;
+  bool button_is_down = false;
+
+  // Create all the timers.  TODO: Error handling?
+  main_task_timer = xTimerCreate("main", 1, pdFALSE, nullptr, main_timer_tick);
+  slideshow_timer = xTimerCreate("slideshow", 1, pdFALSE, nullptr, slideshow_timer_tick);
+#ifdef SNAPPY_SERIAL_INPUT
+  serial_timer = xTimerCreate("serial", 1, pdFALSE, nullptr, serial_timer_tick);
+#endif
+
+  // The slideshow task starts whether we're in slideshow mode or not, since slideshow
+  // mode only affects what happens between communication and monitoring, and for how long.
+  // The first thing the task does is show the splash screen.
+  put_main_event(EvCode::SLIDESHOW_START);
+
+  // Start the main task.
+  put_main_event(EvCode::START_CYCLE);
+
+  for (;;) {
+    SnappyEvent ev;
+    while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
+    switch (ev.code) {
+
+      /////////////////////////////////////////////////////////////////////////////////////////////
+      //
+      // Main-task events: communication, power management / relaxation, monitoring.
+
+      case EvCode::START_CYCLE:
+#ifdef SNAPPY_WIFI
+        put_main_event(EvCode::COMM_START);
+#else
+        put_main_event(EvCode::POST_SLEEP);
+#endif
+        break;
+
+#if defined(TIMESTAMP) || defined(MQTT_UPLOAD) || defined(WEB_UPLOAD)
+      case EvCode::COMM_START:
+        // Open the communication window: bring up the WiFi client, try to configure time if necessary,
+        // connect to the MQTT server or to the web upload server, etc.
+        start_communicating();
+        in_communication_window = true;
+        reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
+        break;
+
+      case EvCode::COMM_FAILED:
+        // Could not open the communication window: WiFi bring-up failed.  In principle this
+        // could happen after COMM_ACTIVITY_EXPIRED and the comm window may already be closed.
+        // In that case, do not post POST_COMM1 here.  Also, stop_communicating() is implicit
+        // in this message.
+        if (in_communication_window) {
+          stop_main_timer();            // We don't care about pending COMM_ACTIVITY_EXPIRED
+          set_no_wifi_error();          // Display "No WiFi"
+          in_communication_window = false;
+          put_main_event(EvCode::POST_COMM);
+        }
+        break;
+
+      case EvCode::COMM_ACTIVITY:
+        // Some component had WiFi activity, so keep the WiFi up a while longer, unless this
+        // message arrives late.
+        if (in_communication_window) {
+          reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
+        }
+        break;
+
+      case EvCode::COMM_ACTIVITY_EXPIRED:
+        // No WiFi activity for a while, so bring down WiFi and move to the next phase.
+        // This was a timer message, which could be received after the comm window has closed.
+        // If so, we should not put a POST_COMM1 event.
+        if (in_communication_window) {
+          stop_communicating();
+          in_communication_window = false;
+          put_main_event(EvCode::POST_COMM);
+        }
+        break;
+
+      case EvCode::POST_COMM:
+        // The process that started in COMM_START task always ends up here, via some of the states
+        // above.
+        //
+        // The comm window is closed.  Let the slideshow continue for a bit before deciding
+        // what mode we're going to be in.
+        assert(!in_communication_window);
+        reset_main_timer(COMM_RELAXATION_TIMEOUT, EvCode::SLEEP_START);
+        break;
+#endif
+
+      case EvCode::SLEEP_START:
+        // Figure out what mode we're in.  In monitoring mode, we turn off the screen and go
+        // into low-power state.  In slideshow mode, we continue on as we were, for a while.
+        slideshow_mode = slideshow_next_mode;
+        if (!slideshow_mode) {
+          put_main_event(EvCode::SLIDESHOW_STOP);
+          reset_main_timer(MONITORING_MODE_SLEEP, EvCode::POST_SLEEP);
+#ifdef SNAPPY_SERIAL_INPUT
+          clear_display();
+#else
+          power_peripherals_off();
+          is_powered_up = false;
+#endif
+        } else {
+          reset_main_timer(SLIDESHOW_MODE_SLEEP, EvCode::POST_SLEEP);
+        }
+        break;
+
+      case EvCode::POST_SLEEP:
+        if (!is_powered_up) {
+          power_peripherals_on();
+        }
+        put_main_event(EvCode::SLIDESHOW_START);
+        put_main_event(EvCode::MONITOR_START);
+        break;
+
+      case EvCode::MONITOR_START:
+        start_monitoring();
+        in_monitoring_window = true;
+        break;
+
+      case EvCode::MONITOR_TICK:
+        // Internal clock tick used for the monitor, with some unknown payload
+        monitoring_tick();
+        break;
+
+      case EvCode::MONITOR_STOP:
+        // We don't need to set up anything here, the sensor code will post an EV_MONITOR_DATA
+        // to us to continue the process.
+        stop_monitoring();
+        in_monitoring_window = false;
+        break;
+
+      case EvCode::MONITOR_DATA: {
+        // monitor data arrived after closing the monitoring window
+        SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
+        assert(new_data != nullptr);
+#ifdef MQTT_UPLOAD
+        mqtt_pending_data = *data;
+#endif
+        // slideshow_new_data takes over the ownership of the new_data
+        slideshow_new_data(new_data);
+        put_main_event(EvCode::START_CYCLE);
+        break;
+      }
+
+      case EvCode::BUTTON_PRESS:
+        if (!is_powered_up) {
+          power_peripherals_on();
+          is_powered_up = true;
+        } else {
+          slideshow_next_mode = !slideshow_next_mode;
+        }
+        put_main_event(EvCode::MESSAGE, new String(slideshow_next_mode ? "Slideshow mode" : "Monitoring mode"));
+        break;
+
+      case EvCode::BUTTON_LONG_PRESS:
+        if (!is_powered_up) {
+          put_main_event(EvCode::POST_SLEEP);
+        }
+        put_main_event(EvCode::AP_MODE);
+        break;
+
+#ifdef WEB_CONFIGURATION
+      case EvCode::AP_MODE:
+        // Major mode change.
+        if (!is_powered_up) {
+          // We need the screen.
+          power_peripherals_on();
+          is_powered_on = true();
+        }
+        if (in_monitoring_window) {
+          // This must stop all timers in the monitoring code
+          stop_monitoring();
+          in_monitoring_window = false;
+        }
+        if (in_communication_window) {
+          // This must stop all timers in the communication code
+          stop_communication();
+          in_communication_window = false;
+        }
+        xTimerStop(main_task_timer, portMAX_DELAY);
+        xTimerStop(slideshow_timer, portMAX_DELAY);
+#ifdef SNAPPY_SERIAL_INPUT
+        xTimerStop(serial_timer, portMAX_DELAY);
+#endif
+        // TODO: Either remove the interrupt handlers for the button, or set a
+        // flag so that events are not sent.
+        ap_mode();
+        esp_restart();
+#endif
+
+      // Communication task
+#ifdef SNAPPY_WIFI
+      case EvCode::COMM_POLL:
+        // Polling tick used by the comms subsystem on their own timer
+        // TODO: Implementme
+        break;
+#endif
+
+      // Display and slideshow task
+      case EvCode::MESSAGE:
+        slideshow_show_message_once((String*)ev.pointer_data);
+        if (is_slideshow_running) {
+          advance_slideshow_task();
+          put_main_event(EvCode::SLIDESHOW_TICK);
+        }
+        break;
+
+      case EvCode::SLIDESHOW_START:
+        if (!is_slideshow_running) {
+          start_slideshow_task();
+          is_slideshow_running = true;
+        }
+        break;
+
+      case EvCode::SLIDESHOW_STOP:
+        if (is_slideshow_running) {
+          stop_slideshow_task();
+          is_slideshow_running = false;
+        }
+        break;
+
+      case EvCode::SLIDESHOW_TICK:
+        if (is_slideshow_running) {
+          slideshow_next();
+          advance_slideshow_task();
+        }
+        break;
+
+      // Button monitor tasks
+      case EvCode::BUTTON_DOWN:
+        // ISR is signaling that the button is down
+        // tv is the time we pressed it
+        button_is_down = true;
+        gettimeofday(&button_down, nullptr);
+        break;
+
+      case EvCode::BUTTON_UP: {
+        if (!button_is_down) {
+          break;
+        }
+        button_is_down = false;
+        struct timeval now;
+        gettimeofday(&now, nullptr);
+        uint64_t press_ms = ((uint64_t(now.tv_sec) * 1000000 + now.tv_usec) - (uint64_t(button_down.tv_sec) * 1000000 + button_down.tv_usec)) / 1000;
+        if (press_ms > 100 && press_ms < 2000) {
+          put_main_event(EvCode::BUTTON_PRESS);
+        } else if (press_ms >= 3000) {
+          put_main_event(EvCode::BUTTON_LONG_PRESS);
+        }
+        break;
+      }
+
+        // Serial monitor task
+#ifdef SNAPPY_SERIAL_INPUT
+      case EvCode::SERIAL_TICK:
+        serial_poll();
+        xTimerReset(serial_timer, portMAX_DELAY);
+        break;
+#endif
+
+      default:
+        panic("Unknown event");
+    }
+  }
 }

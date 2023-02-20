@@ -3,7 +3,6 @@
 
 #include "main.h"
 #include "serial_input.h"
-#include "microtask.h"
 #include "util.h"
 #include "web_server.h"
 
