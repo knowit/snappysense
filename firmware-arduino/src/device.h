@@ -49,12 +49,6 @@ void enter_end_state(const char* msg, bool is_error = false) __attribute__ ((nor
 // on the output stream.
 int probe_i2c_devices(Stream* output);
 
-#ifdef TIMESERVER
-// Set the current time, represented as the number of seconds since epoch.
-
-void configure_clock(time_t t);
-#endif
-
 #ifdef SNAPPY_PIEZO
 void setup_sound();
 void start_note(int frequency);

@@ -1,19 +1,13 @@
-// Stuff to obtain the current time from a web server and configure the clock.
+// Stuff to obtain the current time from an ad-hoc web server and configure the clock.
 //
 // The remote server must know how to handle GET to /time; it must respond with a payload that is
 // the decimal encoding of the number of seconds elapsed since the Posix epoch (ie, what time()
 // would return on a properly configured Posix system).  For a simple server that can do this, see
 // `../server`.
-//
-// TODO: Issue 23: This is hacky, it can be integrated with Posix time code by using settimeofday() after
-// obtaining the time base.
 
 #include "snappytime.h"
 #include "config.h"
-#include "device.h"
 #include "log.h"
-#include "network.h"
-#include "util.h"
 
 #ifdef TIMESERVER
 
@@ -21,54 +15,85 @@
 #include <WiFiClient.h>
 #include <HTTPClient.h>
 
-static bool time_configured;
-
-static bool configure_time() {
-  if (time_configured) {
-    return true;
-  }
-
-  // TODO: These error paths must properly spin down the network!
-  auto holder = connect_to_wifi();
-  if (!holder.is_valid()) {
-    return false;
-  }
+struct TimeServerState {
   WiFiClient wifiClient;
   HTTPClient httpClient;
-  // GET /time returns a number, representing the number of seconds UTC since the start
-  // of the Posix epoch.
-  if (!httpClient.begin(wifiClient, time_server_host(), time_server_port(), "/time")) {
-    return false;
-  }
-  int retval = httpClient.GET();
-  if (retval < 200 || retval > 299) {
-    return false;
-  }
-  unsigned long timebase;
-  if (sscanf(httpClient.getString().c_str(), "%lu", &timebase) != 1) {
-    return false;
-  }
-  configure_clock(timebase);
-  httpClient.end();
-  wifiClient.stop();
-  time_configured = true;
-  return true;
+};
+
+static TimeServerState* timeserver_state;
+static TimerHandle_t timeserver_timer;
+static bool time_configured;
+
+static void put_delayed_retry() {
+  xTimerStart(timeserver_timer, portMAX_DELAY);
 }
 
-ConfigureTimeTask* ConfigureTimeTask::handle;
+void configure_clock(time_t t) {
+  struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
+  settimeofday(&tv, nullptr);
+}
 
-void ConfigureTimeTask::execute(SnappySenseData*) {
-  static unsigned long backoff = 60*1000;
-  if (!configure_time()) {
-    log("Failed to configure time - connection or protocol error.  Will try later.\n");
-    sched_microtask_after(this, backoff);
-    if (backoff < 60*60*1000) {
-      backoff *= 2;
-    }
+static void maybe_configure_time() {
+  // GET /time returns a number, representing the number of seconds UTC since the start
+  // of the Posix epoch.
+  if (!timeserver_state->httpClient.begin(timeserver_state->wifiClient, time_server_host(), time_server_port(), "/time")) {
+    put_delayed_retry();
     return;
   }
-  log("Successfully configured time\n");
-  handle = nullptr;
+  int retval = timeserver_state->httpClient.GET();
+  if (retval < 200 || retval > 299) {
+    // The server seems dead, so no sense in retrying now.  Retry in next comm window.
+    // timeserver_stop() will clean up.
+    log("Time configuration failed: server rejected\n");
+    return;
+  }
+  unsigned long timebase;
+  if (sscanf(timeserver_state->httpClient.getString().c_str(), "%lu", &timebase) != 1) {
+    log("Time configuration failed: bogus time from server\n");
+    // As above
+    return;
+  }
+  log("Time configured\n");
+  configure_clock(timebase);
+  timeserver_state->httpClient.end();
+  timeserver_state->wifiClient.stop();
+  time_configured = true;
+  // timeserver_stop will clean up the state
+}
+
+void timeserver_init() {
+  // We retry every 10s through the comm window if we can't get a connection.
+  timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(10000), pdFALSE, nullptr,
+                                  [](TimerHandle_t){ put_main_event(EvCode::COMM_TIMESERVER_WORK); });
+}
+
+void timeserver_start() {
+  if (time_configured) {
+    return;
+  }
+  log("Attempting to configure time\n");
+  assert(timeserver_state == nullptr);
+  timeserver_state = new TimeServerState;
+  maybe_configure_time();
+}
+
+// Called from the main loop in response to COMM_TIMESERVER_WORK messages.
+void timeserver_work() {
+  if (time_configured) {
+    return;
+  }
+  if (timeserver_state == nullptr) {
+    // Comm window was closed already, this is just a spurious callback
+    return;
+  }
+  maybe_configure_time();
+}
+
+// Stop trying to connect to the time server, if that's still going on.
+void timeserver_stop() {
+  delete timeserver_state;
+  timeserver_state = nullptr;
+  xTimerStop(timeserver_timer, portMAX_DELAY);
 }
 
 #endif // TIMESERVER

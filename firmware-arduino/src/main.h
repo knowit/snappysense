@@ -44,7 +44,7 @@
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
 // has to be provisioned.  See snappytime.h.
-//#define TIMESERVER
+#define TIMESERVER
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
 // every so often.  See mqtt_upload.h.
@@ -115,7 +115,7 @@
 # define WEB_SERVER
 #endif
 
-#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESTAMP) || defined(WEB_CONFIGURATION)
+#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESERVER) || defined(WEB_CONFIGURATION)
 # define SNAPPY_WIFI
 #endif
 
@@ -170,7 +170,9 @@ enum class EvCode {
   // Main task
   START_CYCLE,
   COMM_START,
-  COMM_FAILED,
+  COMM_WIFI_CLIENT_RETRY,
+  COMM_WIFI_CLIENT_FAILED,
+  COMM_WIFI_CLIENT_UP,
   COMM_ACTIVITY,
   COMM_ACTIVITY_EXPIRED,
   POST_COMM,
@@ -179,13 +181,16 @@ enum class EvCode {
   MONITOR_START,
   MONITOR_STOP,
   MONITOR_DATA,
-  MONITOR_TICK,
   BUTTON_PRESS,
   BUTTON_LONG_PRESS,
   AP_MODE,
 
+  // Monitoring work
+  MONITOR_TICK,
+
   // Communication work
-  COMM_POLL,
+  COMM_MQTT_WORK,
+  COMM_TIMESERVER_WORK,
 
   // Slideshow/display work
   MESSAGE,

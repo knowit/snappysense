@@ -85,7 +85,7 @@
 // to set configuration variables.  See CONFIG.md at the root for more information.
 //
 // The device may be configured to fetch the current time from a time server.
-// Follow breadcrumbs from the definition of TIMESTAMP in main.h for more information.
+// Follow breadcrumbs from the definition of TIMESERVER in main.h for more information.
 // A simple time server is in the test-server/ directory in the present repo.
 //
 // The device can be configured to upload results to an MQTT broker (typically AWS)
@@ -97,82 +97,22 @@
 // For development, the device can also listen for interactive commands over the
 // serial line or on an http port, see SERIAL_COMMAND_SERVER and WEB_COMMAND_SERVER
 // in main.h.
-
-#include "config.h"
-#include "config_ui.h"
-#include "command.h"
-#include "device.h"
-#include "icons.h"
-#include "log.h"
-#include "mqtt_upload.h"
-#include "piezo.h"
-#include "sensor.h"
-#include "snappytime.h"
-#include "slideshow.h"
-#include "web_server.h"
-#include "web_upload.h"
-
-// Whether the slideshow mode is enabled or not.  The default is to start the slideshow on startup.
-// It can be toggled to monitoring mode by a press on the wake button.  Slideshow mode really only
-// affects what we do after communication and before monitoring, and for how long.
-#ifdef SLIDESHOW_MODE
-bool slideshow_mode = true;
-#else
-bool slideshow_mode = false;
-#endif // SLIDESHOW_MODE
-
-// The timer driving the main loop
-static TimerHandle_t main_task_timer;
-
-// The timer driving the slideshow / display task
-static TimerHandle_t slideshow_timer;
-
-#ifdef SNAPPY_SERIAL_INPUT
-// The timer driving the serial line poller, when serial line input is enabled
-static TimerHandle_t serial_timer;
-#endif
-
-// The event queue that drives all activity except within the music player task
-static QueueHandle_t/*<int>*/ main_event_queue;
-
-void setup() {
-  main_event_queue = xQueueCreate(10, sizeof(SnappyEvent));
-
-  // Power up the device.
-
-  bool do_interactive_configuration = false;
-  device_setup(&do_interactive_configuration);
-
-  // Serial port and display are up now and can be used for output.
-
-  // Load config from nonvolatile memory, if available, otherwise use default values.
-  read_configuration();
-
-  // We sometimes need random numbers, try to seed the stream.
-  randomSeed(entropy());
-
-  log("SnappySense running!\n");
-#if defined(SNAPPY_PIEZO)
-# if defined(STARTUP_SONG)
-  static const char melody[] = "StarWars:d=4,o=5,b=38:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
-# else
-  static const char melody[] = "Beep:d=4,o=5,b=38:16p,16c";
-# endif
-  play_song(melody);
-#endif
-}
-
-// In normal mode there are conceptually many concurrent tasks:
+//
+//
+// STATE MACHINE
+//
+// In normal mode there are conceptually many concurrent tasks running:
 //
 // The main loop
 // The display / slideshow task
 // The short button press listener
 // The long button press listener
+// The wifi manager task
 // The serial port listener (if the serial port command processor is present)
-// The socket listener for mqtt
-// The socket listener for web upload
-// The socket listener for web commands
+// The mqtt task (download + upload)
+// The web upload task (download + upload)
 // The music player
+// (And more, depending on configuration)
 //
 // All but the music player are integrated into the Arduino main loop, driven by several timers.
 // The music player is an actual FreeRTOS concurrent task with a higher priority.  They could all
@@ -244,20 +184,84 @@ void setup() {
 //    This should probably go away, but it's like the serial port listener: it keeps the device
 //    on and listens actively.
 
-#ifdef SNAPPY_WIFI
-void start_communicating();
-void stop_communicating();
-void set_no_wifi_error();
+
+#include "config.h"
+#include "config_ui.h"
+#include "command.h"
+#include "device.h"
+#include "icons.h"
+#include "log.h"
+#include "mqtt_upload.h"
+#include "network.h"
+#include "piezo.h"
+#include "sensor.h"
+#include "snappytime.h"
+#include "slideshow.h"
+#include "web_server.h"
+#include "web_upload.h"
+
+// Whether the slideshow mode is enabled or not.  The default is to start the slideshow on startup.
+// It can be toggled to monitoring mode by a press on the wake button.  Slideshow mode really only
+// affects what we do after communication and before monitoring, and for how long.
+#ifdef SLIDESHOW_MODE
+bool slideshow_mode = true;
+#else
+bool slideshow_mode = false;
+#endif // SLIDESHOW_MODE
+
+// The timer driving the main loop
+static TimerHandle_t main_task_timer;
+
+// The timer driving the slideshow / display task
+static TimerHandle_t slideshow_timer;
+
+#ifdef SNAPPY_SERIAL_INPUT
+// The timer driving the serial line poller, when serial line input is enabled
+static TimerHandle_t serial_timer;
 #endif
 
+// The event queue that drives all activity except within the music player task
+static QueueHandle_t/*<int>*/ main_event_queue;
+
+void setup() {
+  main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));
+
+  // Power up the device.
+
+  bool do_interactive_configuration = false;
+  device_setup(&do_interactive_configuration);
+
+  // Serial port and display are up now and can be used for output.
+
+  // Load config from nonvolatile memory, if available, otherwise use default values.
+  read_configuration();
+
+  // We sometimes need random numbers, try to seed the stream.
+  randomSeed(entropy());
+
+  log("SnappySense running!\n");
+#if defined(SNAPPY_PIEZO)
+# if defined(STARTUP_SONG)
+  static const char melody[] = "StarWars:d=4,o=5,b=38:32p,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#.6,32f#,32f#,32f#,8b.,8f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32c#6,8b.6,16f#.6,32e6,32d#6,32e6,8c#6";
+# else
+  static const char melody[] = "Beep:d=4,o=5,b=38:16p,16c";
+# endif
+  play_song(melody);
+#endif
+}
+
 void put_main_event(EvCode code) {
+  // Dangerous to use portMAX_DELAY here, we depend on the main queue being dimensioned so
+  // that any waiting will not happen, yet this can be called from a timer callback.  Ditto
+  // all other timer callbacks below.  Should there be a different strategy, eg, delay 0
+  // with some kind of error report?
   SnappyEvent ev(code);
-  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
+  xQueueSend(main_event_queue, &ev, 0);
 }
 
 void put_main_event(EvCode code, void* data) {
   SnappyEvent ev(code, data);
-  xQueueSend(main_event_queue, &ev, portMAX_DELAY);
+  xQueueSend(main_event_queue, &ev, 0);
 }
 
 void put_main_event_from_isr(EvCode code) {
@@ -272,6 +276,10 @@ static void main_timer_tick(TimerHandle_t t) {
 static void reset_main_timer(unsigned timeout_ms, EvCode payload) {
   vTimerSetTimerID(main_task_timer, (void*)payload);
   xTimerChangePeriod(main_task_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+}
+
+static void stop_main_timer() {
+  xTimerStop(main_task_timer, portMAX_DELAY);
 }
 
 static void slideshow_timer_tick(TimerHandle_t t) {
@@ -320,7 +328,9 @@ void loop() {
 
 #ifdef SNAPPY_WIFI
   // True iff the main loop is in the communication window
-  static bool in_communication_window = false;
+  bool in_communication_window = false;
+
+  bool in_wifi_window = false;
 #endif
 
   // True iff the main loop is in the monitoring window (see below)
@@ -348,11 +358,19 @@ void loop() {
   struct timeval button_down;
   bool button_is_down = false;
 
-  // Create all the timers.  TODO: Error handling?
+  // Create all the timers managed by the main loop.  TODO: Error handling?
   main_task_timer = xTimerCreate("main", 1, pdFALSE, nullptr, main_timer_tick);
   slideshow_timer = xTimerCreate("slideshow", 1, pdFALSE, nullptr, slideshow_timer_tick);
 #ifdef SNAPPY_SERIAL_INPUT
   serial_timer = xTimerCreate("serial", 1, pdFALSE, nullptr, serial_timer_tick);
+#endif
+
+  // Initialize all modules that need it.  TODO: Error handling?
+#ifdef SNAPPY_WIFI
+  wifi_init();
+#endif
+#ifdef TIMESERVER
+  timeserver_init();
 #endif
 
   // The slideshow task starts whether we're in slideshow mode or not, since slideshow
@@ -366,6 +384,7 @@ void loop() {
   for (;;) {
     SnappyEvent ev;
     while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
+    log("Event %d\n", (int)ev.code);
     switch (ev.code) {
 
       /////////////////////////////////////////////////////////////////////////////////////////////
@@ -380,26 +399,38 @@ void loop() {
 #endif
         break;
 
-#if defined(TIMESTAMP) || defined(MQTT_UPLOAD) || defined(WEB_UPLOAD)
+#ifdef SNAPPY_WIFI
       case EvCode::COMM_START:
-        // Open the communication window: bring up the WiFi client, try to configure time if necessary,
-        // connect to the MQTT server or to the web upload server, etc.
-        start_communicating();
-        in_communication_window = true;
-        reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
+        // Open the communication window: bring up the WiFi client.  This will respond with either
+        // COMM_WIFI_CLIENT_UP or COMM_WIFI_CLIENT_FAILED.
+        //
+        // TODO: This can take multiple retries and we don't want to block, so how do we deal with that?
+        turn_wifi_client_on();
+        in_wifi_window = true;
         break;
 
-      case EvCode::COMM_FAILED:
-        // Could not open the communication window: WiFi bring-up failed.  In principle this
-        // could happen after COMM_ACTIVITY_EXPIRED and the comm window may already be closed.
-        // In that case, do not post POST_COMM1 here.  Also, stop_communicating() is implicit
-        // in this message.
-        if (in_communication_window) {
-          stop_main_timer();            // We don't care about pending COMM_ACTIVITY_EXPIRED
-          set_no_wifi_error();          // Display "No WiFi"
-          in_communication_window = false;
-          put_main_event(EvCode::POST_COMM);
-        }
+      case EvCode::COMM_WIFI_CLIENT_RETRY:
+        // As above, but retrying after a timeout.
+        retry_wifi_client_on();
+        break;
+
+      case EvCode::COMM_WIFI_CLIENT_FAILED:
+        // Could not bring up WiFi.
+        put_main_event(EvCode::MESSAGE, new String("No WiFi"));
+        in_wifi_window = false;
+        put_main_event(EvCode::POST_COMM);
+        break;
+
+      case EvCode::COMM_WIFI_CLIENT_UP:
+        // TODO: Start communicating
+        in_communication_window = true;
+#ifdef TIMESERVER
+        timeserver_start();
+#endif
+#ifdef MQTT_UPLOAD
+        mqtt_start();
+#endif
+        reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
         break;
 
       case EvCode::COMM_ACTIVITY:
@@ -414,10 +445,21 @@ void loop() {
         // No WiFi activity for a while, so bring down WiFi and move to the next phase.
         // This was a timer message, which could be received after the comm window has closed.
         // If so, we should not put a POST_COMM1 event.
-        if (in_communication_window) {
-          stop_communicating();
-          in_communication_window = false;
+        if (in_communication_window || in_wifi_window) {
           put_main_event(EvCode::POST_COMM);
+        }
+        if (in_communication_window) {
+#ifdef MQTT_UPLOAD
+          mqtt_stop();
+#endif
+#ifdef TIMESERVER
+          timeserver_stop();
+#endif
+          in_communication_window = false;
+        }
+        if (in_wifi_window) {
+          turn_wifi_client_off();
+          in_wifi_window = false;
         }
         break;
 
@@ -427,7 +469,7 @@ void loop() {
         //
         // The comm window is closed.  Let the slideshow continue for a bit before deciding
         // what mode we're going to be in.
-        assert(!in_communication_window);
+        assert(!in_communication_window && !in_wifi_window);
         reset_main_timer(COMM_RELAXATION_TIMEOUT, EvCode::SLEEP_START);
         break;
 #endif
@@ -480,9 +522,14 @@ void loop() {
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
         assert(new_data != nullptr);
 #ifdef MQTT_UPLOAD
-        mqtt_pending_data = *data;
+        // TODO: This should only happen "every so often", possibly not every time there's new
+        // data.  MQTT capture should have its own cadence, different from the needs of eg
+        // the slideshow.  In some sense, MONITOR_DATA should cache the data object in this
+        // function's local state and then there should be other timers driving the needs of
+        // the slideshow and the MQTT system.
+        mqtt_add_data(new SnappySenseData(*new_data));   // Make a copy
 #endif
-        // slideshow_new_data takes over the ownership of the new_data
+        // slideshow_new_data takes over the ownership of the new_data.  See TODO above.
         slideshow_new_data(new_data);
         put_main_event(EvCode::START_CYCLE);
         break;
@@ -535,10 +582,14 @@ void loop() {
 #endif
 
       // Communication task
-#ifdef SNAPPY_WIFI
-      case EvCode::COMM_POLL:
-        // Polling tick used by the comms subsystem on their own timer
-        // TODO: Implementme
+#ifdef MQTT_UPLOAD
+      case EvCode::COMM_MQTT_WORK:
+        mqtt_work();
+        break;
+#endif
+#ifdef TIMESERVER
+      case EvCode::COMM_TIMESERVER_WORK:
+        timeserver_work();
         break;
 #endif
 

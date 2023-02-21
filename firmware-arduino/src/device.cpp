@@ -356,13 +356,6 @@ void enter_end_state(const char* msg, bool is_error) {
   /*NOTREACHED*/
 }
 
-#ifdef TIMESERVER
-void configure_clock(time_t t) {
-  struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
-  settimeofday(&tv, nullptr);
-}
-#endif // TIMESERVER
-
 #ifdef SNAPPY_PIEZO
 void setup_sound() {
   // TODO: Justify these choices, which are wrong.  Probably 1 bit of resolution is fine?

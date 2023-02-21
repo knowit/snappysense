@@ -34,7 +34,6 @@
 
 #include "config.h"
 #include "log.h"
-#include "microtask.h"
 #include "network.h"
 #include "device.h"
 
@@ -69,6 +68,10 @@ static struct MqttState {
   MqttClient mqtt;
   bool work_done;
 } *mqtt_state;
+
+void mqtt_start() {
+  // The WiFi client is up.  We want to connect to the MQTT broker.  This may have some delays.
+}
 
 static void mqtt_enqueue(String&& topic, String&& body) {
   mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));

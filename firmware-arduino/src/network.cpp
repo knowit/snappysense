@@ -26,112 +26,114 @@
  *  server.close() closes the server socket and stops listening
  */
 
-//#define REFCOUNT_LOGGING
-#define WIFI_LOGGING
+static int last_successful_access_point = 0;
+static int current_access_point = 0;
+static int num_access_points_tried = 0;
 
-static unsigned refcount = 0;
+static constexpr int MAX_TIMEOUTS = 10;
+static int num_timeouts = 0;
 
-void WiFiHolder::incRef() {
-  refcount++;
-#ifdef REFCOUNT_LOGGING
-  log("WiFi: refcount = %d\n", refcount);
-#endif
+enum class WiFiState {
+  STARTING,
+  RETRYING,
+  CONNECTED,
+  FAILED,
+  STOPPED
+};
+static WiFiState wifi_state = WiFiState::STARTING;
+
+static TimerHandle_t retry_timer;
+
+static void put_delayed_retry() {
+  xTimerStart(retry_timer, portMAX_DELAY);
 }
 
-void WiFiHolder::decRef() {
-  --refcount;
-#ifdef REFCOUNT_LOGGING
-  log("WiFi: refcount = %d\n", refcount);
-#endif
-  if (refcount == 0) {
-#ifdef WIFI_LOGGING
-    log("WiFi: Bringing down network\n");
-#endif
-    WiFi.disconnect();
-  }
-}
-
-WiFiHolder::WiFiHolder(bool did_create) : valid(did_create) {
-  if (valid) {
-    incRef();
-  }
-}
-
-WiFiHolder::WiFiHolder(const WiFiHolder& other) {
-  if (other.valid) {
-    incRef();
-  }
-  valid = other.valid;
-}
-
-WiFiHolder& WiFiHolder::operator=(const WiFiHolder& other) {
-  if (other.valid && !valid) {
-    incRef();
-  } else if (!other.valid && valid) {
-    decRef();
-  }
-  valid = other.valid;
-  return *this;
-}
-
-WiFiHolder::~WiFiHolder() {
-  if (valid) {
-    decRef();
-  }
-}
-
-WiFiHolder connect_to_wifi() {
-  // TODO: If we fail to bring up the network, we should wait some time before trying again,
-  // otherwise we're just wasting energy.
-  if (refcount > 0) {
-    return WiFiHolder(true);
-  }
-
-  static int last_successful_access_point = 0;
-  int access_point = last_successful_access_point;
-  bool is_connected = false;
-  for (int i=0 ; i < 3; i++) {
-    const char* ap = access_point_ssid(access_point+1);
-    const char* pw = access_point_password(access_point+1);
-    if (*ap == 0) {
-      continue;
+static void connect_to_wifi() {
+again:
+  switch (wifi_state) {
+    case WiFiState::STARTING: {
+      // We're in STARTING every time we try a new AP.  Once we've tried all APs we're done.
+      if (num_access_points_tried == 3) {
+        wifi_state = WiFiState::FAILED;
+        put_main_event(EvCode::COMM_WIFI_CLIENT_FAILED);
+        WiFi.disconnect(true);
+        log("WiFi: Failed to connect to any access point\n");
+        return;
+      }
+      // Next AP.
+      const char* ap = access_point_ssid(current_access_point+1);
+      const char* pw = access_point_password(current_access_point+1);
+      num_access_points_tried++;
+      if (*ap == 0) {
+        goto again;
+      }
+      if (*pw == 0) {
+        pw = nullptr;
+      }
+      num_timeouts = 0;
+      log("Trying access point: [%s]\n", ap);
+      WiFi.begin(ap, pw);
+      put_delayed_retry();
+      wifi_state = WiFiState::RETRYING;
+      return;
     }
-    if (*pw == 0) {
-      pw = nullptr;
+    case WiFiState::RETRYING: {
+      if (WiFi.status() == WL_CONNECTED) {
+        last_successful_access_point = current_access_point;
+        wifi_state = WiFiState::CONNECTED;
+        put_main_event(EvCode::COMM_WIFI_CLIENT_UP);
+        log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
+        return;
+      }
+      if (num_timeouts == MAX_TIMEOUTS) {
+        current_access_point = (current_access_point + 1) % 3;
+        wifi_state = WiFiState::STARTING;
+        goto again;
+      }
+      num_timeouts++;
+      put_delayed_retry();
+      return;
     }
-    log("Trying access point: [%s]\n", ap);
-    wl_status_t stat = WiFi.begin(ap, pw);
-    int attempts = 0;
-    while (stat != WL_CONNECTED && attempts < 5) {
-      // TODO: Embedded delay
-      delay(500);
-      stat = WiFi.status();
-      attempts++;
-    }
-    if (stat == WL_CONNECTED) {
-      last_successful_access_point = access_point;
-      is_connected = true;
+    case WiFiState::FAILED:
+    case WiFiState::STOPPED:
+    case WiFiState::CONNECTED:
+      return;
+    default:
+      panic("Should not happen");
+  }
+}
+
+void wifi_init() {
+  retry_timer = xTimerCreate("wifi retry", pdMS_TO_TICKS(500), pdFALSE, nullptr,
+                             [](TimerHandle_t) { put_main_event(EvCode::COMM_WIFI_CLIENT_RETRY); });
+}
+
+void turn_wifi_client_on() {
+  num_access_points_tried = 0;
+  current_access_point = last_successful_access_point;
+  wifi_state = WiFiState::STARTING;
+  connect_to_wifi();
+}
+
+void retry_wifi_client_on() {
+  connect_to_wifi();
+}
+
+void turn_wifi_client_off() {
+  switch (wifi_state) {
+    case WiFiState::RETRYING:
+    case WiFiState::CONNECTED:
+      log("WiFi: Disconnected\n");
+      WiFi.disconnect(true);
       break;
-    }
-    access_point = (access_point + 1) % 3;
+    default:
+      break;
   }
-  if (is_connected) {
-    WiFiHolder holder(true);
-    if (SlideshowTask::handle) {
-      SlideshowTask::handle->setWiFiStatus(true);
-    }
-    log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
-    return holder;
-  }
-  log("WiFi: Failed to connect to any access point\n");
-  if (SlideshowTask::handle) {
-    SlideshowTask::handle->setWiFiStatus(false);
-  }
-  return WiFiHolder();
+  wifi_state = WiFiState::STOPPED;
 }
 
 String local_ip_address() {
-  if (refcount == 0) {
+  if (wifi_state != WiFiState::CONNECTED) {
     return String();
   }
   return WiFi.localIP().toString();
@@ -141,6 +143,7 @@ bool create_wifi_soft_access_point(const char* ssid, const char* password, IPAdd
   if (!WiFi.softAP(ssid, password)) {
     return false;
   }
+  wifi_state = WiFiState::CONNECTED;
   *ip = WiFi.softAPIP();
   log("Soft AP SSID %s, IP address: %s\n", ssid, ip->toString().c_str());
   return true;

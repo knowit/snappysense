@@ -1,3 +1,5 @@
+/* Manage the display - slideshow and error messages */
+
 #include "slideshow.h"
 
 #include "device.h"
@@ -7,8 +9,6 @@
 // -1 means the splash screen; values 0..whatever refer to the entries
 // in the SnappyMetaData array.
 static int next_view = -1;
-static bool wifi_ok = true;
-static bool pending_error = false;
 static SnappySenseData* current_data;
 static SnappySenseData* next_data;
 static String* current_message;
@@ -50,24 +50,13 @@ again:
       current_data = next_data;
       next_data = nullptr;
     }
-    if (!wifi_ok) {
-      pending_error = true;
-    }
     next_view++;
-    return;
-  }
-
-  if (next_view == 0 && pending_error) {
-    // Display the error, do not advance the pointer
-    if (!wifi_ok) {
-      render_text("No WiFi");
-    }
-    pending_error = false;
     return;
   }
 
   if (current_data == nullptr) {
     // No data, wrap around
+    log("No data\n");
     next_view = -1;
     goto again;
   }

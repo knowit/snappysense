@@ -8,6 +8,9 @@
 // This is the model of the sensor unit.
 
 struct SnappySenseData {
+  SnappySenseData();
+  SnappySenseData(const SnappySenseData& other_data);
+
   // The sequence number is useful for calibration, bug fixing, etc.  It is
   // set from a global variable when a reading is obtained.  It will wrap
   // around silently.

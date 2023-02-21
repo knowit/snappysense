@@ -7,6 +7,14 @@
 #include "log.h"
 #include "snappytime.h"
 
+SnappySenseData::SnappySenseData() {
+  memset(this, 0, sizeof(*this));
+}
+
+SnappySenseData::SnappySenseData(const SnappySenseData& other) {
+  memcpy(this, &other, sizeof(*this));
+}
+
 // The "formatters" format the various members of SnappySenseData into a buffer.  In all
 // cases, `buflim` points to the address beyond the buffer.  No error is returned
 // if the buffer is too small, but the operation is guaranteed not to write beyond

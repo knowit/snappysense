@@ -6,34 +6,20 @@
 #include "main.h"
 
 #ifdef TIMESERVER
-#include "microtask.h"
-#include "util.h"
 
-// A singleton task that will attempt to contact the time server to obtain the
-// current time.  Once it succeeds it will set the device clock to the obtained time.
-//
-// If it does not succeed it will reschedule itself, with some appropriate backoff,
-// to try again at a future time.
+// Call this before anything else.
+void timeserver_init();
 
-class ConfigureTimeTask final : public MicroTask {
-public:
-  // The handle is set to nullptr once the time configuration task has completed and
-  // time has been configured.
-  static ConfigureTimeTask* handle;
+// WIFI must be up.  Try to connect to the time server, if the time has not been set
+// already.  This will result in COMM_TIMESERVER_WORK messages being posted on the
+// main queue every so often if retries are required.
+void timeserver_start();
 
-  ConfigureTimeTask() {
-    if (handle != nullptr) {
-        panic("The time-task is a singleton");
-    }
-    handle = this;
-  }
+// Called from the main loop in response to COMM_TIMESERVER_WORK messages.
+void timeserver_work();
 
-  const char* name() override {
-    return "configure time";
-  }
-
-  void execute(SnappySenseData*) override;
-};
+// Stop trying to connect to the time server, if that's still going on.
+void timeserver_stop();
 
 #endif
 
