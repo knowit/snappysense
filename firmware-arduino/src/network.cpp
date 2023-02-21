@@ -104,7 +104,7 @@ again:
 }
 
 void wifi_init() {
-  retry_timer = xTimerCreate("wifi retry", pdMS_TO_TICKS(500), pdFALSE, nullptr,
+  retry_timer = xTimerCreate("wifi retry", pdMS_TO_TICKS(wifi_retry_ms()), pdFALSE, nullptr,
                              [](TimerHandle_t) { put_main_event(EvCode::COMM_WIFI_CLIENT_RETRY); });
 }
 

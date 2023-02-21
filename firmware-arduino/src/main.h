@@ -39,7 +39,7 @@
 // and short time intervals for many things (to speed up testing).
 // Otherwise, we're in "production" mode and default values are mostly blank and
 // the device must be provisioned from interactive config mode.
-//#define DEVELOPMENT
+#define DEVELOPMENT
 
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
@@ -128,7 +128,7 @@
 #endif
 
 #if !defined(HARDWARE_1_0_0)
-//# define SNAPPY_PIEZO
+# define SNAPPY_PIEZO
 #endif
 
 #if !defined(DEVELOPMENT)

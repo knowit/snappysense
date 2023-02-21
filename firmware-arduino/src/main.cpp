@@ -239,6 +239,14 @@ void setup() {
   // We sometimes need random numbers, try to seed the stream.
   randomSeed(entropy());
 
+#ifdef SNAPPY_WIFI
+  wifi_init();
+#endif
+
+#ifdef TIMESERVER
+  timeserver_init();
+#endif
+
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
 # if defined(STARTUP_SONG)
@@ -251,10 +259,8 @@ void setup() {
 }
 
 void put_main_event(EvCode code) {
-  // Dangerous to use portMAX_DELAY here, we depend on the main queue being dimensioned so
-  // that any waiting will not happen, yet this can be called from a timer callback.  Ditto
-  // all other timer callbacks below.  Should there be a different strategy, eg, delay 0
-  // with some kind of error report?
+  // This (and the ones below) can be called from timer callbacks, so use a delay of 0.
+  // The queue should anyway be large enough for us never to have to block on insert.
   SnappyEvent ev(code);
   xQueueSend(main_event_queue, &ev, 0);
 }
@@ -278,10 +284,6 @@ static void reset_main_timer(unsigned timeout_ms, EvCode payload) {
   xTimerChangePeriod(main_task_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
 }
 
-static void stop_main_timer() {
-  xTimerStop(main_task_timer, portMAX_DELAY);
-}
-
 static void slideshow_timer_tick(TimerHandle_t t) {
   put_main_event(EvCode::SLIDESHOW_TICK);
 }
@@ -295,7 +297,7 @@ static void stop_slideshow_task() {
 }
 
 static void advance_slideshow_task() {
-  xTimerChangePeriod(slideshow_timer, pdMS_TO_TICKS(2000), portMAX_DELAY);
+  xTimerChangePeriod(slideshow_timer, pdMS_TO_TICKS(slideshow_update_interval_s() * 1000), portMAX_DELAY);
 }
 
 #ifdef SNAPPY_SERIAL_INPUT
@@ -303,20 +305,6 @@ static void serial_timer_tick(TimerHandle_t t) {
   put_main_event(EvCode::SERIAL_POLL);
 }
 #endif
-
-#ifdef SNAPPY_WIFI
-// Comm window remains open 1min after last activity
-static unsigned constexpr COMM_ACTIVITY_TIMEOUT = 60000;
-
-// Let the slideshow run 1min after comm window closes
-static unsigned constexpr COMM_RELAXATION_TIMEOUT = 60000;
-#endif
-
-// How long to wait in the sleep window in monitoring mode
-static unsigned constexpr MONITORING_MODE_SLEEP = 60*60*1000;  // ms
-
-// How long to wait in the sleep window in slideshow mode
-static unsigned constexpr SLIDESHOW_MODE_SLEEP = 5*60*1000;    // ms
 
 // This never returns.  The Arduino main loop does nothing interesting for us.  Our main loop
 // is based on FreeRTOS and is not busy-waiting.
@@ -365,14 +353,6 @@ void loop() {
   serial_timer = xTimerCreate("serial", 1, pdFALSE, nullptr, serial_timer_tick);
 #endif
 
-  // Initialize all modules that need it.  TODO: Error handling?
-#ifdef SNAPPY_WIFI
-  wifi_init();
-#endif
-#ifdef TIMESERVER
-  timeserver_init();
-#endif
-
   // The slideshow task starts whether we're in slideshow mode or not, since slideshow
   // mode only affects what happens between communication and monitoring, and for how long.
   // The first thing the task does is show the splash screen.
@@ -380,6 +360,9 @@ void loop() {
 
   // Start the main task.
   put_main_event(EvCode::START_CYCLE);
+
+  // Shut up the compiler
+  (void)in_monitoring_window;
 
   for (;;) {
     SnappyEvent ev;
@@ -430,14 +413,14 @@ void loop() {
 #ifdef MQTT_UPLOAD
         mqtt_start();
 #endif
-        reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
+        reset_main_timer(comm_activity_timeout_s() * 1000, EvCode::COMM_ACTIVITY_EXPIRED);
         break;
 
       case EvCode::COMM_ACTIVITY:
         // Some component had WiFi activity, so keep the WiFi up a while longer, unless this
         // message arrives late.
         if (in_communication_window) {
-          reset_main_timer(COMM_ACTIVITY_TIMEOUT, EvCode::COMM_ACTIVITY_EXPIRED);
+          reset_main_timer(comm_activity_timeout_s() * 1000, EvCode::COMM_ACTIVITY_EXPIRED);
         }
         break;
 
@@ -470,7 +453,7 @@ void loop() {
         // The comm window is closed.  Let the slideshow continue for a bit before deciding
         // what mode we're going to be in.
         assert(!in_communication_window && !in_wifi_window);
-        reset_main_timer(COMM_RELAXATION_TIMEOUT, EvCode::SLEEP_START);
+        reset_main_timer(comm_relaxation_timeout_s() * 1000, EvCode::SLEEP_START);
         break;
 #endif
 
@@ -480,21 +463,23 @@ void loop() {
         slideshow_mode = slideshow_next_mode;
         if (!slideshow_mode) {
           put_main_event(EvCode::SLIDESHOW_STOP);
-          reset_main_timer(MONITORING_MODE_SLEEP, EvCode::POST_SLEEP);
+          reset_main_timer(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
 #ifdef SNAPPY_SERIAL_INPUT
           clear_display();
 #else
+          log("Powering down\n");
           power_peripherals_off();
           is_powered_up = false;
 #endif
         } else {
-          reset_main_timer(SLIDESHOW_MODE_SLEEP, EvCode::POST_SLEEP);
+          reset_main_timer(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
         }
         break;
 
       case EvCode::POST_SLEEP:
         if (!is_powered_up) {
           power_peripherals_on();
+          log("Powered up\n");
         }
         put_main_event(EvCode::SLIDESHOW_START);
         put_main_event(EvCode::MONITOR_START);
@@ -554,11 +539,15 @@ void loop() {
 
 #ifdef WEB_CONFIGURATION
       case EvCode::AP_MODE:
-        // Major mode change.
+        // Major mode change.  This is special: it knows a bit too much about the rest of the
+        // state machine but that's just how it's going to be.  We're trying to avoid having
+        // to process any other messages before switching to a completely different mode.
+        // We never switch back: we restart the device when AP mode ends.
         if (!is_powered_up) {
           // We need the screen.
           power_peripherals_on();
           is_powered_on = true();
+          log("Powered up\n");
         }
         if (in_monitoring_window) {
           // This must stop all timers in the monitoring code

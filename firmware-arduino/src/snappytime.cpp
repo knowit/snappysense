@@ -63,7 +63,7 @@ static void maybe_configure_time() {
 
 void timeserver_init() {
   // We retry every 10s through the comm window if we can't get a connection.
-  timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(10000), pdFALSE, nullptr,
+  timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(time_server_retry_s() * 1000), pdFALSE, nullptr,
                                   [](TimerHandle_t){ put_main_event(EvCode::COMM_TIMESERVER_WORK); });
 }
 

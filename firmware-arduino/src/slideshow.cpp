@@ -56,7 +56,6 @@ again:
 
   if (current_data == nullptr) {
     // No data, wrap around
-    log("No data\n");
     next_view = -1;
     goto again;
   }

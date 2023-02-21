@@ -7,14 +7,6 @@
 #include "log.h"
 #include "snappytime.h"
 
-SnappySenseData::SnappySenseData() {
-  memset(this, 0, sizeof(*this));
-}
-
-SnappySenseData::SnappySenseData(const SnappySenseData& other) {
-  memcpy(this, &other, sizeof(*this));
-}
-
 // The "formatters" format the various members of SnappySenseData into a buffer.  In all
 // cases, `buflim` points to the address beyond the buffer.  No error is returned
 // if the buffer is too small, but the operation is guaranteed not to write beyond
@@ -320,9 +312,9 @@ void start_monitoring() {
   if (monitoring_timer == nullptr) {
     monitoring_timer = xTimerCreate("monitor", 1, pdFALSE, nullptr, monitoring_timer_tick);
   }
-  // Wait 15s to let sensors warm up.  The monitoring window should be longer than this!
-  // FIXME: 15s not 5
-  xTimerChangePeriod(monitoring_timer, pdMS_TO_TICKS(5000), portMAX_DELAY);
+  // Wait a little to let sensors warm up.  The monitoring window must be longer than this!
+  // Warmup time may be zero,
+  xTimerChangePeriod(monitoring_timer, pdMS_TO_TICKS(sensor_warmup_time_s() * 1000), portMAX_DELAY);
   monitoring_is_on = true;
 }
 

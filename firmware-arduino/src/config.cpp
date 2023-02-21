@@ -147,7 +147,7 @@ static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
 static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
-static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 4;
+static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
 
 #ifdef WEB_SERVER
 static const int WEB_SERVER_LISTEN_PORT = 8088;
@@ -166,6 +166,39 @@ static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
 static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
 #endif
 
+#ifdef SNAPPY_WIFI
+// Comm window remains open 1min after last activity
+unsigned long comm_activity_timeout_s() {
+  return 60;
+}
+
+// Let the slideshow run 1min after comm window closes
+unsigned long comm_relaxation_timeout_s() {
+#ifdef DEVELOPMENT
+  return 30;
+#else
+  return 60;
+#endif
+}
+#endif
+
+// How long to wait in the sleep window in monitoring mode
+unsigned long monitoring_mode_sleep_s() {
+#ifdef DEVELOPMENT
+  return 3*60;
+#else
+  return 60*60;
+#endif
+}
+// How long to wait in the sleep window in slideshow mode
+unsigned long slideshow_mode_sleep_s() {
+#ifdef DEVELOPMENT
+  return 1*60;
+#else
+  return 5*60;
+#endif
+}
+
 static struct {
 #ifdef MQTT_UPLOAD
   unsigned long mqtt_monitoring_capture_interval_s;
@@ -183,6 +216,15 @@ unsigned long sensor_poll_interval_s() {
     return SENSOR_POLL_SLIDESHOW_INTERVAL_S;
   } else {
     return SENSOR_POLL_MONITORING_INTERVAL_S;
+  }
+}
+
+// The monitoring window *must* be longer than the value returned here.
+unsigned long sensor_warmup_time_s() {
+  if (slideshow_mode) {
+    return 1;  // We're powered up, but zero is an invalid value
+  } else {
+    return 15; // Wild guess
   }
 }
 
@@ -243,6 +285,10 @@ const char* time_server_host() {
 
 int time_server_port() {
   return get_int_pref("time-server-port");
+}
+
+unsigned long time_server_retry_s() {
+  return 10;
 }
 #endif
 
@@ -337,6 +383,12 @@ unsigned long serial_input_poll_interval_s() {
 #ifdef WEB_CONFIGURATION
 const char* web_config_access_point() {
   return get_string_pref("web-config-access-point");
+}
+#endif
+
+#ifdef SNAPPY_WIFI
+unsigned long wifi_retry_ms() {
+  return 500;
 }
 #endif
 

@@ -8,78 +8,75 @@
 // This is the model of the sensor unit.
 
 struct SnappySenseData {
-  SnappySenseData();
-  SnappySenseData(const SnappySenseData& other_data);
-
   // The sequence number is useful for calibration, bug fixing, etc.  It is
   // set from a global variable when a reading is obtained.  It will wrap
   // around silently.
   //
   // This member shall be at offset 0, so that offsetof() of a flag variable
   // is never 0.
-  unsigned sequence_number;
+  unsigned sequence_number = 0;
 
   // Current device timestamp (seconds since epoch, UTC) when the reading was taken
-  time_t time;
+  time_t time = 0;
 
 #ifdef SENSE_ALTITUDE
   // Altitude of device, meters above (below) sea level
-  float elevation;
-  bool have_elevation;
+  float elevation = 0.0f;
+  bool have_elevation = false;
 #endif
 
 #ifdef SENSE_HUMIDITY
   // Relative humidity, percent
-  float humidity;
-  bool have_humidity;
+  float humidity = 0.0f;
+  bool have_humidity = false;
 #endif
 
 #ifdef SENSE_TEMPERATURE
   // Degrees Celsius
-  float temperature;
-  bool have_temperature;
+  float temperature = 0.0f;
+  bool have_temperature = false;
 #endif
 
 #ifdef SENSE_PRESSURE
   // Air pressure, in 10^2 Pascal
-  uint16_t hpa;
-  bool have_hpa;
+  uint16_t hpa = 0;
+  bool have_hpa = false;
 #endif
 
 #ifdef SENSE_LIGHT
   // Illumninance, in lux
-  float lux;
-  bool have_lux;
+  float lux = 0.0f;
+  bool have_lux = false;
 #endif
 
 #ifdef SENSE_UV
   // Ultraviolet radiation, in mW / cm^2
-  float uv;
-  bool have_uv;
+  float uv = 0.0f;
+  bool have_uv = false;
 #endif
 
   // Status code from the device: 0=normal, 1=warmup, 2=startup, 3=invalid
-  uint8_t air_sensor_status;
-  bool have_air_sensor_status;
+  uint8_t air_sensor_status = 0;
+  bool have_air_sensor_status = false;
 
 #ifdef SENSE_AIR_QUALITY_INDEX
   // AQI: 1-Excellent, 2-Good, 3-Moderate, 4-Poor, 5-Unhealthy
-  uint8_t aqi;
-  bool have_aqi;
+  uint8_t aqi = 0;
+  bool have_aqi = false;
 #endif
 
 #ifdef SENSE_TVOC
   // Total volatile organic compounds, 0–65000, ppb
-  uint16_t tvoc;
-  bool have_tvoc;
+  uint16_t tvoc = 0;
+  bool have_tvoc = false;
 #endif
 
 #ifdef SENSE_CO2
   // CO2, 400–65000, ppm
   // Five levels: Excellent(400 - 600), Good(600 - 800), Moderate(800 - 1000),
   //              Poor(1000 - 1500), Unhealthy(> 1500)
-  uint16_t eco2;
-  bool have_eco2;
+  uint16_t eco2 = 0;
+  bool have_eco2 = false;
 #endif
 
 #ifdef SENSE_NOISE
@@ -88,14 +85,14 @@ struct SnappySenseData {
   // state at 1.5V.  As the environment becomes noisier, the numbers become
   // higher, reaching into the 2200 range.  Some readings were seen around 900
   // and 4100, but not clear what these were.
-  uint16_t noise;
-  bool have_noise;
+  uint16_t noise = 0;
+  bool have_noise = false;
 #endif
 
 #ifdef SENSE_MOTION
   // Passive motion sensor.  Unit: no movement / movement.
-  bool motion_detected;
-  bool have_motion;
+  bool motion_detected = false;
+  bool have_motion = false;
 #endif
 };
 

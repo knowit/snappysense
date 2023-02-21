@@ -221,7 +221,6 @@ void get_sensor_values(SnappySenseData* data) {
     return;
   }
 
-  memset(data, 0, sizeof(SnappySenseData));
   data->sequence_number = sequence_number++;
 
   data->time = time(nullptr);

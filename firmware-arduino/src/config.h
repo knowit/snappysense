@@ -16,6 +16,9 @@
 // if necessary.
 unsigned long sensor_poll_interval_s();
 
+// How long does it take for sensors to warm up at the beginning of the monitoring window?
+unsigned long sensor_warmup_time_s();
+
 // The name of the location at which this device is placed.
 const char* location_name();
 void set_location_name(const char* name);
@@ -42,6 +45,9 @@ const char* time_server_host();
 
 // Port of remote web server used for web upload and time service.
 int time_server_port();
+
+// Interval between connection attempts to time server in the communication window.
+unsigned long time_server_retry_s();
 #endif
 
 #ifdef WEB_UPLOAD
@@ -95,6 +101,12 @@ const char* mqtt_device_private_key();
 
 unsigned long slideshow_update_interval_s();
 
+// How long to wait in the sleep window in monitoring mode
+unsigned long monitoring_mode_sleep_s();
+
+// How long to wait in the sleep window in slideshow mode
+unsigned long slideshow_mode_sleep_s();
+
 #ifdef SNAPPY_SERIAL_INPUT
 // How long to wait between looking for input on the serial channel.
 // This is typically a pretty low value.
@@ -116,6 +128,12 @@ unsigned long web_command_poll_interval_s();
 
 #ifdef WEB_CONFIGURATION
 const char* web_config_access_point();
+#endif
+
+#ifdef SNAPPY_WIFI
+unsigned long wifi_retry_ms();
+unsigned long comm_activity_timeout_s();
+unsigned long comm_relaxation_timeout_s();
 #endif
 
 // Reset the configuration (in memory) to "factory defaults", which is either almost nothing
