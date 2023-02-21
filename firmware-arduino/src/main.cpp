@@ -580,9 +580,20 @@ void loop() {
         break;
 
       case EvCode::ENABLE_DEVICE:
+        set_device_enabled(true);
+        break;
+
       case EvCode::DISABLE_DEVICE:
+        set_device_enabled(false);
+        break;
+
       case EvCode::SET_INTERVAL:
-        log("Ignoring event %d, IMPLEMENTME\n", (int)ev.code);
+        set_mqtt_capture_interval_s(ev.scalar_data);
+        break;
+
+      case EvCode::ACTUATOR:
+        log("Ignoring actuator event %d, IMPLEMENTME\n", (int)ev.code);
+        delete (Actuator*)ev.pointer_data;
         break;
 
 #ifdef WEB_CONFIGURATION

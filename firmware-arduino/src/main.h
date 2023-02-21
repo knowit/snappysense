@@ -52,7 +52,7 @@
 
 // Accept 'snappy/command/<device-name> messages from the server.  Currently none are
 // defined, so we don't normally accept them.
-//#define MQTT_COMMAND_MESSAGES
+#define MQTT_COMMAND_MESSAGES
 
 // Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
 // connected then log messages will appear there, otherwise they will be discarded.
@@ -180,7 +180,7 @@ enum class EvCode {
   POST_SLEEP,
   MONITOR_START,
   MONITOR_STOP,
-  MONITOR_DATA,
+  MONITOR_DATA, // Carries a SnappySenseData object that we take ownership of
   AP_MODE,
 
   // External events happening to the main task
@@ -189,6 +189,7 @@ enum class EvCode {
   ENABLE_DEVICE,
   DISABLE_DEVICE,
   SET_INTERVAL,
+  ACTUATOR, // Carries an Actuator object that we take ownership of
 
   // Monitoring work
   MONITOR_TICK,
@@ -227,5 +228,11 @@ void put_main_event(EvCode code);
 void put_main_event_from_isr(EvCode code);
 void put_main_event(EvCode code, void* data);
 void put_main_event(EvCode code, uint32_t payload);
+
+struct Actuator {
+  Actuator(double reading, double ideal) : reading(reading), ideal(ideal) {}
+  double reading;
+  double ideal;
+};
 
 #endif // !main_h_included

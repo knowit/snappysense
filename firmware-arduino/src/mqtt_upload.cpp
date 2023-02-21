@@ -355,7 +355,7 @@ static void mqtt_handle_message(int payload_size) {
       double reading = (double)json["reading"];
       double ideal = (double)json["ideal"];
       log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
-      sched_microtask_after(new RunActuatorTask(String(key), reading, ideal), 0);
+      put_main_event(EvCode::ACTUATOR, new Actuator(reading, ideal));
     } else {
       log("Mqtt: invalid command message\n%s\n", buf);
     }

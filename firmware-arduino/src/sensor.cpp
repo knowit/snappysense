@@ -340,26 +340,3 @@ void stop_monitoring() {
     monitoring_report();
   }
 }
-
-#ifdef MQTT_COMMAND_MESSAGES
-void EnableDeviceTask::execute(SnappySenseData*) {
-  set_device_enabled(flag);
-}
-
-void RunActuatorTask::execute(SnappySenseData*) {
-  // TODO: Issue 21: Display something, if the display is going
-  // TODO: Issue 22: Manipulate an actuator, if we have one (we don't, really)
-  if (actuator.equals("temperature")) {
-    if (reading >= ideal+2) {
-      log("It's HOT in here!\n");
-    } else if (reading <= ideal-2) {
-      log("I'm starting to feel COLD!\n");
-    }
-  } else if (actuator.equals("airquality")) {
-    if (reading > ideal) {
-      log("The air is pretty BAD in here!\n");
-    }
-  }
-  // and so on
-}
-#endif
