@@ -10,6 +10,8 @@
 // Call this before anything else.
 void timeserver_init();
 
+bool have_timeserver_work();
+
 // WIFI must be up.  Try to connect to the time server, if the time has not been set
 // already.  This will result in COMM_TIMESERVER_WORK messages being posted on the
 // main queue every so often if retries are required.

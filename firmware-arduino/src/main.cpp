@@ -104,6 +104,7 @@
 // In normal mode there are conceptually many concurrent tasks running:
 //
 // The main loop
+// The monitoring / observation task
 // The display / slideshow task
 // The short button press listener
 // The long button press listener
@@ -111,12 +112,15 @@
 // The serial port listener (if the serial port command processor is present)
 // The mqtt task (download + upload)
 // The web upload task (download + upload)
-// The music player
+// The music player task
 // (And more, depending on configuration)
 //
-// All but the music player are integrated into the Arduino main loop, driven by several timers.
+// All but the music player are integrated into the main loop, driven by several timers.
 // The music player is an actual FreeRTOS concurrent task with a higher priority.  They could all
-// have been different tasks but this would not have been a simplification.
+// have been different FreeRTOS tasks but this would not have been a simplification, as we want
+// to be able to react to button presses and other interrupts and that means controlling the
+// other tasks from the main task; also, with other tasks come issues of concurrency and mutual
+// exclusion.
 //
 // The MAIN LOOP goes through a number of states as follows:
 //
@@ -374,13 +378,25 @@ void loop() {
       //
       // Main-task events: communication, power management / relaxation, monitoring.
 
-      case EvCode::START_CYCLE:
+      case EvCode::START_CYCLE: {
 #ifdef SNAPPY_WIFI
-        put_main_event(EvCode::COMM_START);
+        bool comm_work = false;
+#ifdef TIMESERVER
+        comm_work = comm_work || have_timeserver_work();
+#endif
+#ifdef MQTT_UPLOAD
+        comm_work = comm_work || have_mqtt_work();
+#endif
+        if (comm_work) {
+          put_main_event(EvCode::COMM_START);
+        } else {
+          put_main_event(EvCode::POST_COMM);
+        }
 #else
-        put_main_event(EvCode::POST_SLEEP);
+        put_main_event(EvCode::SLEEP_START);
 #endif
         break;
+      }
 
 #ifdef SNAPPY_WIFI
       case EvCode::COMM_START:
@@ -490,11 +506,6 @@ void loop() {
         in_monitoring_window = true;
         break;
 
-      case EvCode::MONITOR_TICK:
-        // Internal clock tick used for the monitor, with some unknown payload
-        monitoring_tick();
-        break;
-
       case EvCode::MONITOR_STOP:
         // We don't need to set up anything here, the sensor code will post an EV_MONITOR_DATA
         // to us to continue the process.
@@ -569,6 +580,12 @@ void loop() {
         ap_mode();
         esp_restart();
 #endif
+
+      // Monitor task
+      case EvCode::MONITOR_TICK:
+        // Internal clock tick used for the monitor, with some unknown payload
+        monitoring_tick();
+        break;
 
       // Communication task
 #ifdef MQTT_UPLOAD

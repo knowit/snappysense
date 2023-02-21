@@ -67,6 +67,16 @@ void timeserver_init() {
                                   [](TimerHandle_t){ put_main_event(EvCode::COMM_TIMESERVER_WORK); });
 }
 
+bool have_timeserver_work() {
+  if (!time_configured) {
+    return true;
+  }
+  if (timeserver_state != nullptr) {
+    return true;
+  }
+  return false;
+}
+
 void timeserver_start() {
   if (time_configured) {
     return;
