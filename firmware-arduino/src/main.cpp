@@ -579,6 +579,12 @@ void loop() {
         put_main_event(EvCode::AP_MODE);
         break;
 
+      case EvCode::ENABLE_DEVICE:
+      case EvCode::DISABLE_DEVICE:
+      case EvCode::SET_INTERVAL:
+        log("Ignoring event %d, IMPLEMENTME\n", (int)ev.code);
+        break;
+
 #ifdef WEB_CONFIGURATION
       case EvCode::AP_MODE:
         // Major mode change.  This is special: it knows a bit too much about the rest of the

@@ -56,12 +56,6 @@ struct MqttMessage {
   String message;
 };
 
-static List<MqttMessage> mqtt_queue;
-
-static void mqtt_enqueue(String&& topic, String&& body) {
-  mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
-}
-
 enum class MqttState {
   STARTING,
   CONNECTING,
@@ -80,35 +74,21 @@ static int num_retries = 0;
 static bool work_done;
 static TimerHandle_t mqtt_timer;
 static time_t last_connect;
+static bool first_time = true;
+static List<MqttMessage> mqtt_queue;
 
 static void subscribe();
+static void connect();
 static bool poll();
 static void send();
 static void generate_startup_message();
 static void mqtt_handle_message(int payload_size);
+static void mqtt_enqueue(String&& topic, String&& body);
+static void put_delayed_retry();
 
 void mqtt_init() {
   mqtt_timer = xTimerCreate("mqtt", pdMS_TO_TICKS(500), pdFALSE, nullptr,
                             [](TimerHandle_t) { put_main_event(EvCode::COMM_MQTT_WORK); });
-}
-
-static void put_delayed_retry() {
-  xTimerStart(mqtt_timer, portMAX_DELAY);
-}
-
-void mqtt_add_data(SnappySenseData* data) {
-  String topic;
-  String body;
-
-  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
-  topic += "snappy/observation/";
-  topic += mqtt_device_class();
-  topic += "/";
-  topic += mqtt_device_id();
-
-  body = format_readings_as_json(*data);
-
-  mqtt_enqueue(std::move(topic), std::move(body));
 }
 
 bool have_mqtt_work() {
@@ -128,7 +108,81 @@ bool have_mqtt_work() {
   return false;
 }
 
-void mqtt_connect() {
+void mqtt_start() {
+  mqtt_state = MqttState::STARTING;
+  num_retries = 0;
+  connect();
+}
+
+void mqtt_stop() {
+  mqtt_client.stop();
+  mqtt_state = MqttState::STOPPED;
+}
+
+void mqtt_work() {
+  if (mqtt_state == MqttState::CONNECTING) {
+    connect();
+    return;
+  }
+  if (mqtt_state == MqttState::CONNECTED) {
+    subscribe();
+    mqtt_state = MqttState::SUBSCRIBED;
+    put_main_event(EvCode::COMM_ACTIVITY);
+    put_main_event(EvCode::COMM_MQTT_WORK);
+    return;
+  }
+  if (mqtt_state == MqttState::SUBSCRIBED) {
+    mqtt_state = MqttState::RUNNING;
+    if (first_time) {
+      generate_startup_message();
+      put_main_event(EvCode::COMM_MQTT_WORK);
+      first_time = false;
+      return;
+    }
+  }
+  if (mqtt_state == MqttState::RUNNING) {
+    if (!mqtt_queue.is_empty()) {
+      send();
+      put_main_event(EvCode::COMM_ACTIVITY);
+      put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
+      return;
+    }
+    // The normal case is that there's very little incoming traffic.  There will be
+    // few actuators and the server should definitely limit the update frequency
+    // for those.  There will be few instances of wishing to disable/enable devices
+    // and changing their report frequencies.
+    if (poll()) {
+      put_main_event(EvCode::COMM_ACTIVITY);
+    }
+    put_delayed_retry();
+  }
+}
+
+void mqtt_add_data(SnappySenseData* data) {
+  String topic;
+  String body;
+
+  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
+  topic += "snappy/observation/";
+  topic += mqtt_device_class();
+  topic += "/";
+  topic += mqtt_device_id();
+
+  body = format_readings_as_json(*data);
+
+  mqtt_enqueue(std::move(topic), std::move(body));
+}
+
+static void mqtt_enqueue(String&& topic, String&& body) {
+  mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
+}
+
+static void put_delayed_retry() {
+  xTimerStart(mqtt_timer, portMAX_DELAY);
+}
+
+
+static void connect() {
 again:
   switch (mqtt_state) {
     case MqttState::STARTING: {
@@ -148,15 +202,12 @@ again:
 
     case MqttState::CONNECTING: {
       log("Mqtt: %s %d : %s\n", mqtt_endpoint_host(), mqtt_endpoint_port(), mqtt_device_id());
-      //log("%s\n", mqtt_root_ca_cert());
-      //log("%s\n", mqtt_device_cert());
-      //log("%s\n", mqtt_device_private_key());
-
-      // Positive error codes are basically fatal configuration errors and should cause the
-      // mqtt component to be disabled.
-      int res = mqtt_client.connect(mqtt_endpoint_host(), mqtt_endpoint_port());
+      bool ok = mqtt_client.connect(mqtt_endpoint_host(), mqtt_endpoint_port());
       put_main_event(EvCode::COMM_ACTIVITY);
-      if (res != MQTT_SUCCESS) {
+      if (!ok) {
+        // Positive error codes are basically fatal configuration errors and should
+        // perhaps cause the mqtt component to be disabled.
+        int res = mqtt_client.connectError();
         log("Mqtt: Failed %d\n", res);
         if (++num_retries < 10) {
           put_delayed_retry();
@@ -175,53 +226,6 @@ again:
 
     default:
       return;
-  }
-}
-
-void mqtt_start() {
-  mqtt_state = MqttState::STARTING;
-  num_retries = 0;
-  mqtt_connect();
-}
-
-void mqtt_stop() {
-  mqtt_client.stop();
-  mqtt_state = MqttState::STOPPED;
-}
-
-void mqtt_work() {
-  if (mqtt_state == MqttState::CONNECTING) {
-    mqtt_connect();
-    return;
-  }
-  if (mqtt_state == MqttState::CONNECTED) {
-    subscribe();
-    mqtt_state = MqttState::SUBSCRIBED;
-    put_main_event(EvCode::COMM_ACTIVITY);
-    put_main_event(EvCode::COMM_MQTT_WORK);
-    return;
-  }
-  if (mqtt_state == MqttState::SUBSCRIBED) {
-    generate_startup_message();
-    mqtt_state = MqttState::RUNNING;
-    put_main_event(EvCode::COMM_MQTT_WORK);
-    return;
-  }
-  if (mqtt_state == MqttState::RUNNING) {
-    if (!mqtt_queue.is_empty()) {
-      send();
-      put_main_event(EvCode::COMM_ACTIVITY);  // maybe?
-      put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
-      return;
-    }
-    // The normal case is that there's very little incoming traffic.  There will be
-    // few actuators and the server should definitely limit the update frequency
-    // for those.  There will be few instances of wishing to disable/enable devices
-    // and changing their report frequencies.
-    if (poll()) {
-      put_main_event(EvCode::COMM_ACTIVITY);
-    }
-    put_delayed_retry();
   }
 }
 
