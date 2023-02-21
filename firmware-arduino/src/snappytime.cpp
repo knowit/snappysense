@@ -40,6 +40,7 @@ static void maybe_configure_time() {
     put_delayed_retry();
     return;
   }
+  put_main_event(EvCode::COMM_ACTIVITY);
   int retval = timeserver_state->httpClient.GET();
   if (retval < 200 || retval > 299) {
     // The server seems dead, so no sense in retrying now.  Retry in next comm window.

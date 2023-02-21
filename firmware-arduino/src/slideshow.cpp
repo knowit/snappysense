@@ -55,9 +55,10 @@ again:
   }
 
   if (current_data == nullptr) {
-    // No data, wrap around
+    // No data, display a message and wrap around
+    render_text("Warming up");
     next_view = -1;
-    goto again;
+    return;
   }
 
   if (snappy_metadata[next_view].json_key == nullptr) {

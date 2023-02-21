@@ -368,6 +368,10 @@ void loop() {
   // Shut up the compiler
   (void)in_monitoring_window;
 
+  // This is used to improve the UX.  It shortens the comm window the first time around and
+  // skips the relaxation / sleep before we read the sensors.
+  bool first_time = true;
+
   for (;;) {
     SnappyEvent ev;
     while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
@@ -420,7 +424,7 @@ void loop() {
         put_main_event(EvCode::POST_COMM);
         break;
 
-      case EvCode::COMM_WIFI_CLIENT_UP:
+      case EvCode::COMM_WIFI_CLIENT_UP: {
         // TODO: Start communicating
         in_communication_window = true;
 #ifdef TIMESERVER
@@ -429,14 +433,23 @@ void loop() {
 #ifdef MQTT_UPLOAD
         mqtt_start();
 #endif
-        reset_main_timer(comm_activity_timeout_s() * 1000, EvCode::COMM_ACTIVITY_EXPIRED);
+        unsigned long timeout_ms = comm_activity_timeout_s() * 1000;
+        if (first_time) {
+          timeout_ms /= 2;
+        }
+        reset_main_timer(timeout_ms, EvCode::COMM_ACTIVITY_EXPIRED);
         break;
+      }
 
       case EvCode::COMM_ACTIVITY:
         // Some component had WiFi activity, so keep the WiFi up a while longer, unless this
         // message arrives late.
         if (in_communication_window) {
-          reset_main_timer(comm_activity_timeout_s() * 1000, EvCode::COMM_ACTIVITY_EXPIRED);
+          unsigned long timeout_ms = comm_activity_timeout_s() * 1000;
+          if (first_time) {
+            timeout_ms /= 2;
+          }
+          reset_main_timer(timeout_ms, EvCode::COMM_ACTIVITY_EXPIRED);
         }
         break;
 
@@ -469,26 +482,34 @@ void loop() {
         // The comm window is closed.  Let the slideshow continue for a bit before deciding
         // what mode we're going to be in.
         assert(!in_communication_window && !in_wifi_window);
-        reset_main_timer(comm_relaxation_timeout_s() * 1000, EvCode::SLEEP_START);
+        if (first_time) {
+          put_main_event(EvCode::SLEEP_START);
+        } else {
+          reset_main_timer(comm_relaxation_timeout_s() * 1000, EvCode::SLEEP_START);
+        }
         break;
 #endif
 
       case EvCode::SLEEP_START:
         // Figure out what mode we're in.  In monitoring mode, we turn off the screen and go
         // into low-power state.  In slideshow mode, we continue on as we were, for a while.
-        slideshow_mode = slideshow_next_mode;
-        if (!slideshow_mode) {
-          put_main_event(EvCode::SLIDESHOW_STOP);
-          reset_main_timer(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
-#ifdef SNAPPY_SERIAL_INPUT
-          clear_display();
-#else
-          log("Powering down\n");
-          power_peripherals_off();
-          is_powered_up = false;
-#endif
+        if (first_time) {
+          put_main_event(EvCode::POST_SLEEP);
         } else {
-          reset_main_timer(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
+          slideshow_mode = slideshow_next_mode;
+          if (!slideshow_mode) {
+            put_main_event(EvCode::SLIDESHOW_STOP);
+            reset_main_timer(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
+#ifdef SNAPPY_SERIAL_INPUT
+            clear_display();
+#else
+            log("Powering down\n");
+            power_peripherals_off();
+            is_powered_up = false;
+#endif
+          } else {
+            reset_main_timer(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
+          }
         }
         break;
 
@@ -499,6 +520,7 @@ void loop() {
         }
         put_main_event(EvCode::SLIDESHOW_START);
         put_main_event(EvCode::MONITOR_START);
+        first_time = false;
         break;
 
       case EvCode::MONITOR_START:
