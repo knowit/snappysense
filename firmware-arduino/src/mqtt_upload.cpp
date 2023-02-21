@@ -171,6 +171,7 @@ void mqtt_add_data(SnappySenseData* data) {
   body = format_readings_as_json(*data);
 
   mqtt_enqueue(std::move(topic), std::move(body));
+  delete data;
 }
 
 static void mqtt_enqueue(String&& topic, String&& body) {
@@ -180,7 +181,6 @@ static void mqtt_enqueue(String&& topic, String&& body) {
 static void put_delayed_retry() {
   xTimerStart(mqtt_timer, portMAX_DELAY);
 }
-
 
 static void connect() {
 again:
