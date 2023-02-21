@@ -34,13 +34,10 @@
 
 #include "config.h"
 #include "log.h"
-#include "network.h"
-#include "device.h"
 
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_Json.h>
-#include <time.h>
 
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.
@@ -61,23 +58,199 @@ struct MqttMessage {
 
 static List<MqttMessage> mqtt_queue;
 
-static struct MqttState {
-  MqttState() : holder(false), mqtt(nullptr), work_done(false) {}
-  WiFiHolder holder;
-  WiFiClientSecure wifi;
-  MqttClient mqtt;
-  bool work_done;
-} *mqtt_state;
-
-void mqtt_start() {
-  // The WiFi client is up.  We want to connect to the MQTT broker.  This may have some delays.
-}
-
 static void mqtt_enqueue(String&& topic, String&& body) {
   mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
 }
 
-void StartMqttTask::execute(SnappySenseData* data) {
+enum class MqttState {
+  STARTING,
+  CONNECTING,
+  RETRYING,
+  CONNECTED,
+  SUBSCRIBED,
+  RUNNING,
+  FAILED,
+  STOPPED,
+};
+
+static MqttState mqtt_state;
+static WiFiClientSecure wifi_client;
+static MqttClient mqtt_client(nullptr);
+static int num_retries = 0;
+static bool work_done;
+static TimerHandle_t mqtt_timer;
+static time_t last_connect;
+
+static void subscribe();
+static bool poll();
+static void send();
+static void generate_startup_message();
+static void mqtt_handle_message(int payload_size);
+
+void mqtt_init() {
+  mqtt_timer = xTimerCreate("mqtt", pdMS_TO_TICKS(500), pdFALSE, nullptr,
+                            [](TimerHandle_t) { put_main_event(EvCode::COMM_MQTT_WORK); });
+}
+
+static void put_delayed_retry() {
+  xTimerStart(mqtt_timer, portMAX_DELAY);
+}
+
+void mqtt_add_data(SnappySenseData* data) {
+  String topic;
+  String body;
+
+  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
+  topic += "snappy/observation/";
+  topic += mqtt_device_class();
+  topic += "/";
+  topic += mqtt_device_id();
+
+  body = format_readings_as_json(*data);
+
+  mqtt_enqueue(std::move(topic), std::move(body));
+}
+
+bool have_mqtt_work() {
+  if (!mqtt_queue.is_empty()) {
+    return true;
+  }
+  // We must connect every so often to check for commands, even if there's no outgoing
+  // traffic.  This matters because the device can be disabled, in which case there will
+  // be no outgoing traffic, but we depend on incoming traffic to enable it again.
+  //
+  // This calculation basically depends on time only having discontinuities forward, which
+  // is reasonably safe for us.
+  time_t now = time(nullptr);
+  if (now - last_connect > 60*60*4) {  // 4 hours
+    return true;
+  }
+  return false;
+}
+
+void mqtt_connect() {
+again:
+  switch (mqtt_state) {
+    case MqttState::STARTING: {
+      wifi_client.setCACert(mqtt_root_ca_cert());
+      wifi_client.setCertificate(mqtt_device_cert());
+      wifi_client.setPrivateKey(mqtt_device_private_key());
+
+      mqtt_client.setClient(wifi_client);
+      mqtt_client.setId(mqtt_device_id());
+      mqtt_client.setTxPayloadSize(MQTT_BUFFER_SIZE);
+      mqtt_client.setCleanSession(false);
+
+      log("Mqtt: Connecting to AWS IOT\n");
+      mqtt_state = MqttState::CONNECTING;
+      goto again;
+    }
+
+    case MqttState::CONNECTING: {
+      log("Mqtt: %s %d : %s\n", mqtt_endpoint_host(), mqtt_endpoint_port(), mqtt_device_id());
+      //log("%s\n", mqtt_root_ca_cert());
+      //log("%s\n", mqtt_device_cert());
+      //log("%s\n", mqtt_device_private_key());
+
+      // Positive error codes are basically fatal configuration errors and should cause the
+      // mqtt component to be disabled.
+      int res = mqtt_client.connect(mqtt_endpoint_host(), mqtt_endpoint_port());
+      put_main_event(EvCode::COMM_ACTIVITY);
+      if (res != MQTT_SUCCESS) {
+        log("Mqtt: Failed %d\n", res);
+        if (++num_retries < 10) {
+          put_delayed_retry();
+          return;
+        }
+        log("Mqtt: Rejected\n");
+        mqtt_state = MqttState::FAILED;
+        return;
+      }
+      log("Mqtt: Accepted\n");
+      mqtt_state = MqttState::CONNECTED;
+      last_connect = time(nullptr);
+      put_main_event(EvCode::COMM_MQTT_WORK);
+      return;
+    }
+
+    default:
+      return;
+  }
+}
+
+void mqtt_start() {
+  mqtt_state = MqttState::STARTING;
+  num_retries = 0;
+  mqtt_connect();
+}
+
+void mqtt_stop() {
+  mqtt_client.stop();
+  mqtt_state = MqttState::STOPPED;
+}
+
+void mqtt_work() {
+  if (mqtt_state == MqttState::CONNECTING) {
+    mqtt_connect();
+    return;
+  }
+  if (mqtt_state == MqttState::CONNECTED) {
+    subscribe();
+    mqtt_state = MqttState::SUBSCRIBED;
+    put_main_event(EvCode::COMM_ACTIVITY);
+    put_main_event(EvCode::COMM_MQTT_WORK);
+    return;
+  }
+  if (mqtt_state == MqttState::SUBSCRIBED) {
+    generate_startup_message();
+    mqtt_state = MqttState::RUNNING;
+    put_main_event(EvCode::COMM_MQTT_WORK);
+    return;
+  }
+  if (mqtt_state == MqttState::RUNNING) {
+    if (!mqtt_queue.is_empty()) {
+      send();
+      put_main_event(EvCode::COMM_ACTIVITY);  // maybe?
+      put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
+      return;
+    }
+    // The normal case is that there's very little incoming traffic.  There will be
+    // few actuators and the server should definitely limit the update frequency
+    // for those.  There will be few instances of wishing to disable/enable devices
+    // and changing their report frequencies.
+    if (poll()) {
+      put_main_event(EvCode::COMM_ACTIVITY);
+    }
+    put_delayed_retry();
+  }
+}
+
+static void subscribe() {
+  // Subscriptions used to be conditional on mqtt_first_time.  However,
+  // at least for AWS and the Arduino MQTT stack, it seems like we have to
+  // resubscribe every time, even if session is not marked as clean.
+  if (*mqtt_device_id() != 0) {
+    String control_msg("snappy/control/");
+    control_msg += mqtt_device_id();
+    mqtt_client.subscribe(control_msg, /* QoS= */ 1);
+  }
+  if (*mqtt_device_class() != 0) {
+    String control_msg("snappy/control-class/");
+    control_msg += mqtt_device_class();
+    mqtt_client.subscribe(control_msg, /* QoS= */ 1);
+  }
+  String control_msg("snappy/control-all");
+  mqtt_client.subscribe(control_msg, /* QoS= */ 1);
+#ifdef MQTT_COMMAND_MESSAGES
+  if (*mqtt_device_id() != 0) {
+    String command_msg("snappy/command/");
+    command_msg += mqtt_device_id();
+    mqtt_client.subscribe(command_msg, /* QoS= */ 1);
+  }
+#endif
+}
+
+static void generate_startup_message() {
   String topic;
   String body;
 
@@ -96,168 +269,52 @@ void StartMqttTask::execute(SnappySenseData* data) {
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-void CaptureSensorsForMqttTask::execute(SnappySenseData* data) {
-  String topic;
-  String body;
-
-  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
-  topic += "snappy/observation/";
-  topic += mqtt_device_class();
-  topic += "/";
-  topic += mqtt_device_id();
-
-  body = format_readings_as_json(*data);
-
-  mqtt_enqueue(std::move(topic), std::move(body));
+static bool poll() {
+  work_done = false;
+  mqtt_client.onMessage(mqtt_handle_message);
+  mqtt_client.poll();
+  mqtt_client.onMessage(nullptr);
+  return work_done;
 }
 
-// The MqttCommsTask will re-enqueue itself with the new deadline.
-// FIXME: Issue 16: millis() is not a reliable API in the long term (beyond 49 days).
-
-void MqttCommsTask::execute(SnappySenseData*) {
-  unsigned long now = millis();
-  // Note we don't connect just because there's something in the outgoing queue,
-  // we wait until the upload is scheduled.  There could be a notion of high
-  // priority messages that override this, but currently we don't need those.
-  if (now < next_work) {
-    sched_microtask_after(this, next_work - now);
+static void send() {
+  if (mqtt_queue.is_empty()) {
     return;
   }
 
-  // However, we do connect whether there is outgoing data or not, because we
-  // want to poll for incoming messages.
-  if (mqtt_state == nullptr) {
-    mqtt_state = new MqttState();
-    if (!connect()) {
-      delete mqtt_state;
-      mqtt_state = nullptr;
-      now = millis();
-      next_work = now + mqtt_upload_interval_s() * 1000;
-      sched_microtask_after(this, next_work - now);
-      return;
-    }
-  }
-  if (!mqtt_queue.is_empty()) {
-    send();
-    // TODO: Undocumented embedded delay
-    delay(100);
-    last_work = millis();
-  }
-  // The normal case is that there's very little incoming traffic.  There will be
-  // few actuators and the server should definitely limit the update frequency
-  // for those.  There will be few instances of wishing to disable/enable devices
-  // and changing their report frequencies.
-  bool got_something = poll();
-  if (got_something) {
-    last_work = millis();
-  }
-  if (millis() - last_work >= mqtt_max_idle_time_s()*1000 || !mqtt_state->mqtt.connected()) {
-    disconnect();
-    delete mqtt_state;
-    mqtt_state = nullptr;
-    next_work = millis() + mqtt_upload_interval_s() * 1000;
-  } else {
-    next_work = millis() + 1000;
-  }
-  sched_microtask_after(this, max(next_work - millis(), 1000LU));
-}
-
-bool MqttCommsTask::connect() {
-  mqtt_state->holder = connect_to_wifi();
-  if (!mqtt_state->holder.is_valid()) {
-    return false;
-  }
-  mqtt_state->wifi.setCACert(mqtt_root_ca_cert());
-  mqtt_state->wifi.setCertificate(mqtt_device_cert());
-  mqtt_state->wifi.setPrivateKey(mqtt_device_private_key());
-
-  mqtt_state->mqtt.setClient(mqtt_state->wifi);
-  mqtt_state->mqtt.setId(mqtt_device_id());
-  mqtt_state->mqtt.setTxPayloadSize(MQTT_BUFFER_SIZE);
-
-  mqtt_state->mqtt.setCleanSession(first_time);
-
-  // Connect to the MQTT broker on the AWS endpoint
-  // FIXME: Issue 15: don't block here
-  log("Mqtt: Connecting to AWS IOT ");
-  while (!mqtt_state->mqtt.connect(mqtt_endpoint_host(), mqtt_endpoint_port())) {
-    log(".");
-    // TODO: Embedded delay
-    delay(100);
-  }
-  if(!mqtt_state->mqtt.connected()){
-    log("AWS IoT Timeout!\n");
-    return false;
-  }
-  log("Connected!\n");
-
-  // Subscriptions used to be conditional on mqtt_first_time.  However,
-  // at least for AWS and the Arduino MQTT stack, it seems like we have to
-  // resubscribe every time, even if session is not marked as clean.
-  if (*mqtt_device_id() != 0) {
-    String control_msg("snappy/control/");
-    control_msg += mqtt_device_id();
-    mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
-  }
-  if (*mqtt_device_class() != 0) {
-    String control_msg("snappy/control-class/");
-    control_msg += mqtt_device_class();
-    mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
-  }
-  String control_msg("snappy/control-all");
-  mqtt_state->mqtt.subscribe(control_msg, /* QoS= */ 1);
-#ifdef MQTT_COMMAND_MESSAGES
-  if (*mqtt_device_id() != 0) {
-    String command_msg("snappy/command/");
-    command_msg += mqtt_device_id();
-    mqtt_state->mqtt.subscribe(command_msg, /* QoS= */ 1);
-  }
-#endif
-  first_time = false;
-  return true;
-}
-
-void MqttCommsTask::disconnect() {
-  mqtt_state->mqtt.stop();
-  // TODO: Oops, this probably reaps the wifi before the client is taken down.
-  mqtt_state->holder = WiFiHolder(false);
-}
-
-void MqttCommsTask::send() {
-  while (!mqtt_queue.is_empty()) {
-    MqttMessage& first = mqtt_queue.peek_front();
-    size_t msg_len = first.message.length();
-    if (msg_len > MQTT_BUFFER_SIZE) {
-      log("Mqtt: Message too long: %d!\n", msg_len);
-      continue;
-    }
-
-    // TODO: Status code!
-    mqtt_state->mqtt.beginMessage(first.topic.c_str(), false, 1, 0);
-    // TODO: Status code!
-    if (mqtt_state->mqtt.write((uint8_t*)first.message.c_str(), msg_len) != msg_len) {
-      log("Mqtt: Message was chopped by mqtt layer!\n");
-    }
-    // TODO: Status code!
-    mqtt_state->mqtt.endMessage();
-
-    // FIXME: Issue 20: We could fail to send because the connection drops.  In that
-    // case, detect the error and do not dequeue the message, but leave it in the buffer
-    // for a subsequent attempt and exit the loop here.
-
+  MqttMessage& first = mqtt_queue.peek_front();
+  size_t msg_len = first.message.length();
+  if (msg_len > MQTT_BUFFER_SIZE) {
+    log("Mqtt: Message too long: %d!\n", msg_len);
     mqtt_queue.pop_front();
+    return;
   }
+
+  // TODO: Status code!
+  mqtt_client.beginMessage(first.topic.c_str(), false, 1, 0);
+  // TODO: Status code!
+  if (mqtt_client.write((uint8_t*)first.message.c_str(), msg_len) != msg_len) {
+    log("Mqtt: Message was chopped by mqtt layer!\n");
+  }
+  // TODO: Status code!
+  mqtt_client.endMessage();
+
+  // FIXME: Issue 20: We could fail to send because the connection drops.  In that
+  // case, detect the error and do not dequeue the message, but leave it in the buffer
+  // for a subsequent attempt and exit the loop here.
+
+  mqtt_queue.pop_front();
 }
 
 static void mqtt_handle_message(int payload_size) {
   static const size_t MAX_INCOMING_MESSAGE_SIZE = 1023;
   uint8_t buf[MAX_INCOMING_MESSAGE_SIZE+1];
-  String topic = mqtt_state->mqtt.messageTopic();
+  String topic = mqtt_client.messageTopic();
   if (payload_size > MAX_INCOMING_MESSAGE_SIZE) {
     log("Mqtt: Incoming message too long, %d bytes.  Message discarded.\n", payload_size);
     return;
   }
-  int bytes_read = mqtt_state->mqtt.read(buf, payload_size);
+  int bytes_read = mqtt_client.read(buf, payload_size);
   if (bytes_read != payload_size) {
     log("Mqtt: Bytes read not equal to bytes expected, %d %d.  Message discarded.\n", bytes_read, payload_size);
     return;
@@ -272,13 +329,13 @@ static void mqtt_handle_message(int payload_size) {
     if (json.hasOwnProperty("enable")) {
       unsigned flag = (unsigned)json["enable"];
       log("Mqtt: enable %u\n", flag);
-      sched_microtask_after(new EnableDeviceTask(!!flag), 0);
+      put_main_event(flag ? EvCode::ENABLE_DEVICE : EvCode::DISABLE_DEVICE);
       fields++;
     }
     if (json.hasOwnProperty("interval")) {
       unsigned interval = (unsigned)json["interval"];
       log("Mqtt: set interval %u\n", interval);
-      sched_microtask_after(new SetMqttIntervalTask(interval), 0);
+      put_main_event(EvCode::SET_INTERVAL, (uint32_t)interval);
       fields++;
     }
     // Don't send empty messages
@@ -302,18 +359,7 @@ static void mqtt_handle_message(int payload_size) {
   } else {
     log("Mqtt: unknown incoming message\n%s\n%s\n", topic.c_str(), buf);
   }
-  mqtt_state->work_done = true;
+  work_done = true;
 }
 
-bool MqttCommsTask::poll() {
-  mqtt_state->work_done = false;
-  mqtt_state->mqtt.onMessage(mqtt_handle_message);
-  mqtt_state->mqtt.poll();
-  mqtt_state->mqtt.onMessage(nullptr);
-  return mqtt_state->work_done;
-}
-
-void SetMqttIntervalTask::execute(SnappySenseData*) {
-  set_mqtt_capture_interval_s(interval_s);
-}
 #endif

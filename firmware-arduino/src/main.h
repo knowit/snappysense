@@ -48,7 +48,7 @@
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
 // every so often.  See mqtt_upload.h.
-//#define MQTT_UPLOAD
+#define MQTT_UPLOAD
 
 // Accept 'snappy/command/<device-name> messages from the server.  Currently none are
 // defined, so we don't normally accept them.
@@ -181,9 +181,14 @@ enum class EvCode {
   MONITOR_START,
   MONITOR_STOP,
   MONITOR_DATA,
+  AP_MODE,
+
+  // External events happening to the main task
   BUTTON_PRESS,
   BUTTON_LONG_PRESS,
-  AP_MODE,
+  ENABLE_DEVICE,
+  DISABLE_DEVICE,
+  SET_INTERVAL,
 
   // Monitoring work
   MONITOR_TICK,
@@ -221,6 +226,6 @@ struct SnappyEvent {
 void put_main_event(EvCode code);
 void put_main_event_from_isr(EvCode code);
 void put_main_event(EvCode code, void* data);
-void put_main_event(EvCode code, int payload);
+void put_main_event(EvCode code, uint32_t payload);
 
 #endif // !main_h_included

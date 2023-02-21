@@ -251,6 +251,10 @@ void setup() {
   timeserver_init();
 #endif
 
+#ifdef MQTT_UPLOAD
+  mqtt_init();
+#endif
+
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
 # if defined(STARTUP_SONG)
@@ -270,6 +274,11 @@ void put_main_event(EvCode code) {
 }
 
 void put_main_event(EvCode code, void* data) {
+  SnappyEvent ev(code, data);
+  xQueueSend(main_event_queue, &ev, 0);
+}
+
+void put_main_event(EvCode code, uint32_t data) {
   SnappyEvent ev(code, data);
   xQueueSend(main_event_queue, &ev, 0);
 }
@@ -375,7 +384,7 @@ void loop() {
   for (;;) {
     SnappyEvent ev;
     while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
-    log("Event %d\n", (int)ev.code);
+    //log("Event %d\n", (int)ev.code);
     switch (ev.code) {
 
       /////////////////////////////////////////////////////////////////////////////////////////////
