@@ -198,6 +198,7 @@ enum class EvCode {
   // Slideshow/display task state machine (timer-driven)
   MESSAGE,
   SLIDESHOW_START,
+  SLIDESHOW_RESET,
   SLIDESHOW_STOP,
   SLIDESHOW_TICK,
 

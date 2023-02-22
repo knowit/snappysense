@@ -499,6 +499,11 @@ void loop() {
         //
         // The comm window is closed.  Let the slideshow continue for a bit before deciding
         // what mode we're going to be in.
+        //
+        // TODO: In an ideal world, the commencement of sleep would coincide with the end of the
+        // slidehow cycle.  We could implement this by having SLEEP_START set a flag and have
+        // a message from the slideshow at the end of the cycle see that flag and actually
+        // enter sleep mode.  But this adds more complexity.
         assert(!in_communication_window && !in_wifi_window);
         if (first_time) {
           put_main_event(EvCode::SLEEP_START);
@@ -515,10 +520,11 @@ void loop() {
           put_main_event(EvCode::POST_SLEEP);
         } else {
           slideshow_mode = slideshow_next_mode;
+          log("New mode: %s\n", slideshow_mode ? "slideshow" : "monitoring");
           if (!slideshow_mode) {
             put_main_event(EvCode::SLIDESHOW_STOP);
             reset_main_timer(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
-            log("Powering down\n");
+            log("Nap time.  Sleep mode activated.\n");
             power_peripherals_off();
             is_powered_up = false;
           } else {
@@ -530,9 +536,10 @@ void loop() {
       case EvCode::POST_SLEEP:
         if (!is_powered_up) {
           power_peripherals_on();
-          log("Powered up\n");
+          log("Is anyone there?\n");
+          put_main_event(EvCode::SLIDESHOW_RESET);
+          put_main_event(EvCode::SLIDESHOW_START);
         }
-        put_main_event(EvCode::SLIDESHOW_START);
         put_main_event(EvCode::MONITOR_START);
         first_time = false;
         break;
@@ -576,12 +583,22 @@ void loop() {
 
       case EvCode::BUTTON_PRESS:
         if (!is_powered_up) {
+          // TODO: Observe that the button wakes us up if we're asleep but does not trigger
+          // any change to the state machine.  If the monitoring window is scheduled to
+          // run 30min from now, that does not change.  That's fine if we're in monitoring
+          // mode and we stay there, but if we advance to slideshow mode it's not what we
+          // want: we want the device to become active.  So in that case, cancel the timer
+          // and move us along, if appropriate.  Can be a little tricky.  We might need a
+          // bool to wrap the window when we're sleeping.
           power_peripherals_on();
           is_powered_up = true;
+          log("Is anyone there?\n");
         } else {
           slideshow_next_mode = !slideshow_next_mode;
         }
+        put_main_event(EvCode::SLIDESHOW_RESET);
         put_main_event(EvCode::MESSAGE, new String(slideshow_next_mode ? "Slideshow mode" : "Monitoring mode"));
+        put_main_event(EvCode::SLIDESHOW_START);
         break;
 
       case EvCode::ENABLE_DEVICE:
@@ -620,7 +637,7 @@ void loop() {
           // We need the screen.
           power_peripherals_on();
           is_powered_up = true;
-          log("Powered up\n");
+          log("Powered up for AP mode\n");
         }
         if (in_monitoring_window) {
           // This must stop all timers in the monitoring code
@@ -681,6 +698,10 @@ void loop() {
           advance_slideshow_task();
           put_main_event(EvCode::SLIDESHOW_TICK);
         }
+        break;
+
+      case EvCode::SLIDESHOW_RESET:
+        slideshow_reset();
         break;
 
       case EvCode::SLIDESHOW_START:

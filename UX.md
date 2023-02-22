@@ -40,13 +40,14 @@ hardware bug.
 
 ## Access point mode
 
-The SnappySense device can be brought up in "access point mode" (AP mode), allowing it to be
+The SnappySense device can be switched into "access point mode" (AP mode), allowing it to be
 configured and for its configuration to be queried.
 
 To enter AP mode, press and hold the button on the front of SnappySense (labeled WAKE on v1.0 and
-BTN1 on v1.1) and press and release the RESET button on the back.  When SnappySense enters AP mode,
-a message on its little screen will show a network name and an IP address on the form `192.168.x.y`.
-If the device has not been given an access point name, it will generate a random one.
+BTN1 on v1.1) for at least 3 seconds; the screen will indicate when the mode is switched.  When
+SnappySense enters AP mode, the message on its little screen will show a network name and an IP
+address on the form `192.168.x.y`.  If the device has not been given an access point name, it will
+generate a random one.
 
 ### End-user configuration
 
@@ -56,8 +57,8 @@ on the connected device, open a page at `http://192.168.x.y`.  (Be sure not to u
 time.)  You will see a form with configuration options.  Change what you want to change, then press
 the SUBMIT button to store the options on SnappySense.
 
-After configuration, press the RESET button on the back of SnappySense to restart it with the new
-settings.
+After configuration, either press the RESET button on the back of SnappySense or long-press the
+WAKE/BTN1 button to restart the device with the new settings.
 
 The configuration values are in two groups: the names and passwords for any networks it can connect
 to for uploading data (up to three networks), and the name of the location the device is in.  The

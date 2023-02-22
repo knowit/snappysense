@@ -31,6 +31,10 @@ void slideshow_show_message_once(String* msg) {
   current_message = msg;
 }
 
+void slideshow_reset() {
+  next_view = -1;
+}
+
 void slideshow_next() {
 again:
   if (current_message != nullptr) {

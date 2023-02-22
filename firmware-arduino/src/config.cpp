@@ -481,6 +481,7 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
       reset_configuration();
     } else if (kwd == "save") {
       save_configuration();
+      log("Quit now and cake will be served immediately.\n");
       *was_saved = true;
     } else if (kwd == "version") {
       int major, minor, bugfix;

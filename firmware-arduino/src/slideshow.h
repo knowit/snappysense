@@ -6,6 +6,8 @@
 #include "main.h"
 #include "sensor.h"
 
+void slideshow_reset();
+
 // Advance the display, showing whatever's next
 void slideshow_next();
 
