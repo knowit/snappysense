@@ -95,8 +95,7 @@
 // upload in the test-server/ directory in the present repo.
 //
 // For development, the device can also listen for interactive commands over the
-// serial line or on an http port, see SERIAL_COMMAND_SERVER and WEB_COMMAND_SERVER
-// in main.h.
+// serial line, see SERIAL_COMMAND_SERVER in main.h.
 //
 //
 // STATE MACHINE
@@ -204,6 +203,10 @@
 #include "web_server.h"
 #include "web_upload.h"
 
+static void button_down();
+static void button_up();
+static void button_init();
+
 // Whether the slideshow mode is enabled or not.  The default is to start the slideshow on startup.
 // It can be toggled to monitoring mode by a press on the wake button.  Slideshow mode really only
 // affects what we do after communication and before monitoring, and for how long.
@@ -224,6 +227,9 @@ static TimerHandle_t slideshow_timer;
 static TimerHandle_t serial_timer;
 #endif
 
+#define SHORT_PRESS_MAX 1999
+#define LONG_PRESS_MIN 3000
+
 // The event queue that drives all activity except within the music player task
 static QueueHandle_t/*<int>*/ main_event_queue;
 
@@ -231,10 +237,7 @@ void setup() {
   main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));
 
   // Power up the device.
-
-  bool do_interactive_configuration = false;
-  device_setup(&do_interactive_configuration);
-
+  device_setup();
   // Serial port and display are up now and can be used for output.
 
   // Load config from nonvolatile memory, if available, otherwise use default values.
@@ -254,6 +257,8 @@ void setup() {
 #ifdef MQTT_UPLOAD
   mqtt_init();
 #endif
+
+  button_init();
 
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
@@ -313,10 +318,8 @@ static void advance_slideshow_task() {
   xTimerChangePeriod(slideshow_timer, pdMS_TO_TICKS(slideshow_update_interval_s() * 1000), portMAX_DELAY);
 }
 
-#ifdef SNAPPY_SERIAL_INPUT
-static void serial_timer_tick(TimerHandle_t t) {
-  put_main_event(EvCode::SERIAL_POLL);
-}
+#ifdef WEB_CONFIGURATION
+static void ap_mode_loop() NO_RETURN;
 #endif
 
 // This never returns.  The Arduino main loop does nothing interesting for us.  Our main loop
@@ -358,17 +361,13 @@ void loop() {
   // be running
   bool is_slideshow_running = false;
 
-  /////////////////////////////////////////////////////////////////////////////////////////
-  //
-  // Button listener task's state
-  struct timeval button_down;
-  bool button_is_down = false;
-
   // Create all the timers managed by the main loop.  TODO: Error handling?
   main_task_timer = xTimerCreate("main", 1, pdFALSE, nullptr, main_timer_tick);
   slideshow_timer = xTimerCreate("slideshow", 1, pdFALSE, nullptr, slideshow_timer_tick);
 #ifdef SNAPPY_SERIAL_INPUT
-  serial_timer = xTimerCreate("serial", 1, pdFALSE, nullptr, serial_timer_tick);
+  serial_timer = xTimerCreate("serial", 100, pdFALSE, nullptr,
+                              [](TimerHandle_t){ put_main_event(EvCode::SERIAL_POLL); });
+  xTimerStart(serial_timer, portMAX_DELAY);
 #endif
 
   // The slideshow task starts whether we're in slideshow mode or not, since slideshow
@@ -385,6 +384,11 @@ void loop() {
   // This is used to improve the UX.  It shortens the comm window the first time around and
   // skips the relaxation / sleep before we read the sensors.
   bool first_time = true;
+
+  // TODO: With a web server command task, the wifi is on all the time.  But this is basically
+  // nuts, it warms up the device and has very limited utility since there are almost no commands
+  // left, they are all development-oriented, and the developer has a serial line or terminal.
+  // So get rid of the web command task.
 
   for (;;) {
     SnappyEvent ev;
@@ -615,7 +619,7 @@ void loop() {
         if (!is_powered_up) {
           // We need the screen.
           power_peripherals_on();
-          is_powered_on = true();
+          is_powered_up = true;
           log("Powered up\n");
         }
         if (in_monitoring_window) {
@@ -625,7 +629,12 @@ void loop() {
         }
         if (in_communication_window) {
           // This must stop all timers in the communication code
-          stop_communication();
+#ifdef MQTT_UPLOAD
+          mqtt_stop();
+#endif
+#ifdef TIMESERVER
+          timeserver_stop();
+#endif
           in_communication_window = false;
         }
         xTimerStop(main_task_timer, portMAX_DELAY);
@@ -635,8 +644,7 @@ void loop() {
 #endif
         // TODO: Either remove the interrupt handlers for the button, or set a
         // flag so that events are not sent.
-        ap_mode();
-        esp_restart();
+        ap_mode_loop();
 #endif
 
       /////////////////////////////////////////////////////////////////////////////////////
@@ -698,30 +706,15 @@ void loop() {
 
       /////////////////////////////////////////////////////////////////////////////////////
       //
-      // Button monitor tasks
+      // Button monitor task
 
       case EvCode::BUTTON_DOWN:
-        // ISR is signaling that the button is down
-        // tv is the time we pressed it
-        button_is_down = true;
-        gettimeofday(&button_down, nullptr);
+        button_down();
         break;
 
-      case EvCode::BUTTON_UP: {
-        if (!button_is_down) {
-          break;
-        }
-        button_is_down = false;
-        struct timeval now;
-        gettimeofday(&now, nullptr);
-        uint64_t press_ms = ((uint64_t(now.tv_sec) * 1000000 + now.tv_usec) - (uint64_t(button_down.tv_sec) * 1000000 + button_down.tv_usec)) / 1000;
-        if (press_ms > 100 && press_ms < 2000) {
-          put_main_event(EvCode::BUTTON_PRESS);
-        } else if (press_ms >= 3000) {
-          put_main_event(EvCode::BUTTON_LONG_PRESS);
-        }
+      case EvCode::BUTTON_UP:
+        button_up();
         break;
-      }
 
       /////////////////////////////////////////////////////////////////////////////////////
       //
@@ -735,7 +728,122 @@ void loop() {
 #endif
 
       default:
+        // WEB_POLL, WEB_REQUEST, WEB_REQUEST_FAILED are used only in AP mode
         panic("Unknown event");
     }
+  }
+}
+
+#ifdef WEB_CONFIGURATION
+
+// Event processing loop that never returns.  Processes events from the main queue, but
+// ignores most of them.  In particular, the serial line commands are not available in
+// this mode.
+
+static void ap_mode_loop() {
+  if (!start_access_point()) {
+    panic("Access point failed");
+  }
+  if (!web_start(80)) {
+    panic("Web config failed");
+  }
+  TimerHandle_t web_timer = xTimerCreate("web", pdMS_TO_TICKS(1000), pdTRUE, nullptr,
+                                         [](TimerHandle_t){ put_main_event(EvCode::WEB_POLL); });
+  xTimerStart(web_timer, portMAX_DELAY);
+
+  for (;;) {
+    SnappyEvent ev;
+    while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
+    //log("AP event %d\n", (int)ev.code);
+    switch (ev.code) {
+
+      case EvCode::WEB_POLL:
+        web_poll();
+        break;
+
+      case EvCode::WEB_REQUEST: {
+        WebRequest* r = (WebRequest*)ev.pointer_data;
+        process_config_request(r->client, r->request);
+        web_request_handled(r);
+        break;
+      }
+
+      case EvCode::WEB_REQUEST_FAILED: {
+        WebRequest* r = (WebRequest*)ev.pointer_data;
+        failed_config_request(r->client, r->request);
+        web_request_handled(r);
+        break;
+      }
+
+      case EvCode::BUTTON_LONG_PRESS:
+        esp_restart();
+
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
+      // Button monitor tasks
+
+      case EvCode::BUTTON_DOWN:
+        button_down();
+        break;
+
+      case EvCode::BUTTON_UP:
+        button_up();
+        break;
+
+      default:
+        log("AP loop: Ignoring event %d\n", (int)ev.code);
+        // Ignore the event
+        break;
+    }
+  }
+}
+
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//
+// Button listener task's state
+
+static bool button_is_down;
+static struct timeval button_down_time;
+static TimerHandle_t button_timer;
+
+static void button_wdt(TimerHandle_t t) {
+  if (!button_is_down) {
+    return;
+  }
+  button_is_down = false;
+  put_main_event(EvCode::BUTTON_LONG_PRESS);
+}
+
+static void button_init() {
+  button_timer = xTimerCreate("button", LONG_PRESS_MIN, pdFALSE, nullptr, button_wdt);
+}
+
+static void button_down() {
+  if (button_timer == nullptr) {
+    return;
+  }
+  // ISR is signaling that the button is down
+  // tv is the time we pressed it
+  button_is_down = true;
+  gettimeofday(&button_down_time, nullptr);
+  xTimerReset(button_timer, portMAX_DELAY);
+}
+
+static void button_up() {
+  if (!button_is_down) {
+    return;
+  }
+  xTimerStop(button_timer, portMAX_DELAY);
+  button_is_down = false;
+  struct timeval now;
+  gettimeofday(&now, nullptr);
+  uint64_t press_ms = ((uint64_t(now.tv_sec) * 1000000 + now.tv_usec) -
+                       (uint64_t(button_down_time.tv_sec) * 1000000 + button_down_time.tv_usec)) / 1000;
+  if (press_ms > 100 && press_ms <= SHORT_PRESS_MAX) {
+    put_main_event(EvCode::BUTTON_PRESS);
+  } else if (press_ms >= LONG_PRESS_MIN) {
+    put_main_event(EvCode::BUTTON_LONG_PRESS);
   }
 }

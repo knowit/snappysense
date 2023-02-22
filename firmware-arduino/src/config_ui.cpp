@@ -6,137 +6,28 @@
 
 #ifdef WEB_CONFIGURATION
 
-// Configuration file format version, see the 'config' statement help text further down.
-// This is intended to be used in a proper "semantic versioning" way.
-//
-// Version 1.1:
-//   Added web-config-access-point
-
-#define MAJOR_VERSION 1
-#define MINOR_VERSION 1
-#define BUGFIX_VERSION 0
-
-// evaluate_config() evaluates a configuration program, using the `read_line` parameter
-// to read lines of input from some source of text.
-//
-// If everything was fine it returns an empty String, and *was_saved is updated to indicate
-// whether a save verb was present or not.
-//
-// On error, it returns a String with a longer error message, and also the line number and
-// a short error message, suitable for the OLED screen.
-
-static String evaluate_config(List<String>& input, bool* was_saved, int* lineno, String* msg) {
-  *lineno = 0;
-  *was_saved = false;
-  for (;;) {
-    (*lineno)++;
-    if (input.is_empty()) {
-      *msg = "Missing END";
-      return fmt("Line %d: Configuration program did not end with `end`", *lineno);
-    }
-    String line = input.pop_front();
-    String kwd = get_word(line, 0);
-    if (kwd == "end") {
-      return String();
-    } else if (kwd == "clear") {
-      reset_configuration();
-    } else if (kwd == "save") {
-      save_configuration();
-      *was_saved = true;
-    } else if (kwd == "version") {
-      int major, minor, bugfix;
-      if (sscanf(get_word(line, 1).c_str(), "%d.%d.%d", &major, &minor, &bugfix) != 3) {
-        *msg = "Bad statement";
-        return fmt("Line %d: Bad statement [%s]", *lineno, line.c_str());
-      }
-      if (major != MAJOR_VERSION || (major == MAJOR_VERSION && minor > MINOR_VERSION)) {
-        // Ignore the bugfix version for now, but require it in the input
-        *msg = "Bad version";
-        return fmt("Line %d: Bad version %d.%d.%d, I'm %d.%d.%d",
-                   *lineno,
-                   major, minor, bugfix,
-                   MAJOR_VERSION, MINOR_VERSION, BUGFIX_VERSION);
-      }
-      // version is OK
-    } else if (kwd == "set") {
-      String varname = get_word(line, 1);
-      if (varname == "") {
-        *msg = "Missing name";
-        return fmt("Line %d: Missing variable name for 'set'", *lineno);
-      }
-      // It's legal to use "" as a value, but illegal not to have a value.
-      bool flag = false;
-      String value = get_word(line, 2, &flag);
-      if (!flag) {
-        *msg = "Missing value";
-        return fmt("Line %d: Missing value for variable [%s]", *lineno, varname.c_str());
-      }
-      Pref* p = get_pref(varname.c_str());
-      if (p == nullptr || p->is_cert()) {
-        *msg = "Bad name";
-        return fmt("Line %d: Unknown or inappropriate variable name for 'set': [%s]", *lineno, varname.c_str());
-      }
-      if (p->is_string()) {
-        p->str_value = value;
-      } else {
-        p->int_value = int(value.toInt());
-      }
-    } else if (kwd == "cert") {
-      String varname = get_word(line, 1);
-      if (varname == "") {
-        *msg = "Missing name";
-        return fmt("Line %d: Missing variable name for 'cert'", *lineno);
-      }
-      String value;
-      if (input.is_empty()) {
-        *msg = "EOF in cert";
-        return fmt("Line %d: Unexpected end of input in config (certificate)", *lineno);
-      }
-      (*lineno)++;
-      String line = input.pop_front();
-      if (!line.startsWith("-----BEGIN ")) {
-        *msg = "Missing BEGIN";
-        return fmt("Line %d: Expected -----BEGIN at the beginning of cert", *lineno);
-      }
-      value = line;
-      value += "\n";
-      for (;;) {
-        if (input.is_empty()) {
-          *msg = "EOF in cert";
-          return fmt("Line %d: Unexpected end of input in config (certificate)", *lineno);
-        }
-        (*lineno)++;
-        String line = input.pop_front();
-        value += line;
-        value += "\n";
-        if (line.startsWith("-----END ")) {
-          break;
-        }
-      }
-      value.trim();
-      Pref* p = get_pref(varname.c_str());
-      if (p == nullptr || !p->is_cert()) {
-        *msg = "Bad name";
-        return fmt("Line %d: Unknown or inappropriate variable name for 'cert': [%s]", *lineno, varname.c_str());
-      }
-      p->str_value = value;
-    } else {
-      int i = 0;
-      while (i < line.length() && isspace(line[i])) {
-        i++;
-      }
-      if (i < line.length() && line[i] == '#') {
-        // comment, do nothing
-      } else if (i == line.length()) {
-        // blank, do nothing
-      } else {
-        *msg = "Bad statement";
-        return fmt("Line %d: Bad configuration statement [%s]", *lineno, line.c_str());
-      }
-    }
+bool start_access_point() {
+  char buf[32];
+  const char* ssid = web_config_access_point();
+  if (*ssid == 0) {
+    // No AP configured, but we're not defeated that easily.  Generate a randomish name.
+    unsigned hibits = rand() % 65536;
+    unsigned lobits = rand() % 65536;
+    sprintf(buf, "snp_%04x_%04x_cfg", hibits, lobits);
+    ssid = buf;
   }
-  /*NOTREACHED*/
-  panic("Unreachable state in evaluate_config");
+  // TODO: Handle return code better!  If we fail to bring up the AP then we probably
+  // should not try again, as we're wasting energy.  On the other hand, if we fail
+  // to bring up the AP then there's probably a serious error, so maybe a panic is
+  // the appropriate response...
+  IPAddress ip;
+  if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
+    render_text("AP config failed.\n\nHanging now.");
+    for(;;) {}
+  }
+  String msg = fmt("%s\n\n%s", ssid, ip.toString().c_str());
+  render_text(msg.c_str());
+  return true;
 }
 
 // Configuration / provisioning:
@@ -186,7 +77,7 @@ static const char config_page[] = R"EOF(
 </html>
 )EOF";
 
-void WebConfigRequestHandler::handle_get_user_config() {
+static void handle_get_user_config(Stream& client) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
   client.println();
@@ -197,7 +88,7 @@ void WebConfigRequestHandler::handle_get_user_config() {
                 location_name());
 }
 
-void WebConfigRequestHandler::handle_post_user_config(const char* buf) {
+static void handle_post_user_config(Stream& client, const char* buf) {
   bool updated = false;
   bool failed = true;
   const char* p = (char*)buf;
@@ -250,7 +141,7 @@ void WebConfigRequestHandler::handle_post_user_config(const char* buf) {
   }
 }
 
-void WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
+static void handle_post_factory_config(Stream& client, const char* buf) {
   // In this case the content is a config script.  Split it into lines and hand it to the
   // config script processor.
   List<String> lines;
@@ -268,7 +159,7 @@ void WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
   int bad_line;
   String msg;
   bool was_saved;
-  String err = evaluate_config(lines, &was_saved, &bad_line, &msg);
+  String err = evaluate_configuration(lines, &was_saved, &bad_line, &msg);
   if (err.isEmpty()) {
     client.println("HTTP/1.1 200 OK");
     String buf("Config accepted");
@@ -287,14 +178,14 @@ void WebConfigRequestHandler::handle_post_factory_config(const char* buf) {
   }
 }
 
-void WebConfigRequestHandler::handle_show_factory_config() {
+static void handle_show_factory_config(Stream& client) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
   client.println();
   show_configuration(&client);
 }
 
-char* WebConfigRequestHandler::get_post_data() {
+char* get_post_data(Stream& client, const String& request) {
   int ix = request.indexOf("Content-Length:");
   if (ix == -1) {
     return nullptr;
@@ -312,23 +203,23 @@ char* WebConfigRequestHandler::get_post_data() {
   return (char*)buf;
 }
 
-void WebConfigRequestHandler::process_request() {
+void process_config_request(Stream& client, const String& request) {
   bool bad_request = false;
   // The request handler performs all processing:
   // - it replies to the client, also on error
   // - it logs, if logging is required
   // - it updates the display, if display updating is required
   if (request.startsWith("GET / ")) {
-    handle_get_user_config();
+    handle_get_user_config(client);
   } else if (request.startsWith("GET /show ")) {
-    handle_show_factory_config();
+    handle_show_factory_config(client);
   } else if (request.startsWith("POST /")) {
-    char* post_data = get_post_data();
+    char* post_data = get_post_data(client, request);
     if (post_data) {
       if (request.startsWith("POST / ")) {
-        handle_post_user_config(post_data);
+        handle_post_user_config(client, post_data);
       } else if (request.startsWith("POST /config ")) {
-        handle_post_factory_config(post_data);
+        handle_post_factory_config(client, post_data);
       } else {
         bad_request = true;
       }
@@ -343,39 +234,12 @@ void WebConfigRequestHandler::process_request() {
     client.println("HTTP/1.1 405 Bad request");
     log("Web server: invalid method or URL %s\n", request.c_str());
   }
-  dead = true;
 }
 
-void WebConfigRequestHandler::failed_request() {
+void failed_config_request(Stream& client, const String& request) {
+  client.println("HTTP/1.1 405 Bad request");
   log("Web server: Incomplete request [%s]\n", request.c_str());
-  dead = true;
 }
 
-bool WebConfigTask::start() {
-  char buf[32];
-  const char* ssid = web_config_access_point();
-  if (*ssid == 0) {
-    // No AP configured, but we're not defeated that easily.  Generate a randomish name.
-    unsigned hibits = rand() % 65536;
-    unsigned lobits = rand() % 65536;
-    sprintf(buf, "snp_%04x_%04x_cfg", hibits, lobits);
-    ssid = buf;
-  }
-  // TODO: Handle return code better!  If we fail to bring up the AP then we probably
-  // should not try again, as we're wasting energy.  On the other hand, if we fail
-  // to bring up the AP then there's probably a serious error, so maybe a panic is
-  // the appropriate response...
-  IPAddress ip;
-  if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
-    render_text("AP config failed.\n\nHanging now.");
-    for(;;) {}
-  }
-  String msg = fmt("%s\n\n%s", ssid, ip.toString().c_str());
-  render_text(msg.c_str());
-  int port = 80;
-  web_server = new WebServer(port);
-  web_server->server.begin();
-  log("Web server: listening on port %d\n", port);
-  return true;
-}
+
 #endif // WEB_CONFIGURATION

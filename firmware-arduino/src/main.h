@@ -63,7 +63,7 @@
 // factory provisioning of ID, certificates, and so on, as well as user provisioning
 // of network names and other local information.  See CONFIG.md at the root of the
 // repo.
-//#define WEB_CONFIGURATION
+#define WEB_CONFIGURATION
 
 // In this mode, the display is updated frequently with readings.  The device and
 // display are on continually, and the device uses a lot of power.  It is useful in
@@ -98,11 +98,6 @@
 // every so often.  See web_upload.h.
 //#define WEB_UPLOAD
 
-// Simple web server to send commands to the device, obtain data, etc.  The IP address
-// of the device is printed on the serial line and also on the display.  Just ask
-// for / or /help to see a directory of the possible requests.
-//#define WEB_COMMAND_SERVER
-
 // (Obscure) This sets the power-off interval artificially low so that it's
 // easier to test it during development.
 //#define TEST_POWER_MANAGEMENT
@@ -111,15 +106,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(WEB_CONFIGURATION) || defined(WEB_COMMAND_SERVER)
-# define WEB_SERVER
-#endif
-
-#if defined(WEB_UPLOAD) || defined(WEB_SERVER) || defined(MQTT_UPLOAD) || defined(TIMESERVER) || defined(WEB_CONFIGURATION)
+#if defined(WEB_UPLOAD) || defined(WEB_CONFIGURATION) || defined(MQTT_UPLOAD) || defined(TIMESERVER)
 # define SNAPPY_WIFI
 #endif
 
-#if defined(SERIAL_COMMAND_SERVER) || defined(WEB_COMMAND_SERVER)
+#if defined(SERIAL_COMMAND_SERVER)
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
@@ -138,14 +129,11 @@
 # ifdef WEB_UPLOAD
 #  warning "WEB_UPLOAD not usually enabled in production"
 # endif
-# ifdef WEB_COMMAND_SERVER
-#  warning "WEB_COMMAND_SERVER not usually enabled in production"
-# endif
 #endif
 
 #if defined(TEST_POWER_MANAGEMENT) && (defined(DEVELOPMENT) || \
                                        defined(SNAPPY_SERIAL_LINE) || \
-                                       defined(SNAPPY_WEB_SERVER))
+                                       defined(WEB_CONFIGURATION))
 # error "Power management test won't work when the device is mostly busy"
 #endif
 
@@ -159,6 +147,9 @@
 #if defined(HARDWARE_1_0_0) || defined(HARDWARE_1_1_0)
 # undef SENSE_ALTITUDE
 #endif
+
+#define WARN_UNUSED __attribute__((warn_unused_result))
+#define NO_RETURN __attribute__ ((noreturn))
 
 extern bool slideshow_mode;
 
@@ -194,6 +185,8 @@ enum class EvCode {
   SET_INTERVAL,       // Set monitoring interval, from comm task
   ACTUATOR,           // Actuator command, from comm task; transfers an Actuator object
   PERFORM,            // Interactive command, from serial listener; transfers a String object
+  WEB_REQUEST,        // Successful request, transfers a WebRequest object
+  WEB_REQUEST_FAILED, // Failed request, transfers a WebRequest object
 
   // Monitoring task state machine (timer-driven)
   MONITOR_TICK,
@@ -214,6 +207,9 @@ enum class EvCode {
 
   // Serial listener task state machine (timer-driven)
   SERIAL_POLL,
+
+  // Web listener task state machine (timer-driven)
+  WEB_POLL,
 };
 
 struct SnappyEvent {
@@ -237,6 +233,12 @@ struct Actuator {
   Actuator(double reading, double ideal) : reading(reading), ideal(ideal) {}
   double reading;
   double ideal;
+};
+
+struct WebRequest {
+  WebRequest(String request, Stream& client) : request(request), client(client) {}
+  String request;
+  Stream& client;
 };
 
 #endif // !main_h_included

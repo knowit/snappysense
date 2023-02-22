@@ -120,7 +120,7 @@ static void button_handler() {
 // This must NOT depend on the configuration because the configuration may not
 // have been read at this point, see main.cpp.
 
-void device_setup(bool* do_interactive_configuration) {
+void device_setup() {
   // Always connect serial on startup
   Serial.begin(115200);
 #ifdef LOGGING
@@ -139,17 +139,6 @@ void device_setup(bool* do_interactive_configuration) {
   power_peripherals_on();
 
   log("Device initialized\n");
-
-#ifdef WEB_CONFIGURATION
-  // To enter configuration mode, press and hold the WAKE/BTN1 button and then press and release
-  // the reset button.  For more information, see CONFIG.md at the root of the repo.
-  if (digitalRead(BUTTON_PIN)) {
-    delay(1000);
-    if (digitalRead(BUTTON_PIN)) {
-      *do_interactive_configuration = true;
-    }
-  }
-#endif
 
   attachInterrupt(BUTTON_PIN, button_handler, CHANGE);
 }

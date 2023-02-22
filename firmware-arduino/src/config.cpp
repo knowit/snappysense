@@ -149,11 +149,6 @@ static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 
 static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
 
-#ifdef WEB_SERVER
-static const int WEB_SERVER_LISTEN_PORT = 8088;
-static const unsigned long WEB_SERVER_POLL_INTERVAL_S = 1;
-#endif
-
 #ifdef WEB_UPLOAD
 # ifdef DEVELOPMENT
 static const unsigned long WEB_UPLOAD_INTERVAL_S = MINUTE(1);
@@ -364,16 +359,6 @@ unsigned long slideshow_update_interval_s() {
   return SLIDESHOW_UPDATE_INTERVAL_S;
 }
 
-#ifdef WEB_SERVER
-int web_server_listen_port() {
-  return WEB_SERVER_LISTEN_PORT;
-}
-
-unsigned long web_command_poll_interval_s() {
-  return WEB_SERVER_POLL_INTERVAL_S;
-}
-#endif
-
 #ifdef SNAPPY_SERIAL_INPUT
 unsigned long serial_input_poll_interval_s() {
   return SERIAL_INPUT_POLL_INTERVAL_S;
@@ -457,4 +442,138 @@ void show_configuration(Stream* out) {
       out->printf("%-22s - %d\n", p->long_key, p->int_value);
     }
   }
+}
+
+
+// Configuration file format version, see the 'config' statement help text further down.
+// This is intended to be used in a proper "semantic versioning" way.
+//
+// Version 1.1:
+//   Added web-config-access-point
+
+#define MAJOR_VERSION 1
+#define MINOR_VERSION 1
+#define BUGFIX_VERSION 0
+
+// evaluate_config() evaluates a configuration program, using the `read_line` parameter
+// to read lines of input from some source of text.
+//
+// If everything was fine it returns an empty String, and *was_saved is updated to indicate
+// whether a save verb was present or not.
+//
+// On error, it returns a String with a longer error message, and also the line number and
+// a short error message, suitable for the OLED screen.
+
+String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno, String* msg) {
+  *lineno = 0;
+  *was_saved = false;
+  for (;;) {
+    (*lineno)++;
+    if (input.is_empty()) {
+      *msg = "Missing END";
+      return fmt("Line %d: Configuration program did not end with `end`", *lineno);
+    }
+    String line = input.pop_front();
+    String kwd = get_word(line, 0);
+    if (kwd == "end") {
+      return String();
+    } else if (kwd == "clear") {
+      reset_configuration();
+    } else if (kwd == "save") {
+      save_configuration();
+      *was_saved = true;
+    } else if (kwd == "version") {
+      int major, minor, bugfix;
+      if (sscanf(get_word(line, 1).c_str(), "%d.%d.%d", &major, &minor, &bugfix) != 3) {
+        *msg = "Bad statement";
+        return fmt("Line %d: Bad statement [%s]", *lineno, line.c_str());
+      }
+      if (major != MAJOR_VERSION || (major == MAJOR_VERSION && minor > MINOR_VERSION)) {
+        // Ignore the bugfix version for now, but require it in the input
+        *msg = "Bad version";
+        return fmt("Line %d: Bad version %d.%d.%d, I'm %d.%d.%d",
+                   *lineno,
+                   major, minor, bugfix,
+                   MAJOR_VERSION, MINOR_VERSION, BUGFIX_VERSION);
+      }
+      // version is OK
+    } else if (kwd == "set") {
+      String varname = get_word(line, 1);
+      if (varname == "") {
+        *msg = "Missing name";
+        return fmt("Line %d: Missing variable name for 'set'", *lineno);
+      }
+      // It's legal to use "" as a value, but illegal not to have a value.
+      bool flag = false;
+      String value = get_word(line, 2, &flag);
+      if (!flag) {
+        *msg = "Missing value";
+        return fmt("Line %d: Missing value for variable [%s]", *lineno, varname.c_str());
+      }
+      Pref* p = get_pref(varname.c_str());
+      if (p == nullptr || p->is_cert()) {
+        *msg = "Bad name";
+        return fmt("Line %d: Unknown or inappropriate variable name for 'set': [%s]", *lineno, varname.c_str());
+      }
+      if (p->is_string()) {
+        p->str_value = value;
+      } else {
+        p->int_value = int(value.toInt());
+      }
+    } else if (kwd == "cert") {
+      String varname = get_word(line, 1);
+      if (varname == "") {
+        *msg = "Missing name";
+        return fmt("Line %d: Missing variable name for 'cert'", *lineno);
+      }
+      String value;
+      if (input.is_empty()) {
+        *msg = "EOF in cert";
+        return fmt("Line %d: Unexpected end of input in config (certificate)", *lineno);
+      }
+      (*lineno)++;
+      String line = input.pop_front();
+      if (!line.startsWith("-----BEGIN ")) {
+        *msg = "Missing BEGIN";
+        return fmt("Line %d: Expected -----BEGIN at the beginning of cert", *lineno);
+      }
+      value = line;
+      value += "\n";
+      for (;;) {
+        if (input.is_empty()) {
+          *msg = "EOF in cert";
+          return fmt("Line %d: Unexpected end of input in config (certificate)", *lineno);
+        }
+        (*lineno)++;
+        String line = input.pop_front();
+        value += line;
+        value += "\n";
+        if (line.startsWith("-----END ")) {
+          break;
+        }
+      }
+      value.trim();
+      Pref* p = get_pref(varname.c_str());
+      if (p == nullptr || !p->is_cert()) {
+        *msg = "Bad name";
+        return fmt("Line %d: Unknown or inappropriate variable name for 'cert': [%s]", *lineno, varname.c_str());
+      }
+      p->str_value = value;
+    } else {
+      int i = 0;
+      while (i < line.length() && isspace(line[i])) {
+        i++;
+      }
+      if (i < line.length() && line[i] == '#') {
+        // comment, do nothing
+      } else if (i == line.length()) {
+        // blank, do nothing
+      } else {
+        *msg = "Bad statement";
+        return fmt("Line %d: Bad configuration statement [%s]", *lineno, line.c_str());
+      }
+    }
+  }
+  /*NOTREACHED*/
+  panic("Unreachable state in evaluate_config");
 }

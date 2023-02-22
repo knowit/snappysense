@@ -1,9 +1,11 @@
 // Support for the device acting as a simple web server, for configuration and commands
 
+// TODO: Rename this as web_config.cpp
+
 #include "web_server.h"
 #include "device.h"
 
-#ifdef WEB_SERVER
+#ifdef WEB_CONFIGURATION
 
 #include "command.h"
 #include "config.h"
@@ -14,6 +16,62 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 
+// HTTP request parsing state.
+
+enum class RequestParseState {
+  TEXT,
+  CR,
+  CRLF,
+  CRLFCR,
+  CRLFCRLF,
+};
+
+// One request handler object for each connection created to a server.
+
+class WebRequestHandler {
+public:
+  // These fields are PRIVATE to the web server framework
+
+  // List of clients attached to some server
+  WebRequestHandler* next = nullptr;
+
+  // Input parsing state
+  RequestParseState state = RequestParseState::TEXT;
+
+  // The WiFi client for this web client
+  WiFiClient client;
+
+public:
+  // These properties and methods are for the client.
+
+  WebRequestHandler(WiFiClient&& client) : client(std::move(client)) {}
+  ~WebRequestHandler() {}
+
+  // This is the request that has been collected for processing.
+  String request;
+
+  // process_request() and failed_request() set `dead` to true when the client is done.
+  bool dead = false;
+
+  //
+  bool complete = false;
+};
+
+// This holds an active server and a list of its clients.  It can be subclassed to add
+// data specific to the connection (for example, for the command server the wifi connection
+// is kept alive by this object).
+
+struct WebServer {
+  WebRequestHandler* request_handlers = nullptr;
+  WiFiServer server;
+
+  WebServer(int port) : server(port) {}
+  virtual ~WebServer() {}
+};
+
+static WebServer* web_server;
+
+
 // Parse the input until it is terminated.  If the input was complete, invoke the processing
 // function to handle it.  If the input was incomplete and there isn't any more, invoke the
 // failure function to signal this.
@@ -22,7 +80,7 @@
 // This state machine attempts to implement that precisely.  It may be that a looser
 // interpretation would be more resilient.
 
-void WebInputTask::poll(WebRequestHandler* rh) {
+static void poll(WebRequestHandler* rh) {
   // Client can disconnect at any time
   while (rh->client.connected()) {
     // Bytes arrive now and then.
@@ -73,21 +131,28 @@ void WebInputTask::poll(WebRequestHandler* rh) {
   }
 
 request_completed:
+  log("Web: finished request, %d\n", (int)rh->state);
+  rh->complete = true;
   if (rh->state == RequestParseState::CRLFCRLF) {
-    rh->process_request();
+    put_main_event(EvCode::WEB_REQUEST, new WebRequest(rh->request, rh->client));
   } else {
-    rh->failed_request();
+    put_main_event(EvCode::WEB_REQUEST_FAILED, new WebRequest(rh->request, rh->client));
   }
 }
 
-// This polls the server for new clients, and for each active client, polls for input.
-// It then reaps any dead clients.
+bool web_start(int port) {
+  if (web_server) {
+    panic("Multiple web servers");
+  }
+  web_server = new WebServer(port);
+  web_server->server.begin();
+  log("Web server: listening on port %d\n", port);
+  return true;
+}
 
-void WebInputTask::execute(SnappySenseData*) {
-  if (web_server == nullptr) {
-    if (!start()) {
-      return;
-    }
+void web_poll() {
+  if (!web_server) {
+    return;
   }
 
   // Listen for incoming clients
@@ -97,7 +162,7 @@ void WebInputTask::execute(SnappySenseData*) {
       break;
     }
     log("Web server: Incoming request\n");
-    WebRequestHandler* rh = create_request_handler(std::move(client));
+    WebRequestHandler* rh = new WebRequestHandler(std::move(client));
     rh->next = web_server->request_handlers;
     web_server->request_handlers = rh;
   }
@@ -106,7 +171,7 @@ void WebInputTask::execute(SnappySenseData*) {
   // be two loops, where the outer loop runs as long as some work has been
   // performed, but it doesn't seem important.
   for ( WebRequestHandler* rh = web_server->request_handlers; rh != nullptr; rh = rh->next ) {
-    if (!rh->dead) {
+    if (!rh->complete && !rh->dead) {
       poll(rh);
     }
   }
@@ -132,8 +197,22 @@ void WebInputTask::execute(SnappySenseData*) {
       }
       delete curr;
       curr = next;
+    } else {
+      prev = curr;
+      curr = curr->next;
     }
   }
 }
 
-#endif // WEB_SERVER
+void web_request_handled(WebRequest* r) {
+  log("Reaping client\n");
+  for ( WebRequestHandler* rh = web_server->request_handlers; rh != nullptr; rh = rh->next ) {
+    if (&rh->client == &r->client) {
+      rh->dead = true;
+      break;
+    }
+  }
+  delete r;
+}
+
+#endif // WEB_CONFIGURATION

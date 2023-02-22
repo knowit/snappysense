@@ -115,17 +115,6 @@ unsigned long slideshow_mode_sleep_s();
 unsigned long serial_input_poll_interval_s();
 #endif
 
-#ifdef WEB_SERVER
-// The port the device's server is listening on.
-int web_server_listen_port();
-
-// How long to wait between looking for input on the web channel.
-// This is typically a pretty low value.
-//
-// Note, WEB_SERVER will keep the device continually on.
-unsigned long web_command_poll_interval_s();
-#endif
-
 #ifdef WEB_CONFIGURATION
 const char* web_config_access_point();
 #endif
@@ -148,6 +137,10 @@ void save_configuration();
 
 // Dump the current configuration without revealing too many secrets.
 void show_configuration(Stream* out);
+
+// Evaluate the configuration script, returning the empty string on success and otherwise
+// an error message.
+String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno, String* msg);
 
 // A structure holding a preference value.
 //

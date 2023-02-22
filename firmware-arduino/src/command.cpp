@@ -102,14 +102,8 @@ static void cmd_inet(const String& cmd, const SnappySenseData&, Stream* out) {
 #ifdef MQTT_UPLOAD
   out->println("MQTT upload is enabled");
 #endif
-#ifdef WEB_SERVER
-  out->printf("Web server is enabled, inet address %s\n", local_ip_address().c_str());
-#endif
-#ifdef WEB_COMMAND_SERVER
-  out->println("Web commands are accepted\n");
-#endif
 #ifdef WEB_CONFIGURATION
-  out->println("Web configuration is enabled, ap %s\n", web_config_access_point());
+  out->printf("Web configuration is enabled, ap %s\n", web_config_access_point());
 #endif
 }
 
@@ -128,90 +122,3 @@ Command commands[] = {
 };
 
 #endif // SNAPPY_COMMAND_PROCESSOR
-
-#ifdef WEB_COMMAND_SERVER
-
-// TODO: Clean up doc
-
-// Command processing:
-//
-// The device is connected to an external access point, and the device has an IP
-// address provided by that AP.  It listens on a port, default 8086, for GET
-// requests that ...
-//
-// TODO: The IP must be shown on the device screen, not just on the serial port.
-// It can be shown by the slideshow if the slideshow is running, otherwise whenever
-// the device wakes up to read the sensors.
-//
-// Parameters are passed using the usual syntax, so <http://.../get?temperature> to
-// return the temperature reading.  The parameter handling is ad-hoc and works only
-// for these simple cases.
-
-// This keeps the client alive until the command task has provided
-// output.
-class ProcessCommandTaskFromWeb : public ProcessCommandTask {
-  WebRequestHandler* cl;
-public:
-  ProcessCommandTaskFromWeb(WebRequestHandler* cl) : ProcessCommandTask(cl->request, &cl->client), cl(cl) {}
-  ~ProcessCommandTaskFromWeb() {
-    cl->dead = true;
-  }
-};
-
-void WebCommandClient::process_request() {
-  log("Processing %s\n", request.c_str());
-  if (request.startsWith("GET /")) {
-    log("Web server: handling GET\n");
-    String r = request.substring(5);
-    int idx = r.indexOf(' ');
-    if (idx != -1) {
-      r = r.substring(0, idx);
-      // TODO: Issue 24: technically this is url-encoded and needs to be decoded
-    }
-    if (r.isEmpty()) {
-      r = String("help");
-    }
-    // Hack
-    idx = r.indexOf('?');
-    if (idx != -1) {
-      r[idx] = ' ';
-    }
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-type:text/html");
-    client.println();
-    client.println("<pre>");
-    sched_microtask_after(new ProcessCommandTaskFromWeb(this), 0);
-    client.println("</pre>");
-    return;
-  }
-  log("Web server: invalid method or URL\n");
-  client.println("HTTP/1.1 403 Forbidden");
-}
-
-void WebCommandClient::failed_request() {
-  log("Web server: Incomplete request [%s]\n", request.c_str());
-  dead = true;
-}
-
-struct WebCommandServer : public WebServer {
-  WiFiHolder server_holder;
-  WebCommandServer(int port) : WebServer(port) {}
-};
-
-bool WebCommandTask::start() {
-  int port = web_server_listen_port();
-  auto* state = new WebCommandServer(port);
-  state->server_holder = connect_to_wifi();
-  if (!state->server_holder.is_valid()) {
-    // TODO: Does somebody need to know?
-    log("Failed to bring up web server\n");
-    delete state;
-    return false;
-  }
-  state->server.begin();
-  log("Web server: listening on port %d\n", port);
-  this->web_server = state;
-  return true;
-}
-
-#endif

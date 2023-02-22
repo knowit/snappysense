@@ -7,9 +7,8 @@
 #include "sensor.h"
 #include <time.h>
 
-// Initialize the hardware.  If `*interactive_configuration` is set on return,
-// then a request for config mode was detected during bootup.
-void device_setup(bool* interactive_configuration);
+// Initialize the hardware.
+void device_setup();
 
 // Bring the signal on the periperal power line high, if it is currently low.  This will
 // re-initialize the devices that were affected by power-off.  It is not possible to
