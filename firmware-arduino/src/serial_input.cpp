@@ -6,7 +6,9 @@
 
 #include "command.h"
 
-void ReadSerialInputTask::execute(SnappySenseData*) {
+static String line;
+
+void serial_poll() {
   while (Serial.available() > 0) {
     int ch = Serial.read();
     if (ch <= 0 || ch > 127) {
@@ -18,7 +20,7 @@ void ReadSerialInputTask::execute(SnappySenseData*) {
       if (line.isEmpty()) {
         continue;
       }
-      perform();
+      put_main_event(EvCode::PERFORM, new String(line));
       line.clear();
       continue;
     }

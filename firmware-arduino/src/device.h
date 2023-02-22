@@ -45,10 +45,6 @@ void get_sensor_values(SnappySenseData* data);
 // may be produced (eg a sound or additional message).
 void enter_end_state(const char* msg, bool is_error = false) __attribute__ ((noreturn));
 
-// (Obscure) Probe the I2C bus for devices and report the findings in textual form
-// on the output stream.
-int probe_i2c_devices(Stream* output);
-
 #ifdef SNAPPY_PIEZO
 void setup_sound();
 void start_note(int frequency);

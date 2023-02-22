@@ -19,7 +19,7 @@ struct Command {
 // The last row of this table has a null `command` field
 extern Command commands[];
 
-void ProcessCommandTask::execute(SnappySenseData* data) {
+void execute_command(Stream* output, String cmd, SnappySenseData* data) {
   String w = get_word(cmd, 0);
   if (!w.isEmpty()) {
     for (Command* c = commands; c->command != nullptr; c++ ) {
@@ -50,33 +50,6 @@ static void cmd_help(const String& cmd, const SnappySenseData&, Stream* out) {
   for (SnappyMetaDatum* m = snappy_metadata; m->json_key != nullptr; m++) {
     out->printf(" %s - %s (%s)\n", m->json_key, m->explanatory_text, m->unit_text);
   }
-}
-
-static void cmd_scani2c(const String& cmd, const SnappySenseData&, Stream* out) {
-  // TODO: Issue 25: Turn this into a control task.  Note this may be difficult,
-  // as the task cannot hold a reference to the stream - the task may
-  // outlive the stream - unless we do something to make sure the stream
-  // lives longer, or is safe-for-deletion.
-  out->println("Scanning...");
-  int num = probe_i2c_devices(out);
-  out->print("Number of I2C devices found: ");
-  out->println(num, DEC);
-  return;
-}
-
-static void cmd_poweron(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new PowerOnTask, 0);
-  out->println("Peripheral power turned on");
-}
-
-static void cmd_poweroff(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new PowerOffTask, 0);
-  out->println("Peripheral power turned off");
-}
-
-static void cmd_read(const String& cmd, const SnappySenseData&, Stream* out) {
-  sched_microtask_after(new ReadSensorsTask, 0);
-  out->println("Sensor measurements gathered");
 }
 
 static void cmd_view(const String& cmd, const SnappySenseData& data, Stream* out) {
@@ -132,6 +105,12 @@ static void cmd_inet(const String& cmd, const SnappySenseData&, Stream* out) {
 #ifdef WEB_SERVER
   out->printf("Web server is enabled, inet address %s\n", local_ip_address().c_str());
 #endif
+#ifdef WEB_COMMAND_SERVER
+  out->println("Web commands are accepted\n");
+#endif
+#ifdef WEB_CONFIGURATION
+  out->println("Web configuration is enabled, ap %s\n", web_config_access_point());
+#endif
 }
 
 static void cmd_config(const String& cmd, const SnappySenseData&, Stream* out) {
@@ -141,10 +120,6 @@ static void cmd_config(const String& cmd, const SnappySenseData&, Stream* out) {
 Command commands[] = {
   {"hello",    "Echo the argument",                                  cmd_hello},
   {"help",     "Print help text",                                    cmd_help},
-  {"scani2c",  "Scan the I2C address space and report what we find", cmd_scani2c},
-  {"poweroff", "Turn off peripheral power and peripherals",          cmd_poweroff},
-  {"poweron",  "Turn on peripheral power; initialize peripherals",   cmd_poweron},
-  {"read",     "Read the sensors",                                   cmd_read},
   {"get",      "Get the sensor reading for a specific sensor name",  cmd_get},
   {"view",     "View all the current sensor readings",               cmd_view},
   {"inet",     "Internet connectivity details",                      cmd_inet},
@@ -153,12 +128,6 @@ Command commands[] = {
 };
 
 #endif // SNAPPY_COMMAND_PROCESSOR
-
-#ifdef SERIAL_COMMAND_SERVER
-void SerialCommandTask::perform() {
-  sched_microtask_after(new ProcessCommandTask(line, &Serial), 0);
-}
-#endif
 
 #ifdef WEB_COMMAND_SERVER
 

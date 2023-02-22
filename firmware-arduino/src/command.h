@@ -7,67 +7,10 @@
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
 
-#include "microtask.h"
 #include "sensor.h"
-#include "serial_input.h"
-#include "web_server.h"
 
-// Command tasks are created ad-hoc by serial and web command servers.
-//
-// This class is not `final`, as the web server task subclasses it to handle garbage
-// collection of the output stream.
-
-class ProcessCommandTask : public MicroTask {
-  String cmd;
-  Stream* output;
-public:
-  // It is critical that the output stream live at least as long as this task.
-  // But NOTE CAREFULLY that the stream may die when this task dies; if this
-  // task spawns other tasks, it may not pass the stream on to those other
-  // tasks.
-  ProcessCommandTask(String cmd, Stream* output) : cmd(cmd), output(output) {}
-  const char* name() override {
-    return "Process command";
-  }
-  void execute(SnappySenseData*) override;
-};
+void execute_command(Stream* output, String cmd, SnappySenseData* data);
 
 #endif // SNAPPY_COMMAND_PROCESSOR
-
-#ifdef SERIAL_COMMAND_SERVER
-
-class SerialCommandTask final : public ReadSerialInputTask {
-public:
-  const char* name() override {
-    return "Serial server command input";
-  }
-  void perform() override;
-};
-
-#endif
-
-#ifdef WEB_COMMAND_SERVER
-
-class WebCommandClient final : public WebRequestHandler {
-public:
-  WebCommandClient(WiFiClient&& client) : WebRequestHandler(std::move(client)) {}
-  virtual void process_request() override;
-  virtual void failed_request() override;
-};
-
-class WebCommandTask final : public WebInputTask {
-public:
-  WebRequestHandler* create_request_handler(WiFiClient&& client) override {
-    return new WebCommandClient(std::move(client));
-  }
-
-  const char* name() override {
-    return "Web server config input";
-  }
-
-  bool start() override;
-};
-
-#endif // WEB_COMMAND_SERVER
 
 #endif // !command_h_included

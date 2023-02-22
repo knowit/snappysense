@@ -92,7 +92,7 @@
 
 // With SERIAL_COMMAND_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-//#define SERIAL_COMMAND_SERVER
+#define SERIAL_COMMAND_SERVER
 
 // With WEB_UPLOAD, the device will upload readings to a predefined http server
 // every so often.  See web_upload.h.
@@ -167,48 +167,52 @@ extern bool slideshow_mode;
 enum class EvCode {
   NONE = 0,
 
-  // Main task
+  // Main task state machine (timer-driven and event-driven).  There's a
+  // blurry line between these states and the external events, below,
+  // but mainly, these states can cause state changes, while the events
+  // below generally don't do that.
   START_CYCLE,
   COMM_START,
   COMM_WIFI_CLIENT_RETRY,
   COMM_WIFI_CLIENT_FAILED,
   COMM_WIFI_CLIENT_UP,
-  COMM_ACTIVITY,
   COMM_ACTIVITY_EXPIRED,
   POST_COMM,
   SLEEP_START,
   POST_SLEEP,
   MONITOR_START,
   MONITOR_STOP,
-  MONITOR_DATA, // Carries a SnappySenseData object that we take ownership of
-  AP_MODE,
 
-  // External events happening to the main task
-  BUTTON_PRESS,
-  BUTTON_LONG_PRESS,
-  ENABLE_DEVICE,
-  DISABLE_DEVICE,
-  SET_INTERVAL,
-  ACTUATOR, // Carries an Actuator object that we take ownership of
+  // External events being handled in the main task, orthogonally to its
+  // state machine.
+  COMM_ACTIVITY,      // Communication activity, from comm task
+  MONITOR_DATA,       // Observation data, from monitor task; transfers a SnappySenseData object
+  BUTTON_PRESS,       // Short press, from button listener
+  BUTTON_LONG_PRESS,  // Long press, from button listener
+  ENABLE_DEVICE,      // Enable monitoring, from comm task
+  DISABLE_DEVICE,     // Disable monitoring, from comm task
+  SET_INTERVAL,       // Set monitoring interval, from comm task
+  ACTUATOR,           // Actuator command, from comm task; transfers an Actuator object
+  PERFORM,            // Interactive command, from serial listener; transfers a String object
 
-  // Monitoring work
+  // Monitoring task state machine (timer-driven)
   MONITOR_TICK,
 
-  // Communication work
+  // Communication task state machine (timer-driven)
   COMM_MQTT_WORK,
   COMM_TIMESERVER_WORK,
 
-  // Slideshow/display work
+  // Slideshow/display task state machine (timer-driven)
   MESSAGE,
   SLIDESHOW_START,
   SLIDESHOW_STOP,
   SLIDESHOW_TICK,
 
-  // Button listener
+  // Button listener task state machine (interrupt-driven)
   BUTTON_DOWN,
   BUTTON_UP,
 
-  // Serial listener
+  // Serial listener task state machine (timer-driven)
   SERIAL_POLL,
 };
 

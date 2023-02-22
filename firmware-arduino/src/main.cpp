@@ -344,6 +344,11 @@ void loop() {
   // and is acted upon at a specific point in the state machine
   bool slideshow_next_mode = slideshow_mode;
 
+#ifdef SNAPPY_COMMAND_PROCESSOR
+  // Data held for the command processor.
+  SnappySenseData current_data;
+#endif
+
   /////////////////////////////////////////////////////////////////////////////////////////
   //
   // Slideshow / display task's state state
@@ -389,7 +394,7 @@ void loop() {
 
       /////////////////////////////////////////////////////////////////////////////////////////////
       //
-      // Main-task events: communication, power management / relaxation, monitoring.
+      // Main task
 
       case EvCode::START_CYCLE: {
 #ifdef SNAPPY_WIFI
@@ -509,13 +514,9 @@ void loop() {
           if (!slideshow_mode) {
             put_main_event(EvCode::SLIDESHOW_STOP);
             reset_main_timer(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
-#ifdef SNAPPY_SERIAL_INPUT
-            clear_display();
-#else
             log("Powering down\n");
             power_peripherals_off();
             is_powered_up = false;
-#endif
           } else {
             reset_main_timer(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
           }
@@ -544,6 +545,10 @@ void loop() {
         in_monitoring_window = false;
         break;
 
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
+      // Events delivered to the main task
+
       case EvCode::MONITOR_DATA: {
         // monitor data arrived after closing the monitoring window
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
@@ -555,6 +560,9 @@ void loop() {
         // function's local state and then there should be other timers driving the needs of
         // the slideshow and the MQTT system.
         mqtt_add_data(new SnappySenseData(*new_data));   // Make a copy
+#endif
+#ifdef SNAPPY_COMMAND_PROCESSOR
+        current_data = *new_data;
 #endif
         // slideshow_new_data takes over the ownership of the new_data.  See TODO above.
         slideshow_new_data(new_data);
@@ -572,13 +580,6 @@ void loop() {
         put_main_event(EvCode::MESSAGE, new String(slideshow_next_mode ? "Slideshow mode" : "Monitoring mode"));
         break;
 
-      case EvCode::BUTTON_LONG_PRESS:
-        if (!is_powered_up) {
-          put_main_event(EvCode::POST_SLEEP);
-        }
-        put_main_event(EvCode::AP_MODE);
-        break;
-
       case EvCode::ENABLE_DEVICE:
         set_device_enabled(true);
         break;
@@ -592,12 +593,21 @@ void loop() {
         break;
 
       case EvCode::ACTUATOR:
-        log("Ignoring actuator event %d, IMPLEMENTME\n", (int)ev.code);
+        log("Ignoring actuator event, IMPLEMENTME\n");
         delete (Actuator*)ev.pointer_data;
         break;
 
+#ifdef SNAPPY_COMMAND_PROCESSOR
+      case EvCode::PERFORM: {
+        String* cmd = (String*)ev.pointer_data;
+        execute_command(&Serial, *cmd, &current_data);
+        delete cmd;
+        break;
+      }
+#endif
+
 #ifdef WEB_CONFIGURATION
-      case EvCode::AP_MODE:
+      case EvCode::BUTTON_LONG_PRESS:
         // Major mode change.  This is special: it knows a bit too much about the rest of the
         // state machine but that's just how it's going to be.  We're trying to avoid having
         // to process any other messages before switching to a completely different mode.
@@ -629,13 +639,19 @@ void loop() {
         esp_restart();
 #endif
 
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
       // Monitor task
+
       case EvCode::MONITOR_TICK:
         // Internal clock tick used for the monitor, with some unknown payload
         monitoring_tick();
         break;
 
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
       // Communication task
+
 #ifdef MQTT_UPLOAD
       case EvCode::COMM_MQTT_WORK:
         mqtt_work();
@@ -647,7 +663,10 @@ void loop() {
         break;
 #endif
 
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
       // Display and slideshow task
+
       case EvCode::MESSAGE:
         slideshow_show_message_once((String*)ev.pointer_data);
         if (is_slideshow_running) {
@@ -677,7 +696,10 @@ void loop() {
         }
         break;
 
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
       // Button monitor tasks
+
       case EvCode::BUTTON_DOWN:
         // ISR is signaling that the button is down
         // tv is the time we pressed it
@@ -701,9 +723,12 @@ void loop() {
         break;
       }
 
-        // Serial monitor task
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
+      // Serial monitor task
+
 #ifdef SNAPPY_SERIAL_INPUT
-      case EvCode::SERIAL_TICK:
+      case EvCode::SERIAL_POLL:
         serial_poll();
         xTimerReset(serial_timer, portMAX_DELAY);
         break;

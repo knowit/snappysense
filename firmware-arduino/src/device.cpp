@@ -184,34 +184,6 @@ void power_peripherals_off() {
   peripherals_powered_on = false;
 }
 
-int probe_i2c_devices(Stream* stream) {
-  byte error, address;
-  uint8_t num = 0;
-
-  if (!peripherals_powered_on) {
-    stream->println("Peripherals are presently powered off");
-    return num;
-  }
-
-  for(address = 1; address < 127; address++ )
-  {
-    // The i2c_scanner uses the return value of the Wire.endTransmisstion to see if
-    // a device did acknowledge to the address.
-    Wire.beginTransmission(address);
-    error = Wire.endTransmission();
-
-    if (error == 0)
-    {
-      ++num;
-      stream->print("I2C device found at address 0x");
-      if (address<16)
-        stream->print("0");
-      stream->println(address,HEX);
-    }
-  }
-  return num;
-}
-
 // The sequence_number is not very useful any more, but it's a fallback for when we don't have a time
 // stamp, and may help us out when the time changes under our feet.
 static unsigned sequence_number;
