@@ -91,7 +91,7 @@ void mqtt_init() {
                             [](TimerHandle_t) { put_main_event(EvCode::COMM_MQTT_WORK); });
 }
 
-bool have_mqtt_work() {
+bool mqtt_have_work() {
   time_t delta = time(nullptr) - last_connect;
 
   // Connect at most once per two hours if there's stuff to upload; meanwhile

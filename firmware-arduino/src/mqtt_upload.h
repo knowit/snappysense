@@ -13,7 +13,7 @@ void mqtt_add_data(SnappySenseData* new_data);
 
 // The wifi must be up.  Connect to the MQTT server, and
 void mqtt_start();
-bool have_mqtt_work();
+bool mqtt_have_work();
 void mqtt_stop();
 void mqtt_work();
 void mqtt_init();

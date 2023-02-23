@@ -21,7 +21,7 @@ bool start_access_point() {
   // to bring up the AP then there's probably a serious error, so maybe a panic is
   // the appropriate response...
   IPAddress ip;
-  if (!create_wifi_soft_access_point(ssid, nullptr, &ip)) {
+  if (!wifi_create_access_point(ssid, nullptr, &ip)) {
     render_text("AP config failed.\n\nHanging now.");
     for(;;) {}
   }

@@ -246,18 +246,20 @@ void setup() {
   // We sometimes need random numbers, try to seed the stream.
   randomSeed(entropy());
 
+  // TODO: Not totally obvious that these should be here and not in loop(), following
+  // the setting up of the start messages.  In principle some of these init functions
+  // can themselves send messages to the main queue, or set up timers that cause
+  // such messages to be sent, and we don't want that.
 #ifdef SNAPPY_WIFI
   wifi_init();
 #endif
-
 #ifdef TIMESERVER
   timeserver_init();
 #endif
-
 #ifdef MQTT_UPLOAD
   mqtt_init();
 #endif
-
+  monitoring_init();
   button_init();
 
   log("SnappySense running!\n");
@@ -349,7 +351,7 @@ void loop() {
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
   // Data held for the command processor.
-  SnappySenseData current_data;
+  SnappySenseData command_data;
 #endif
 
   /////////////////////////////////////////////////////////////////////////////////////////
@@ -408,10 +410,10 @@ void loop() {
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
 #ifdef TIMESERVER
-        comm_work = comm_work || have_timeserver_work();
+        comm_work = comm_work || timeserver_have_work();
 #endif
 #ifdef MQTT_UPLOAD
-        comm_work = comm_work || have_mqtt_work();
+        comm_work = comm_work || mqtt_have_work();
 #endif
         if (comm_work) {
           put_main_event(EvCode::COMM_START);
@@ -430,13 +432,13 @@ void loop() {
         // COMM_WIFI_CLIENT_UP or COMM_WIFI_CLIENT_FAILED.
         //
         // TODO: This can take multiple retries and we don't want to block, so how do we deal with that?
-        turn_wifi_client_on();
+        wifi_enable_start();
         in_wifi_window = true;
         break;
 
       case EvCode::COMM_WIFI_CLIENT_RETRY:
         // As above, but retrying after a timeout.
-        retry_wifi_client_on();
+        wifi_enable_retry();
         break;
 
       case EvCode::COMM_WIFI_CLIENT_FAILED:
@@ -492,7 +494,7 @@ void loop() {
           in_communication_window = false;
         }
         if (in_wifi_window) {
-          turn_wifi_client_off();
+          wifi_disable();
           in_wifi_window = false;
         }
         break;
@@ -551,13 +553,13 @@ void loop() {
       case EvCode::MONITOR_START:
         log("Monitoring window opens\n");
         // Eventually the monitoring code will send MONITOR_STOP.
-        start_monitoring();
+        monitoring_start();
         in_monitoring_window = true;
         break;
 
       case EvCode::MONITOR_STOP:
         log("Monitoring window closes\n");
-        stop_monitoring();
+        monitoring_stop();
         in_monitoring_window = false;
         put_main_event(EvCode::START_CYCLE);
         break;
@@ -581,7 +583,7 @@ void loop() {
         mqtt_add_data(new SnappySenseData(*new_data));   // Make a copy
 #endif
 #ifdef SNAPPY_COMMAND_PROCESSOR
-        current_data = *new_data;
+        command_data = *new_data;
 #endif
         // slideshow_new_data takes over the ownership of the new_data.  See TODO above.
         slideshow_new_data(new_data);
@@ -628,7 +630,7 @@ void loop() {
 #ifdef SNAPPY_COMMAND_PROCESSOR
       case EvCode::PERFORM: {
         String* cmd = (String*)ev.pointer_data;
-        execute_command(&Serial, *cmd, &current_data);
+        command_evaluate(*cmd, command_data, Serial);
         delete cmd;
         break;
       }
@@ -648,7 +650,7 @@ void loop() {
         }
         if (in_monitoring_window) {
           // This must stop all timers in the monitoring code
-          stop_monitoring();
+          monitoring_stop();
           in_monitoring_window = false;
         }
         if (in_communication_window) {

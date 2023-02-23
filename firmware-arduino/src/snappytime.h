@@ -10,7 +10,8 @@
 // Call this before anything else.
 void timeserver_init();
 
-bool have_timeserver_work();
+// Return true if the time server needs WiFi to be enabled because it has work to do.
+bool timeserver_have_work();
 
 // WIFI must be up.  Try to connect to the time server, if the time has not been set
 // already.  This will result in COMM_TIMESERVER_WORK messages being posted on the

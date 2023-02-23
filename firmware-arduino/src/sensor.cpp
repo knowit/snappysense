@@ -333,11 +333,12 @@ void monitoring_timer_tick(TimerHandle_t t) {
 // a little aggressive.)  This will require rethinking how the noise sensor is represented in
 // sensor data, and it will invalidate some current sensor data.
 
-void start_monitoring() {
-  if (pir_timer == nullptr) {
-    pir_timer = xTimerCreate("pir", 1, pdFALSE, nullptr, monitoring_timer_tick);
-    mems_timer = xTimerCreate("mems", 1, pdFALSE, nullptr, monitoring_timer_tick);
-  }
+void monitoring_init() {
+  pir_timer = xTimerCreate("pir", 1, pdFALSE, nullptr, monitoring_timer_tick);
+  mems_timer = xTimerCreate("mems", 1, pdFALSE, nullptr, monitoring_timer_tick);
+}
+
+void monitoring_start() {
   // Wait a little to let sensors warm up.
   monitor_state = MonitorState::WARMUP;
   assert(monitoring_window_s() > sensor_warmup_time_s());
@@ -382,7 +383,7 @@ void monitoring_tick(uint32_t which) {
   }
 }
 
-void stop_monitoring() {
+void monitoring_stop() {
   if (monitor_state != MonitorState::OFF) {
     // Somebody asked to stop before the timer expired
     monitor_state = MonitorState::OFF;

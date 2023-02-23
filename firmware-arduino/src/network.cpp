@@ -82,7 +82,7 @@ again:
         last_successful_access_point = current_access_point;
         wifi_state = WiFiState::CONNECTED;
         put_main_event(EvCode::COMM_WIFI_CLIENT_UP);
-        log("WiFi: Connected. Device IP address: %s\n", local_ip_address().c_str());
+        log("WiFi: Connected. Device IP address: %s\n", wifi_local_ip().c_str());
         return;
       }
       if (num_timeouts == MAX_TIMEOUTS) {
@@ -108,18 +108,18 @@ void wifi_init() {
                              [](TimerHandle_t) { put_main_event(EvCode::COMM_WIFI_CLIENT_RETRY); });
 }
 
-void turn_wifi_client_on() {
+void wifi_enable_start() {
   num_access_points_tried = 0;
   current_access_point = last_successful_access_point;
   wifi_state = WiFiState::STARTING;
   connect_to_wifi();
 }
 
-void retry_wifi_client_on() {
+void wifi_enable_retry() {
   connect_to_wifi();
 }
 
-void turn_wifi_client_off() {
+void wifi_disable() {
   switch (wifi_state) {
     case WiFiState::RETRYING:
     case WiFiState::CONNECTED:
@@ -132,14 +132,14 @@ void turn_wifi_client_off() {
   wifi_state = WiFiState::STOPPED;
 }
 
-String local_ip_address() {
+String wifi_local_ip() {
   if (wifi_state != WiFiState::CONNECTED) {
     return String();
   }
   return WiFi.localIP().toString();
 }
 
-bool create_wifi_soft_access_point(const char* ssid, const char* password, IPAddress* ip) {
+bool wifi_create_access_point(const char* ssid, const char* password, IPAddress* ip) {
   if (!WiFi.softAP(ssid, password)) {
     return false;
   }
