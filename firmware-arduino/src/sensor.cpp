@@ -5,7 +5,7 @@
 #include "device.h"
 #include "icons.h"
 #include "log.h"
-#include "snappytime.h"
+#include "time_server.h"
 
 // The "formatters" format the various members of SnappySenseData into a buffer.  In all
 // cases, `buflim` points to the address beyond the buffer.  No error is returned

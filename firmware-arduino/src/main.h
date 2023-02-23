@@ -43,7 +43,7 @@
 
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
-// has to be provisioned.  See snappytime.h.
+// has to be provisioned.  See time_server.h.
 #define TIMESERVER
 
 // With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker

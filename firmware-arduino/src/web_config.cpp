@@ -1,4 +1,4 @@
-#include "config_ui.h"
+#include "web_config.h"
 #include "config.h"
 #include "device.h"
 #include "network.h"
@@ -6,7 +6,7 @@
 
 #ifdef WEB_CONFIGURATION
 
-bool start_access_point() {
+bool webcfg_start_access_point() {
   char buf[32];
   const char* ssid = web_config_access_point();
   if (*ssid == 0) {
@@ -203,7 +203,7 @@ char* get_post_data(Stream& client, const String& request) {
   return (char*)buf;
 }
 
-void process_config_request(Stream& client, const String& request) {
+void webcfg_process_request(Stream& client, const String& request) {
   bool bad_request = false;
   // The request handler performs all processing:
   // - it replies to the client, also on error
@@ -236,7 +236,7 @@ void process_config_request(Stream& client, const String& request) {
   }
 }
 
-void failed_config_request(Stream& client, const String& request) {
+void webcfg_failed_request(Stream& client, const String& request) {
   client.println("HTTP/1.1 405 Bad request");
   log("Web server: Incomplete request [%s]\n", request.c_str());
 }

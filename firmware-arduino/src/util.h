@@ -39,7 +39,7 @@ String format_timestamp(time_t t);
 
 // Emit message on possible channels and do not return.
 
-void panic(const char* msg) __attribute__ ((noreturn));
+void panic(const char* msg) NO_RETURN;
 
 // List of T.
 

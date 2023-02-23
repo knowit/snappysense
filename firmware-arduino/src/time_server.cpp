@@ -5,7 +5,7 @@
 // would return on a properly configured Posix system).  For a simple server that can do this, see
 // `../server`.
 
-#include "snappytime.h"
+#include "time_server.h"
 #include "config.h"
 #include "log.h"
 

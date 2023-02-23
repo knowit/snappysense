@@ -1,7 +1,7 @@
 // Stuff to obtain the current time from a web server and configure the clock.
 
-#ifndef snappytime_h_included
-#define snappytime_h_included
+#ifndef time_server_h_included
+#define time_server_h_included
 
 #include "main.h"
 
@@ -26,4 +26,4 @@ void timeserver_stop();
 
 #endif
 
-#endif // !snappytime_h_included
+#endif // !time_server_h_included

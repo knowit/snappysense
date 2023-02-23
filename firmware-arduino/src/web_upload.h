@@ -10,7 +10,6 @@
 
 #ifdef WEB_UPLOAD
 
-#include "microtask.h"
 #include "sensor.h"
 
 class WebUploadTask final : public MicroTask {

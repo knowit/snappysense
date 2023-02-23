@@ -46,7 +46,7 @@ void sample_mems();
 // Go into a state where `msg` is displayed on all available surfaces and the
 // device hangs.  If `is_error` is true then an additional error indication
 // may be produced (eg a sound or additional message).
-void enter_end_state(const char* msg, bool is_error = false) __attribute__ ((noreturn));
+void enter_end_state(const char* msg, bool is_error = false) NO_RETURN;
 
 #ifdef SNAPPY_PIEZO
 void setup_sound();

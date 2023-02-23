@@ -6,12 +6,8 @@
 //
 // The firmware is based on the Arduino framework.
 //
-// The firmware is constructed around a simple microtask system that sits on top
-// of the Arduino runloop.  Periodic tasks, created in setup(), below, handle polling,
-// sensor reading, and data uploading.  Ad-hoc tasks, created various places,
-// deal with system management needs and aperiodic work.  Only one task can run at
-// a time, and it runs to completion before the next task is run.  No locking is
-// needed at any level.  See microtask.{cpp,h} for more.
+// The firmware is constructed around an event queue processed by the Arduino runloop.  There
+// is one global event queue, and many timers feeding it.  See below for a better description.
 //
 // The system will sleep when there's no work to be done.  If the time to sleep is long
 // enough, it will power down peripherals while it's sleeping.  All of this is managed
@@ -31,14 +27,11 @@
 //   Utility functions, in util.{cpp,h}
 //   Serial line logging, in log.{cpp,h}
 //
-// Tasking layer:
-//   Tasking system, in microtask.{cpp,h}
-//
 // Connectivity layer:
 //   Serial line input, in serial_input.{cpp,h}
 //   WiFi connection management, in network.{cpp,h}
 //   Web server infrastructure, in web_server.{cpp,h}
-//   Time configuration service, in snappytime.{cpp,h}
+//   Time configuration service, in time_server.{cpp,h}
 //
 // Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
@@ -48,7 +41,7 @@
 //
 // Application UI layer:
 //   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
-//   Configuration user interface (serial and web), in config_ui.{cpp,h}
+//   Configuration web user interface, in web_config.{cpp,h}
 //   Orchestration of everything, in main.cpp
 //   Compile-time configuration, in main.h
 //
@@ -189,7 +182,6 @@
 
 
 #include "config.h"
-#include "config_ui.h"
 #include "command.h"
 #include "device.h"
 #include "icons.h"
@@ -198,8 +190,9 @@
 #include "network.h"
 #include "piezo.h"
 #include "sensor.h"
-#include "snappytime.h"
 #include "slideshow.h"
+#include "time_server.h"
+#include "web_config.h"
 #include "web_server.h"
 #include "web_upload.h"
 
@@ -770,7 +763,7 @@ void loop() {
 // this mode.
 
 static void ap_mode_loop() {
-  if (!start_access_point()) {
+  if (!webcfg_start_access_point()) {
     panic("Access point failed");
   }
   if (!web_start(80)) {
@@ -792,14 +785,14 @@ static void ap_mode_loop() {
 
       case EvCode::WEB_REQUEST: {
         WebRequest* r = (WebRequest*)ev.pointer_data;
-        process_config_request(r->client, r->request);
+        webcfg_process_request(r->client, r->request);
         web_request_handled(r);
         break;
       }
 
       case EvCode::WEB_REQUEST_FAILED: {
         WebRequest* r = (WebRequest*)ev.pointer_data;
-        failed_config_request(r->client, r->request);
+        webcfg_failed_request(r->client, r->request);
         web_request_handled(r);
         break;
       }

@@ -64,7 +64,7 @@
 #include "icons.h"
 #include "log.h"
 #include "sensor.h"
-#include "snappytime.h"
+#include "time_server.h"
 #include "Wire.h"
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
