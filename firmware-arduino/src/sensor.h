@@ -135,7 +135,7 @@ extern SnappyMetaDatum snappy_metadata[];
 String format_readings_as_json(const SnappySenseData& data);
 
 void start_monitoring();
-void monitoring_tick();
+void monitoring_tick(uint32_t which);
 void stop_monitoring();
 
 #endif // !sensor_h_included

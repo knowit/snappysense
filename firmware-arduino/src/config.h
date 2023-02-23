@@ -19,6 +19,9 @@ unsigned long sensor_poll_interval_s();
 // How long does it take for sensors to warm up at the beginning of the monitoring window?
 unsigned long sensor_warmup_time_s();
 
+// How long is the monitoring window overall (including warmup)?
+unsigned long monitoring_window_s();
+
 // The name of the location at which this device is placed.
 const char* location_name();
 void set_location_name(const char* name);

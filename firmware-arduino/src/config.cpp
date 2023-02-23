@@ -223,6 +223,13 @@ unsigned long sensor_warmup_time_s() {
   }
 }
 
+unsigned long monitoring_window_s() {
+  // Constraints:
+  // - longer than the warmup time
+  // - long enough to get good readings from the PIR and MEMS
+  return 30;
+}
+
 bool device_enabled() {
   return get_int_pref("enabled");
 }

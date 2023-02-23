@@ -401,6 +401,10 @@ void loop() {
       // Main task
 
       case EvCode::START_CYCLE: {
+        // We communicate only if we have to.  Note that the predicates for comm work have the
+        // ability to reduce the frequency of communication if they want; for example, the
+        // mqtt task could decide not to communicate often, or if it doesn't have a lot of
+        // data to upload.
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
 #ifdef TIMESERVER
@@ -545,15 +549,17 @@ void loop() {
         break;
 
       case EvCode::MONITOR_START:
+        log("Monitoring window opens\n");
+        // Eventually the monitoring code will send MONITOR_STOP.
         start_monitoring();
         in_monitoring_window = true;
         break;
 
       case EvCode::MONITOR_STOP:
-        // We don't need to set up anything here, the sensor code will post an EV_MONITOR_DATA
-        // to us to continue the process.
+        log("Monitoring window closes\n");
         stop_monitoring();
         in_monitoring_window = false;
+        put_main_event(EvCode::START_CYCLE);
         break;
 
       /////////////////////////////////////////////////////////////////////////////////////
@@ -561,15 +567,17 @@ void loop() {
       // Events delivered to the main task
 
       case EvCode::MONITOR_DATA: {
+        log("Monitor data received\n");
         // monitor data arrived after closing the monitoring window
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
         assert(new_data != nullptr);
 #ifdef MQTT_UPLOAD
         // TODO: This should only happen "every so often", possibly not every time there's new
-        // data.  MQTT capture should have its own cadence, different from the needs of eg
+        // data!  MQTT capture should have its own cadence, different from the needs of eg
         // the slideshow.  In some sense, MONITOR_DATA should cache the data object in this
         // function's local state and then there should be other timers driving the needs of
-        // the slideshow and the MQTT system.
+        // the slideshow and the MQTT system.  But this logic can be hidden inside mqtt_add_data,
+        // too.
         mqtt_add_data(new SnappySenseData(*new_data));   // Make a copy
 #endif
 #ifdef SNAPPY_COMMAND_PROCESSOR
@@ -577,7 +585,6 @@ void loop() {
 #endif
         // slideshow_new_data takes over the ownership of the new_data.  See TODO above.
         slideshow_new_data(new_data);
-        put_main_event(EvCode::START_CYCLE);
         break;
       }
 
@@ -670,7 +677,7 @@ void loop() {
 
       case EvCode::MONITOR_TICK:
         // Internal clock tick used for the monitor, with some unknown payload
-        monitoring_tick();
+        monitoring_tick(ev.scalar_data);
         break;
 
       /////////////////////////////////////////////////////////////////////////////////////

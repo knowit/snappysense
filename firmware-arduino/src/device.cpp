@@ -176,6 +176,25 @@ void power_peripherals_off() {
 // The sequence_number is not very useful any more, but it's a fallback for when we don't have a time
 // stamp, and may help us out when the time changes under our feet.
 static unsigned sequence_number;
+static unsigned pir_value;
+static unsigned mems_value;
+
+void reset_pir_and_mems() {
+  pir_value = 0;
+  mems_value = 0;
+}
+
+void sample_pir() {
+#ifdef SENSE_MOTION
+  pir_value |= analogRead(PIR_SENSOR_PIN);
+#endif
+}
+
+void sample_mems() {
+#ifdef SENSE_NOISE
+  mems_value = max(mems_value, unsigned(analogRead(MIC_PIN)));
+#endif
+}
 
 void get_sensor_values(SnappySenseData* data) {
   if (!peripherals_powered_on) {
@@ -253,12 +272,12 @@ void get_sensor_values(SnappySenseData* data) {
 #endif
 
 #ifdef SENSE_MOTION
-  data->motion_detected = (analogRead(PIR_SENSOR_PIN) != 0 ? true : false);
+  data->motion_detected = pir_value != 0;
   data->have_motion = true;
 #endif
 
 #ifdef SENSE_NOISE
-  data->noise = analogRead(MIC_PIN);
+  data->noise = mems_value;
   data->have_noise = true;
 #endif
 }

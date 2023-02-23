@@ -39,6 +39,10 @@ void render_oled_view(const uint8_t *bitmap, const char* value, const char *unit
 // Read the sensors and store the readings in `*data`.
 void get_sensor_values(SnappySenseData* data);
 
+void reset_pir_and_mems();
+void sample_pir();
+void sample_mems();
+
 // Go into a state where `msg` is displayed on all available surfaces and the
 // device hangs.  If `is_error` is true then an additional error indication
 // may be produced (eg a sound or additional message).
