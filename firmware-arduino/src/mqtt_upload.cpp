@@ -175,6 +175,11 @@ void mqtt_work() {
 }
 
 void mqtt_add_data(SnappySenseData* data) {
+  if (!device_enabled()) {
+    delete data;
+    return;
+  }
+
   String topic;
   String body;
 
