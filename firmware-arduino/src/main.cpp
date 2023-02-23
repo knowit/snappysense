@@ -666,8 +666,7 @@ void loop() {
 #ifdef SNAPPY_SERIAL_INPUT
         xTimerStop(serial_timer, portMAX_DELAY);
 #endif
-        // TODO: Either remove the interrupt handlers for the button, or set a
-        // flag so that events are not sent.
+        // This never returns, it restarts the device.
         ap_mode_loop();
 #endif
 
