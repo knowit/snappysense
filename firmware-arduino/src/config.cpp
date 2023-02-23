@@ -27,11 +27,6 @@
 #else
 # define IF_TIMESERVER(x, y) y
 #endif
-#if defined(DEVELOPMENT) && defined(WEB_UPLOAD)
-# define IF_HTTP_UP(x, y) x
-#else
-# define IF_HTTP_UP(x, y) y
-#endif
 #if defined(DEVELOPMENT) && defined(MQTT_UPLOAD)
 # define IF_MQTT_UP(x, y) x
 #else
@@ -51,8 +46,8 @@ static Pref factory_prefs[] = {
   {"password3",               "p3",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the third WiFi network"},
   {"time-server-host",        "tsh",   Pref::Str,              0, IF_TIMESERVER(TIME_SERVER_HOST, ""),   "Host name of ad-hoc time server"},
   {"time-server-port",        "tsp",   Pref::Int,              IF_TIMESERVER(TIME_SERVER_PORT, 8086), "","Port name on the ad-hoc time server"},
-  {"http-upload-host",        "huh",   Pref::Str,              0, IF_HTTP_UP(WEB_UPLOAD_HOST, ""),       "Host name of ad-hoc http sensor-reading upload server"},
-  {"http-upload-port",        "hup",   Pref::Int,              IF_HTTP_UP(WEB_UPLOAD_PORT, 8086), "",    "Port number on the ad-hoc http sensor-reading upload server"},
+  {"http-upload-host",        "huh",   Pref::Str,              0, "",                                    "Host name of ad-hoc http sensor-reading upload server"},
+  {"http-upload-port",        "hup",   Pref::Int,              8086, "",                                 "Port number on the ad-hoc http sensor-reading upload server"},
   {"web-config-access-point", "wcap",  Pref::Str,              0, "",                                    "Unique access point name for end-user web config"},
   {"aws-iot-id",              "aid",   Pref::Str,              0, IF_MQTT_UP(AWS_CLIENT_IDENTIFIER, ""), "IoT device ID"},
   {"aws-iot-class",           "acls",  Pref::Str,              0, IF_MQTT_UP("snappysense", ""),         "IoT device class"},
@@ -148,14 +143,6 @@ static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
 static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
-
-#ifdef WEB_UPLOAD
-# ifdef DEVELOPMENT
-static const unsigned long WEB_UPLOAD_INTERVAL_S = MINUTE(1);
-# else
-static const unsigned long WEB_UPLOAD_INTERVAL_S = HOUR(1);
-# endif
-#endif
 
 #ifdef SNAPPY_SERIAL_INPUT
 static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
@@ -291,20 +278,6 @@ int time_server_port() {
 
 unsigned long time_server_retry_s() {
   return 10;
-}
-#endif
-
-#ifdef WEB_UPLOAD
-const char* web_upload_host() {
-  return get_string_pref("http-upload-host");
-}
-
-int web_upload_port() {
-  return get_int_pref("http-upload-port");
-}
-
-unsigned long web_upload_interval_s() {
-  return WEB_UPLOAD_INTERVAL_S;
 }
 #endif
 

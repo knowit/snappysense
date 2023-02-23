@@ -16,15 +16,6 @@ static const char WIFI_PASSWORD[] = "......";   // FIXME
 
 static const char LOCATION_NAME[] = "...";      // FIXME
 
-#ifdef WEB_UPLOAD
-// -------------------------------------------------------------------------------
-//
-// Web upload server address
-
-static const char WEB_UPLOAD_HOST[] = "...";    // FIXME
-static const int WEB_UPLOAD_PORT = 8086;        // Useful default
-#endif // WEB_UPLOAD
-
 #ifdef TIMESERVER
 // -------------------------------------------------------------------------------
 //

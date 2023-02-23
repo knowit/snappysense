@@ -1,3 +1,6 @@
+// Logic for setting up a configuration access point and handling web requests received
+// by a server on that access point.
+
 #include "web_config.h"
 #include "config.h"
 #include "device.h"

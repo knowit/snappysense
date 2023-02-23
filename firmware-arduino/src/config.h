@@ -53,20 +53,6 @@ int time_server_port();
 unsigned long time_server_retry_s();
 #endif
 
-#ifdef WEB_UPLOAD
-// Host name of remote web server used for web upload and time service.
-const char* web_upload_host();
-
-// Port of remote web server used for web upload and time service.
-int web_upload_port();
-
-// How often to upload results to a server.
-//
-// Note this is independent of mqtt upload, which is OK - web upload
-// is for development and experimentation, mqtt upload for production.
-unsigned long web_upload_interval_s();
-#endif
-
 #ifdef MQTT_UPLOAD
 // How often readings are captured and enqueued for mqtt upload.
 //

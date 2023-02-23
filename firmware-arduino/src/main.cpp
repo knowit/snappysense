@@ -36,7 +36,6 @@
 // Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
 //   MQTT data upload and command handling, in mqtt_upload.{cpp,h}
-//   HTTP data upload (for development), in web_upload.{cpp,h}
 //   Serial & web interactive command processing (for development), in command.{cpp,h}
 //
 // Application UI layer:
@@ -194,7 +193,6 @@
 #include "time_server.h"
 #include "web_config.h"
 #include "web_server.h"
-#include "web_upload.h"
 
 static void button_down();
 static void button_up();
@@ -786,14 +784,14 @@ static void ap_mode_loop() {
       case EvCode::WEB_REQUEST: {
         WebRequest* r = (WebRequest*)ev.pointer_data;
         webcfg_process_request(r->client, r->request);
-        web_request_handled(r);
+        web_request_completed(r);
         break;
       }
 
       case EvCode::WEB_REQUEST_FAILED: {
         WebRequest* r = (WebRequest*)ev.pointer_data;
         webcfg_failed_request(r->client, r->request);
-        web_request_handled(r);
+        web_request_completed(r);
         break;
       }
 

@@ -94,10 +94,6 @@
 // command "help" will provide a list of possible commands.
 #define SERIAL_COMMAND_SERVER
 
-// With WEB_UPLOAD, the device will upload readings to a predefined http server
-// every so often.  See web_upload.h.
-//#define WEB_UPLOAD
-
 // (Obscure) This sets the power-off interval artificially low so that it's
 // easier to test it during development.
 //#define TEST_POWER_MANAGEMENT
@@ -106,7 +102,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(WEB_UPLOAD) || defined(WEB_CONFIGURATION) || defined(MQTT_UPLOAD) || defined(TIMESERVER)
+#if defined(WEB_CONFIGURATION) || defined(MQTT_UPLOAD) || defined(TIMESERVER)
 # define SNAPPY_WIFI
 #endif
 
@@ -125,9 +121,6 @@
 #if !defined(DEVELOPMENT)
 # ifdef SERIAL_COMMAND_SERVER
 #  warning "SERIAL_COMMAND_SERVER not usually enabled in production"
-# endif
-# ifdef WEB_UPLOAD
-#  warning "WEB_UPLOAD not usually enabled in production"
 # endif
 #endif
 

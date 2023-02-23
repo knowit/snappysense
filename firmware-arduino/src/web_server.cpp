@@ -1,6 +1,4 @@
-// Support for the device acting as a simple web server, for configuration and commands
-
-// TODO: Rename this as web_config.cpp
+// Support for the device acting as a simple web server
 
 #include "web_server.h"
 #include "device.h"
@@ -57,9 +55,7 @@ public:
   bool complete = false;
 };
 
-// This holds an active server and a list of its clients.  It can be subclassed to add
-// data specific to the connection (for example, for the command server the wifi connection
-// is kept alive by this object).
+// This holds an active server and a list of its clients.
 
 struct WebServer {
   WebRequestHandler* request_handlers = nullptr;
@@ -70,7 +66,6 @@ struct WebServer {
 };
 
 static WebServer* web_server;
-
 
 // Parse the input until it is terminated.  If the input was complete, invoke the processing
 // function to handle it.  If the input was incomplete and there isn't any more, invoke the
@@ -204,7 +199,7 @@ void web_poll() {
   }
 }
 
-void web_request_handled(WebRequest* r) {
+void web_request_completed(WebRequest* r) {
   log("Reaping client\n");
   for ( WebRequestHandler* rh = web_server->request_handlers; rh != nullptr; rh = rh->next ) {
     if (&rh->client == &r->client) {

@@ -1,3 +1,6 @@
+// Logic for setting up a configuration access point and handling web requests received
+// by a server on that access point.
+
 #ifndef web_config_h_included
 #define web_config_h_included
 
