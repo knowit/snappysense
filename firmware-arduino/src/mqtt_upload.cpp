@@ -92,17 +92,33 @@ void mqtt_init() {
 }
 
 bool have_mqtt_work() {
+  time_t delta = time(nullptr) - last_connect;
+
+  // Connect at most once per two hours if there's stuff to upload; meanwhile
+  // we keep it in the queue.
+  //
+  // TODO: This should be a config setting
+  if (!mqtt_queue.is_empty() && delta >= 60*60) {
+    return true;
+  }
+
+#ifdef DEVELOPMENT
+  // For now, in development mode, upload always if there's stuff to upload.
   if (!mqtt_queue.is_empty()) {
     return true;
   }
+#endif
+
   // We must connect every so often to check for commands, even if there's no outgoing
   // traffic.  This matters because the device can be disabled, in which case there will
   // be no outgoing traffic, but we depend on incoming traffic to enable it again.
   //
   // This calculation basically depends on time only having discontinuities forward, which
   // is reasonably safe for us.
-  time_t now = time(nullptr);
-  if (now - last_connect > 60*60*4) {  // 4 hours
+  //
+  // TODO: This should be a config setting.
+  // TODO: It may be that at device startup time we should connect more often.
+  if (delta >= 60*60*4) {  // 4 hours
     return true;
   }
   return false;
