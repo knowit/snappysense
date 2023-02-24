@@ -288,17 +288,20 @@ void loop() {
   // Main task's state
 
 #ifdef SNAPPY_WIFI
-  // True iff the main loop is in the communication window
+  // True iff the main loop is in the communication window, between COMM_WIFI_CLIENT_UP
+  // and COMM_ACTIVITY_EXPIRED.
   bool in_communication_window = false;
 
+  // True iff the main loop is in the wifi window, between COMM_START and COMM_ACTIVITY_EXPIRED.
   bool in_wifi_window = false;
 #endif
 
-  // True iff the main loop is in the monitoring window (see below)
+  // True iff the main loop is in the monitoring window, between MONITOR_START and MONITOR_STOP.
   bool in_monitoring_window = false;
 
-  // True when the peripherals have been powered up
-  bool is_powered_up = true;
+  // True when the peripherals have been powered down and we are between SLEEP_START and
+  // POST_SLEEP.
+  bool in_sleep_window = false;
 
   // This starts out the same as slideshow_mode but can be changed by a button press,
   // and is acted upon at a specific point in the state machine
@@ -484,20 +487,22 @@ void loop() {
         } else {
           slideshow_mode = slideshow_next_mode;
           log("New mode: %s\n", slideshow_mode ? "slideshow" : "monitoring");
-          if (!slideshow_mode) {
+          if (slideshow_mode) {
+            set_master_timeout(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
+          } else {
             put_main_event(EvCode::SLIDESHOW_STOP);
             set_master_timeout(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
             log("Nap time.  Sleep mode activated.\n");
             power_peripherals_off();
-            is_powered_up = false;
-          } else {
-            set_master_timeout(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
+            in_sleep_window = true;
           }
         }
         break;
 
       case EvCode::POST_SLEEP:
-        if (!is_powered_up) {
+        if (in_sleep_window) {
+          // We can come to POST_SLEEP from either the timeout or from a button press.
+          cancel_master_timeout();
           power_peripherals_on();
           log("Is anyone there?\n");
           put_main_event(EvCode::SLIDESHOW_RESET);
@@ -542,20 +547,14 @@ void loop() {
       }
 
       case EvCode::BUTTON_PRESS:
-        if (!is_powered_up) {
-          // FIXME: Observe that the button wakes us up if we're asleep but does not trigger
-          // any change to the state machine.  If the monitoring window is scheduled to
-          // run 30min from now, that does not change.  That's fine if we're in monitoring
-          // mode and we stay there, but if we advance to slideshow mode it's not what we
-          // want: we want the device to become active.  So in that case, cancel the timer
-          // and move us along, if appropriate.  Can be a little tricky.  We might need a
-          // bool to wrap the window when we're sleeping.
-          power_peripherals_on();
-          is_powered_up = true;
-          log("Is anyone there?\n");
-        } else {
-          slideshow_next_mode = !slideshow_next_mode;
+        if (in_sleep_window) {
+          // Wake up and move the state machine along.  POST_SLEEP will cancel any pending timeout.
+          put_main_event(EvCode::POST_SLEEP);
+          put_main_event(EvCode::MESSAGE, new String(slideshow_mode ? "Slideshow mode" : "Monitoring mode"));
+          break;
         }
+
+        slideshow_next_mode = !slideshow_next_mode;
         put_main_event(EvCode::SLIDESHOW_RESET);
         put_main_event(EvCode::MESSAGE, new String(slideshow_next_mode ? "Slideshow mode" : "Monitoring mode"));
         put_main_event(EvCode::SLIDESHOW_START);
@@ -599,10 +598,10 @@ void loop() {
         slideshow_stop();
 
         // We need the screen, so power up i2c if we're powered down.
-        if (!is_powered_up) {
-          power_peripherals_on();
-          is_powered_up = true;
+        if (in_sleep_window) {
           log("Powered up for AP mode\n");
+          power_peripherals_on();
+          in_sleep_window = false;
         }
 
         // Stop monitoring if we're doing that.  We may get a callback about new data
