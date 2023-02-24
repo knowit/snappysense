@@ -74,7 +74,10 @@ static int num_retries = 0;
 static bool work_done;
 static TimerHandle_t mqtt_timer;
 static time_t last_connect;
-static bool first_time = true;
+static time_t last_capture;
+static bool early_times = true;
+static int num_times = 0;
+static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
 
 static void subscribe();
@@ -94,11 +97,8 @@ void mqtt_init() {
 bool mqtt_have_work() {
   time_t delta = time(nullptr) - last_connect;
 
-  // Connect at most once per two hours if there's stuff to upload; meanwhile
-  // we keep it in the queue.
-  //
-  // TODO: This should be a config setting, mqtt_upload_interval_s()
-  if (!mqtt_queue.is_empty() && delta >= 60*60) {
+  // Hold data for a while, don't connect every time just because there's work to do.
+  if (!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) {
     return true;
   }
 
@@ -116,9 +116,9 @@ bool mqtt_have_work() {
   // This calculation basically depends on time only having discontinuities forward, which
   // is reasonably safe for us.
   //
-  // TODO: This should be a config setting.
-  // TODO: It may be that at device startup time we should connect more often.
-  if (delta >= 60*60*4) {  // 4 hours
+  // Early on we connect more often because commands are frequently delayed to later connections,
+  // they are not always sent during the first comm window.
+  if (delta >= mqtt_max_unconnected_time_s() || early_times) {
     return true;
   }
   return false;
@@ -127,12 +127,16 @@ bool mqtt_have_work() {
 void mqtt_start() {
   mqtt_state = MqttState::STARTING;
   num_retries = 0;
+  if (early_times) {
+    num_times++;
+    if (num_times > 5) {
+      early_times = false;
+    }
+  }
   connect();
 }
 
 void mqtt_stop() {
-  // TODO: It's possible for stop to be called without start having been called,
-  // do we need anything here?
   mqtt_client.stop();
   mqtt_state = MqttState::STOPPED;
 }
@@ -151,10 +155,10 @@ void mqtt_work() {
   }
   if (mqtt_state == MqttState::SUBSCRIBED) {
     mqtt_state = MqttState::RUNNING;
-    if (first_time) {
+    if (send_startup_message) {
       generate_startup_message();
       put_main_event(EvCode::COMM_MQTT_WORK);
-      first_time = false;
+      send_startup_message = false;
       return;
     }
   }
@@ -181,6 +185,12 @@ void mqtt_add_data(SnappySenseData* data) {
     delete data;
     return;
   }
+  if (last_capture > 0 && time(nullptr) - last_capture < mqtt_capture_interval_s()) {
+    delete data;
+    return;
+  }
+
+  last_capture = time(nullptr);
 
   String topic;
   String body;
@@ -288,7 +298,7 @@ static void generate_startup_message() {
   topic += mqtt_device_id();
 
   body += "{\"interval\":";
-  body += sensor_poll_interval_s();
+  body += mqtt_capture_interval_s();
   body += ",\"sent\":\"";
   body += format_timestamp(time(nullptr));
   body += "\"}";

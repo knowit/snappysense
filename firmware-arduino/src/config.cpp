@@ -139,7 +139,6 @@ static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
 static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
 static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
 # endif
-static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 #endif
 
 static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
@@ -181,25 +180,11 @@ unsigned long slideshow_mode_sleep_s() {
 #endif
 }
 
-static struct {
 #ifdef MQTT_UPLOAD
-  unsigned long mqtt_monitoring_capture_interval_s;
+unsigned long mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S;
 #endif
-} builtin_cfg = {
-#ifdef MQTT_UPLOAD
-  .mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S
-#endif
-};
 
 // Preference accessors
-
-unsigned long sensor_poll_interval_s() {
-  if (slideshow_mode) {
-    return SENSOR_POLL_SLIDESHOW_INTERVAL_S;
-  } else {
-    return SENSOR_POLL_MONITORING_INTERVAL_S;
-  }
-}
 
 // The monitoring window *must* be longer than the value returned here.
 unsigned long sensor_warmup_time_s() {
@@ -286,16 +271,12 @@ unsigned long mqtt_capture_interval_s() {
   if (slideshow_mode) {
     return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
   } else {
-    return builtin_cfg.mqtt_monitoring_capture_interval_s;
+    return mqtt_monitoring_capture_interval_s;
   }
 }
 
 void set_mqtt_capture_interval_s(unsigned long interval) {
-  builtin_cfg.mqtt_monitoring_capture_interval_s = interval;
-}
-
-unsigned long mqtt_max_idle_time_s() {
-  return MQTT_MAX_IDLE_TIME_S;
+  mqtt_monitoring_capture_interval_s = interval;
 }
 
 unsigned long mqtt_upload_interval_s() {
@@ -304,6 +285,10 @@ unsigned long mqtt_upload_interval_s() {
   } else {
     return MQTT_MONITORING_UPLOAD_INTERVAL_S;
   }
+}
+
+unsigned long mqtt_max_unconnected_time_s() {
+  return 4*60*60;
 }
 
 const char* mqtt_endpoint_host() {

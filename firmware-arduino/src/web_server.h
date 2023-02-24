@@ -9,6 +9,11 @@
 
 // Create a server for HTTP connections on the port, and start listening, but don't start polling
 // for traffic yet.  There can be only one web server.
+//
+// NOTE that the web server is like the serial line: it requires the device to be on continuously.
+// This conflicts with the logic in the main loop wrt the "communication window" and spinning
+// up and down wifi.   That code has to be rewritten if we want to use the web server other than
+// in AP mode.
 void web_server_init(int port);
 
 // Start polling for traffic.

@@ -44,7 +44,7 @@
 //   Orchestration of everything, in main.cpp
 //   Compile-time configuration, in main.h
 //
-// TODO: The sensor data model is really more than one thing.  There's the model
+// The sensor data model is really more than one thing...  There's the model
 // for sensor readings, which really belongs with the device.  And then there's the
 // sensor metadata, which handle things like formatting and so on; these are part of
 // the application logic and UI, properly.  (Formatting for MQTT is part of the
@@ -223,26 +223,6 @@ void setup() {
   // We sometimes need random numbers, try to seed the stream.
   randomSeed(entropy());
 
-  // TODO: Not totally obvious that these should be here and not in loop(), following
-  // the setting up of the start messages.  In principle some of these init functions
-  // can themselves send messages to the main queue, or set up timers that cause
-  // such messages to be sent, and we don't want that.
-#ifdef SNAPPY_WIFI
-  wifi_init();
-#endif
-#ifdef TIMESERVER
-  timeserver_init();
-#endif
-#ifdef MQTT_UPLOAD
-  mqtt_init();
-#endif
-#ifdef SNAPPY_SERIAL_INPUT
-  serial_server_init();
-#endif
-  monitoring_init();
-  button_init();
-  slideshow_init();
-
   log("SnappySense running!\n");
 #if defined(SNAPPY_PIEZO)
 # if defined(STARTUP_SONG)
@@ -343,9 +323,23 @@ void loop() {
   // Start the main task.
   put_main_event(EvCode::START_CYCLE);
 
+  // Start concurrent tasks.
+#ifdef SNAPPY_WIFI
+  wifi_init();
+#endif
+#ifdef TIMESERVER
+  timeserver_init();
+#endif
+#ifdef MQTT_UPLOAD
+  mqtt_init();
+#endif
 #ifdef SNAPPY_SERIAL_INPUT
+  serial_server_init();
   serial_server_start();
 #endif
+  monitoring_init();
+  button_init();
+  slideshow_init();
 
   // Shut up the compiler
   (void)in_monitoring_window;
@@ -353,11 +347,6 @@ void loop() {
   // This is used to improve the UX.  It shortens the comm window the first time around and
   // skips the relaxation / sleep before we read the sensors.
   bool first_time = true;
-
-  // TODO: With a web server command task, the wifi is on all the time.  But this is basically
-  // nuts, it warms up the device and has very limited utility since there are almost no commands
-  // left, they are all development-oriented, and the developer has a serial line or terminal.
-  // So get rid of the web command task.
 
   for (;;) {
     SnappyEvent ev;
@@ -397,8 +386,6 @@ void loop() {
       case EvCode::COMM_START:
         // Open the communication window: bring up the WiFi client.  This will respond with either
         // COMM_WIFI_CLIENT_UP or COMM_WIFI_CLIENT_FAILED.
-        //
-        // TODO: This can take multiple retries and we don't want to block, so how do we deal with that?
         wifi_enable_start();
         in_wifi_window = true;
         break;
@@ -416,7 +403,6 @@ void loop() {
         break;
 
       case EvCode::COMM_WIFI_CLIENT_UP: {
-        // TODO: Start communicating
         in_communication_window = true;
 #ifdef TIMESERVER
         if (timeserver_have_work()) {
@@ -493,9 +479,6 @@ void loop() {
       case EvCode::SLEEP_START:
         // Figure out what mode we're in.  In monitoring mode, we turn off the screen and go
         // into low-power state.  In slideshow mode, we continue on as we were, for a while.
-        //
-        // FIXME: There is also sensor_poll_interval_s(), which is controlled from the server
-        // but currently not used at all.
         if (first_time) {
           put_main_event(EvCode::POST_SLEEP);
         } else {
@@ -548,27 +531,19 @@ void loop() {
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
         assert(new_data != nullptr);
 #ifdef MQTT_UPLOAD
-        // TODO: This should only happen "every so often", possibly not every time there's new
-        // data!  MQTT capture should have its own cadence, different from the needs of eg
-        // the slideshow.  In some sense, MONITOR_DATA should cache the data object in this
-        // function's local state and then there should be other timers driving the needs of
-        // the slideshow and the MQTT system.  But this logic can be hidden inside mqtt_add_data,
-        // too.
-        //
-        // FIXME: mqtt_capture_interval_s() is already a pref for this, just need to use it.
-        mqtt_add_data(new SnappySenseData(*new_data));   // Make a copy
+        mqtt_add_data(new SnappySenseData(*new_data));
 #endif
 #ifdef SNAPPY_COMMAND_PROCESSOR
         command_data = *new_data;
 #endif
-        // slideshow_new_data takes over the ownership of the new_data.  See TODO above.
+        // slideshow_new_data takes over the ownership of the new_data.
         slideshow_new_data(new_data);
         break;
       }
 
       case EvCode::BUTTON_PRESS:
         if (!is_powered_up) {
-          // TODO: Observe that the button wakes us up if we're asleep but does not trigger
+          // FIXME: Observe that the button wakes us up if we're asleep but does not trigger
           // any change to the state machine.  If the monitoring window is scheduled to
           // run 30min from now, that does not change.  That's fine if we're in monitoring
           // mode and we stay there, but if we advance to slideshow mode it's not what we
@@ -751,8 +726,8 @@ void loop() {
 // this mode.
 
 static void ap_mode_loop() {
-  // TODO: We could drain the event queue here as everything that's pending is bogus,
-  // but it seems safe for now to discard them in the loop below instead.
+  // We could drain the event queue here as everything that's pending is bogus,
+  // but it seems safe for now to discard unknow events in the loop below instead.
 
   // Create an access point and advertise it on the screen
   if (!webcfg_start_access_point()) {

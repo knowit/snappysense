@@ -8,7 +8,7 @@
 #include "main.h"
 
 #ifdef SNAPPY_PIEZO
-// TODO: Spec the syntax of the song
+// TODO: Spec the syntax of the song, or better, switch to compiled music.
 void play_song(const char* song);
 void stop_song();
 #endif

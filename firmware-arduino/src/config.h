@@ -27,7 +27,9 @@ void save_configuration();
 void show_configuration(Stream* out);
 
 // Evaluate the configuration script, returning the empty string on success and otherwise
-// an error message.
+// an error message.  `was_saved` is set to true if a `save` command was evaluated.
+// `lineno` has the offending line number and `msg` a very short (OLED-suitable) error
+// message in the case of error.
 String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno, String* msg);
 
 // A structure holding a preference value.
@@ -79,16 +81,6 @@ void set_device_enabled(bool flag);
 //
 // Sensors, monitoring, data capture
 
-// Frequency of sensor readings.
-//
-// Note reading frequency is independent of both web and mqtt upload frequencies.
-// Sensor readings draw little power and can be frequent, allowing for sampling
-// if necessary.
-//
-// FIXME: Currently not used.  Related to the sleep timers.  Is this really power management?
-
-unsigned long sensor_poll_interval_s();
-
 // How long does it take for sensors to warm up at the beginning of the monitoring window?
 unsigned long sensor_warmup_time_s();
 
@@ -138,9 +130,9 @@ unsigned long time_server_retry_s();
 #endif
 
 #ifdef MQTT_UPLOAD
-// How long will an idle connection (no outgoing or incoming messages) be
-// kept alive?
-unsigned long mqtt_max_idle_time_s();
+// The longest time we will let pass without connecting, whether there are data
+// to upload or not.
+unsigned long mqtt_max_unconnected_time_s();
 
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();

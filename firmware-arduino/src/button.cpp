@@ -11,7 +11,7 @@ static TimerHandle_t button_timer;
 
 void button_init() {
   button_timer = xTimerCreate("button",
-                              LONG_PRESS_MIN,
+                              pdMS_TO_TICKS(LONG_PRESS_MIN),
                               pdFALSE,
                               nullptr,
                               [](TimerHandle_t t) {
