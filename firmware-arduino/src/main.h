@@ -114,6 +114,10 @@
 # define SNAPPY_SERIAL_INPUT
 #endif
 
+#if defined(WEB_CONFIGURATION)
+# define SNAPPY_WEB_SERVER
+#endif
+
 #if !defined(HARDWARE_1_0_0)
 # define SNAPPY_PIEZO
 #endif
@@ -125,8 +129,8 @@
 #endif
 
 #if defined(TEST_POWER_MANAGEMENT) && (defined(DEVELOPMENT) || \
-                                       defined(SNAPPY_SERIAL_LINE) || \
-                                       defined(WEB_CONFIGURATION))
+                                       defined(SNAPPY_SERIAL_INPUT) || \
+                                       defined(SNAPPY_WEB_SERVER))
 # error "Power management test won't work when the device is mostly busy"
 #endif
 
@@ -200,10 +204,10 @@ enum class EvCode {
   BUTTON_UP,
 
   // Serial listener task state machine (timer-driven)
-  SERIAL_POLL,
+  SERIAL_SERVER_POLL,
 
   // Web listener task state machine (timer-driven)
-  WEB_POLL,
+  WEB_SERVER_POLL,
 };
 
 struct SnappyEvent {

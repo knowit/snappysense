@@ -97,7 +97,7 @@ bool mqtt_have_work() {
   // Connect at most once per two hours if there's stuff to upload; meanwhile
   // we keep it in the queue.
   //
-  // TODO: This should be a config setting
+  // TODO: This should be a config setting, mqtt_upload_interval_s()
   if (!mqtt_queue.is_empty() && delta >= 60*60) {
     return true;
   }
@@ -131,6 +131,8 @@ void mqtt_start() {
 }
 
 void mqtt_stop() {
+  // TODO: It's possible for stop to be called without start having been called,
+  // do we need anything here?
   mqtt_client.stop();
   mqtt_state = MqttState::STOPPED;
 }

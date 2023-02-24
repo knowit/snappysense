@@ -15,13 +15,6 @@
 
 String get_word(const String& line, int n, bool* flag = nullptr);
 
-// Reads nonempty lines terminated by CR, LF, or CRLF, but note there's no line editing
-// unless the front end (terminal, whatever) implements it.
-//
-// Control characters are accepted but not usually what you want.
-
-String blocking_read_nonempty_line(Stream* io);
-
 // Format stuff into a String.
 
 String fmt(const char* format, ...) __attribute__ ((format (printf, 1, 2)));

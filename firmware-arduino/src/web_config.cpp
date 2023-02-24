@@ -244,5 +244,4 @@ void webcfg_failed_request(Stream& client, const String& request) {
   log("Web server: Incomplete request [%s]\n", request.c_str());
 }
 
-
 #endif // WEB_CONFIGURATION

@@ -3,7 +3,7 @@
 #include "web_server.h"
 #include "device.h"
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEB_SERVER
 
 #include "command.h"
 #include "config.h"
@@ -24,26 +24,21 @@ enum class RequestParseState {
   CRLFCRLF,
 };
 
-// One request handler object for each connection created to a server.
+// One request handler object for each connection created to the server,
+// this packages a WiFiClient with input parsing state and some bookkeeping.
 
-class WebRequestHandler {
-public:
-  // These fields are PRIVATE to the web server framework
-
-  // List of clients attached to some server
-  WebRequestHandler* next = nullptr;
-
-  // Input parsing state
-  RequestParseState state = RequestParseState::TEXT;
+struct WebRequestHandler {
+  WebRequestHandler(WiFiClient&& client) : client(std::move(client)) {}
+  ~WebRequestHandler() {}
 
   // The WiFi client for this web client
   WiFiClient client;
 
-public:
-  // These properties and methods are for the client.
+  // List of clients attached to the unique server
+  WebRequestHandler* next = nullptr;
 
-  WebRequestHandler(WiFiClient&& client) : client(std::move(client)) {}
-  ~WebRequestHandler() {}
+  // Input parsing state for this client
+  RequestParseState state = RequestParseState::TEXT;
 
   // This is the request that has been collected for processing.
   String request;
@@ -51,21 +46,32 @@ public:
   // process_request() and failed_request() set `dead` to true when the client is done.
   bool dead = false;
 
-  //
+  // set to true once the request has been dispatched to the main thread and we
+  // should no longer be listening
   bool complete = false;
 };
 
-// This holds an active server and a list of its clients.
+static WebRequestHandler* request_handlers;
+static WiFiServer* web_server;
+static TimerHandle_t web_timer;
 
-struct WebServer {
-  WebRequestHandler* request_handlers = nullptr;
-  WiFiServer server;
+void web_server_init(int port) {
+  if (web_server) {
+    panic("Multiple web servers");
+  }
+  web_timer = xTimerCreate("web", pdMS_TO_TICKS(1000), pdTRUE, nullptr,
+                           [](TimerHandle_t){ put_main_event(EvCode::WEB_SERVER_POLL); });
+  web_server = new WiFiServer(port);
+  web_server->begin();
+}
 
-  WebServer(int port) : server(port) {}
-  virtual ~WebServer() {}
-};
+void web_server_start() {
+  xTimerStart(web_timer, portMAX_DELAY);
+}
 
-static WebServer* web_server;
+void web_server_stop() {
+  xTimerStop(web_timer, portMAX_DELAY);
+}
 
 // Parse the input until it is terminated.  If the input was complete, invoke the processing
 // function to handle it.  If the input was incomplete and there isn't any more, invoke the
@@ -135,44 +141,34 @@ request_completed:
   }
 }
 
-bool web_start(int port) {
-  if (web_server) {
-    panic("Multiple web servers");
-  }
-  web_server = new WebServer(port);
-  web_server->server.begin();
-  log("Web server: listening on port %d\n", port);
-  return true;
-}
-
-void web_poll() {
+void web_server_poll() {
   if (!web_server) {
     return;
   }
 
   // Listen for incoming clients
   for (;;) {
-    WiFiClient client = web_server->server.available();
+    WiFiClient client = web_server->available();
     if (!client) {
       break;
     }
     log("Web server: Incoming request\n");
     WebRequestHandler* rh = new WebRequestHandler(std::move(client));
-    rh->next = web_server->request_handlers;
-    web_server->request_handlers = rh;
+    rh->next = request_handlers;
+    request_handlers = rh;
   }
 
   // Obtain traffic and respond to requests.  I guess in principle this should
   // be two loops, where the outer loop runs as long as some work has been
   // performed, but it doesn't seem important.
-  for ( WebRequestHandler* rh = web_server->request_handlers; rh != nullptr; rh = rh->next ) {
+  for ( WebRequestHandler* rh = request_handlers; rh != nullptr; rh = rh->next ) {
     if (!rh->complete && !rh->dead) {
       poll(rh);
     }
   }
 
   // Garbage collect the clients
-  WebRequestHandler* curr = web_server->request_handlers;
+  WebRequestHandler* curr = request_handlers;
   WebRequestHandler* prev = nullptr;
   while (curr != nullptr) {
     if (curr->dead) {
@@ -186,7 +182,7 @@ void web_poll() {
       curr->client.stop();
       WebRequestHandler* next = curr->next;
       if (prev == nullptr) {
-        web_server->request_handlers = next;
+        request_handlers = next;
       } else {
         prev->next = next;
       }
@@ -199,9 +195,9 @@ void web_poll() {
   }
 }
 
-void web_request_completed(WebRequest* r) {
+void web_server_request_completed(WebRequest* r) {
   log("Reaping client\n");
-  for ( WebRequestHandler* rh = web_server->request_handlers; rh != nullptr; rh = rh->next ) {
+  for ( WebRequestHandler* rh = request_handlers; rh != nullptr; rh = rh->next ) {
     if (&rh->client == &r->client) {
       rh->dead = true;
       break;
@@ -210,4 +206,4 @@ void web_request_completed(WebRequest* r) {
   delete r;
 }
 
-#endif // WEB_CONFIGURATION
+#endif // SNAPPY_WEB_SERVER

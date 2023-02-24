@@ -1,121 +1,20 @@
-// SnappySense configuration manager.  Anything that's a parameter that could sensibly
-// be customized at runtime or stored in a configuration file is handled here, and
-// many compile-time parameters besides.
+// SnappySense configuration manager.
+//
+// Anything that's a parameter that could sensibly be customized at runtime or stored
+// in a configuration file is handled here, and many compile-time parameters besides.
 
 #ifndef config_h_included
 #define config_h_included
 
 #include "main.h"
-#include "serial_input.h"
 #include "util.h"
 
-// Frequency of sensor readings.
+/////////////////////////////////////////////////////////////////////////////////
 //
-// Note reading frequency is independent of both web and mqtt upload frequencies.
-// Sensor readings draw little power and can be frequent, allowing for sampling
-// if necessary.
-unsigned long sensor_poll_interval_s();
-
-// How long does it take for sensors to warm up at the beginning of the monitoring window?
-unsigned long sensor_warmup_time_s();
-
-// How long is the monitoring window overall (including warmup)?
-unsigned long monitoring_window_s();
-
-// The name of the location at which this device is placed.
-const char* location_name();
-void set_location_name(const char* name);
-
-// WiFi access point SSID - up to three of them, n=1, 2, or 3.  If the ssid is
-// not defined then the return value will be an empty string, not nullptr.
-const char* access_point_ssid(int n);
-void set_access_point_ssid(int n, const char* val);
-
-// WiFi access point password.  Again n=1, 2, or 3.  If the password is empty
-// then the return value is an empty string, not nullptr.
-const char* access_point_password(int n);
-void set_access_point_password(int n, const char* val);
-
-// The device can be disabled and enabled by an mqtt message or during provisioning.
-// If it is disabled is is still operable (responds to mqtt messages, for one thing)
-// but does not read sensors or report their values.
-bool device_enabled();
-void set_device_enabled(bool flag);
-
-#ifdef TIMESERVER
-// Host name of remote web server used for web upload and time service.
-const char* time_server_host();
-
-// Port of remote web server used for web upload and time service.
-int time_server_port();
-
-// Interval between connection attempts to time server in the communication window.
-unsigned long time_server_retry_s();
-#endif
-
-#ifdef MQTT_UPLOAD
-// How often readings are captured and enqueued for mqtt upload.
-//
-// Note this is independent of sensor reading frequency; fewer readings
-// may be captured for upload than are performed.
-unsigned long mqtt_capture_interval_s();
-void set_mqtt_capture_interval_s(unsigned long interval);
-
-// How long will an idle connection (no outgoing or incoming messages) be
-// kept alive?
-unsigned long mqtt_max_idle_time_s();
-
-// How long do we sleep between every time we bring up the radio for
-// mqtt upload/download?
-//
-// Note this is independent of web upload, which is OK - web upload
-// is for development and experimentation, mqtt upload for production.
-unsigned long mqtt_upload_interval_s();
-
-// Host name and port to contact for MQTT traffic
-const char* mqtt_endpoint_host();
-int mqtt_endpoint_port();
-
-// The device identifier required by the remote service
-const char* mqtt_device_id();
-
-// The name of the device class to which this device belongs
-const char* mqtt_device_class();
-
-// Keys and certificates
-const char* mqtt_root_ca_cert();
-const char* mqtt_device_cert();
-const char* mqtt_device_private_key();
-#endif
-
-unsigned long slideshow_update_interval_s();
-
-// How long to wait in the sleep window in monitoring mode
-unsigned long monitoring_mode_sleep_s();
-
-// How long to wait in the sleep window in slideshow mode
-unsigned long slideshow_mode_sleep_s();
-
-#ifdef SNAPPY_SERIAL_INPUT
-// How long to wait between looking for input on the serial channel.
-// This is typically a pretty low value.
-//
-// Note, SNAPPY_SERIAL_LINE services will keep the device continually on.
-unsigned long serial_input_poll_interval_s();
-#endif
-
-#ifdef WEB_CONFIGURATION
-const char* web_config_access_point();
-#endif
-
-#ifdef SNAPPY_WIFI
-unsigned long wifi_retry_ms();
-unsigned long comm_activity_timeout_s();
-unsigned long comm_relaxation_timeout_s();
-#endif
+// Configuration management
 
 // Reset the configuration (in memory) to "factory defaults", which is either almost nothing
-// in release mode or the developer settings in DEVELOPER mode.
+// in release mode or the developer settings in DEVELOPMENT mode.
 void reset_configuration();
 
 // Read configuration from some nonvolatile source, or revert to a default.
@@ -135,7 +34,6 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
 //
 // By and large no strings will have leading or trailing whitespace unless they were
 // defined by quoted strings that include such whitespace.
-
 struct Pref {
   enum Flags {
     Str = 1,     // str_value has value
@@ -156,13 +54,143 @@ struct Pref {
   bool is_passwd() { return flags & Passwd; }
 };
 
-// A global table of current preferences.  The last entry is a sentinel with
-// long_key==nullptr.
-
-extern Pref prefs[];
-
 // Returns the pref if it is found, otherwise nullptr.
-
 Pref* get_pref(const char* name);
+
+/////////////////////////////////////////////////////////////////////////////////
+//
+// Device ID and status
+
+// The name of the location at which this device is placed.
+const char* location_name();
+
+// Update the location in RAM, but do not save the change in NVRAM.
+void set_location_name(const char* name);
+
+// The device can be disabled and enabled by an mqtt message or during provisioning.
+// If it is disabled is is still operable (responds to mqtt messages, for one thing)
+// but does not read sensors or report their values.
+bool device_enabled();
+
+// Update the flag in RAM, but do not save the change in NVRAM.
+void set_device_enabled(bool flag);
+
+/////////////////////////////////////////////////////////////////////////////////
+//
+// Sensors, monitoring, data capture
+
+// Frequency of sensor readings.
+//
+// Note reading frequency is independent of both web and mqtt upload frequencies.
+// Sensor readings draw little power and can be frequent, allowing for sampling
+// if necessary.
+//
+// FIXME: Currently not used.  Related to the sleep timers.  Is this really power management?
+
+unsigned long sensor_poll_interval_s();
+
+// How long does it take for sensors to warm up at the beginning of the monitoring window?
+unsigned long sensor_warmup_time_s();
+
+// How long is the monitoring window overall (including warmup)?
+unsigned long monitoring_window_s();
+
+#ifdef MQTT_UPLOAD
+// How often readings are captured and enqueued for mqtt upload.
+//
+// Note this is independent of sensor reading frequency; fewer readings
+// may be captured for upload than are performed.
+unsigned long mqtt_capture_interval_s();
+void set_mqtt_capture_interval_s(unsigned long interval);
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////
+//
+// Networks
+
+#ifdef SNAPPY_WIFI
+// How long to wait between retries for connecting to an access point.
+unsigned long wifi_retry_ms();
+
+// How long to keep the wifi up after last recorded activity.
+unsigned long comm_activity_timeout_s();
+#endif
+
+// WiFi access point SSID - up to three of them, n=1, 2, or 3.  If the ssid is
+// not defined then the return value will be an empty string, not nullptr.
+const char* access_point_ssid(int n);
+void set_access_point_ssid(int n, const char* val);
+
+// WiFi access point password.  Again n=1, 2, or 3.  If the password is empty
+// then the return value is an empty string, not nullptr.
+const char* access_point_password(int n);
+void set_access_point_password(int n, const char* val);
+
+#ifdef TIMESERVER
+// Host name of remote web server used for web upload and time service.
+const char* time_server_host();
+
+// Port of remote web server used for web upload and time service.
+int time_server_port();
+
+// Interval between connection attempts to time server in the communication window.
+unsigned long time_server_retry_s();
+#endif
+
+#ifdef MQTT_UPLOAD
+// How long will an idle connection (no outgoing or incoming messages) be
+// kept alive?
+unsigned long mqtt_max_idle_time_s();
+
+// Host name and port to contact for MQTT traffic
+const char* mqtt_endpoint_host();
+int mqtt_endpoint_port();
+
+// The device identifier required by the remote service
+const char* mqtt_device_id();
+
+// The name of the device class to which this device belongs
+const char* mqtt_device_class();
+
+// Keys and certificates
+const char* mqtt_root_ca_cert();
+const char* mqtt_device_cert();
+const char* mqtt_device_private_key();
+#endif
+
+#ifdef WEB_CONFIGURATION
+// Name of the access point used for web configuration (AP mode).
+const char* web_config_access_point();
+#endif
+
+/////////////////////////////////////////////////////////////////////////////////
+//
+// Power management, broadly
+
+unsigned long slideshow_update_interval_s();
+
+// How long to wait in the sleep window in monitoring mode
+unsigned long monitoring_mode_sleep_s();
+
+// How long to wait in the sleep window in slideshow mode
+unsigned long slideshow_mode_sleep_s();
+
+#ifdef SNAPPY_WIFI
+// How long to wait after taking the wifi down before doing anything else.
+unsigned long comm_relaxation_timeout_s();
+#endif
+
+#ifdef SNAPPY_SERIAL_INPUT
+// How long to wait between looking for input on the serial channel.
+// This is typically a pretty low value.
+//
+// Note, SNAPPY_SERIAL_INPUT services will keep the device continually on.
+unsigned long serial_server_poll_interval_ms();
+#endif
+
+#ifdef MQTT_UPLOAD
+// Frequency of MQTT uploads, messages can be cached meanwhile.
+unsigned long mqtt_upload_interval_s();
+#endif
 
 #endif // !config_h_included

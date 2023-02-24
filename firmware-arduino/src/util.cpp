@@ -61,23 +61,6 @@ String get_word(const String& cmd, int n, bool* flag) {
   return String();
 }
 
-String blocking_read_nonempty_line(Stream* input) {
-  String buf;
-  for (;;) {
-    int ch = input->read();
-    if (ch <= 0 || ch > 127) {
-      continue;
-    }
-    if (ch == '\r' || ch == '\n') {
-      if (buf.isEmpty()) {
-        continue;
-      }
-      return buf;
-    }
-    buf += (char)ch;
-  }
-}
-
 String fmt(const char* format, ...) {
   char buf[1024];
   va_list args;

@@ -2,16 +2,66 @@
 
 #include "slideshow.h"
 
+#include "config.h"
 #include "device.h"
 #include "sensor.h"
 #include "util.h"
 
-// -1 means the splash screen; values 0..whatever refer to the entries
-// in the SnappyMetaData array.
+// -1 means the splash screen; values 0..whatever refer to the entries in the SnappyMetaData array.
 static int next_view = -1;
 static SnappySenseData* current_data;
 static SnappySenseData* next_data;
 static String* current_message;
+static TimerHandle_t slideshow_timer;
+static bool is_running;
+
+static void update_view();
+
+// The timer is reloaded after every display update rather than running constantly.
+// The main thing this does is to ensure that display updates are never squished
+// together - they are spaced at least as far apart as the update interval setting
+// says they should be.
+
+void slideshow_init() {
+  slideshow_timer = xTimerCreate("slideshow",
+                                 1,       // Irrelevant; this is changed every time we reset the timer
+                                 pdFALSE,
+                                 nullptr,
+                                 [](TimerHandle_t t) {
+                                   put_main_event(EvCode::SLIDESHOW_TICK);
+                                 });
+}
+
+static void advance() {
+  xTimerChangePeriod(slideshow_timer, pdMS_TO_TICKS(slideshow_update_interval_s() * 1000), portMAX_DELAY);
+}
+
+void slideshow_start() {
+  if (!is_running) {
+    put_main_event(EvCode::SLIDESHOW_TICK);
+    is_running = true;
+  }
+}
+
+void slideshow_stop() {
+  if (is_running) {
+    is_running = false;
+    xTimerStop(slideshow_timer, portMAX_DELAY);
+  }
+}
+
+void slideshow_show_message_once(String* msg) {
+  assert(msg != nullptr);
+  delete current_message;  // Overwrite another one that wasn't shown yet (for now)
+  current_message = msg;
+  if (is_running) {
+    put_main_event(EvCode::SLIDESHOW_TICK);
+  }
+}
+
+void slideshow_reset() {
+  next_view = -1;
+}
 
 void slideshow_new_data(SnappySenseData* new_data) {
   assert(new_data != nullptr);
@@ -21,21 +71,14 @@ void slideshow_new_data(SnappySenseData* new_data) {
   //log("%s\n", format_readings_as_json(*new_data).c_str());
 }
 
-// Show the message immediately, for a normal time slot (or until a new message arrives)
-// The main loop will reset the slideshow timer after calling this fn, taking care
-// of display.
-
-void slideshow_show_message_once(String* msg) {
-  assert(msg != nullptr);
-  delete current_message;  // Overwrite another one that wasn't shown yet (for now)
-  current_message = msg;
-}
-
-void slideshow_reset() {
-  next_view = -1;
-}
-
 void slideshow_next() {
+  if (is_running) {
+    update_view();
+    advance();
+  }
+}
+
+static void update_view() {
 again:
   if (current_message != nullptr) {
     // Message pending.  Do not advance the pointer; deleting the message will

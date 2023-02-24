@@ -5,19 +5,25 @@
 
 #include "main.h"
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEB_SERVER
 
-// Start listening for HTTP connections on the port.  There can be only one active web server,
-// and once set up it actively polls on the incoming connection.
-bool web_start(int port);
+// Create a server for HTTP connections on the port, and start listening, but don't start polling
+// for traffic yet.  There can be only one web server.
+void web_server_init(int port);
+
+// Start polling for traffic.
+void web_server_start();
+
+// Stop polling for traffic.
+void web_server_stop();
 
 // The request `r` was sent from the server to the main thread for processing.  This is a callback
 // from the main thread that `r` has been processed and can be deleted.
-void web_request_completed(WebRequest* r);
+void web_server_request_completed(WebRequest* r);
 
 // Perform web polling work.
-void web_poll();
+void web_server_poll();
 
-#endif // WEB_CONFIGURATION
+#endif // SNAPPY_WEB_SERVER
 
 #endif // web_server_h_included

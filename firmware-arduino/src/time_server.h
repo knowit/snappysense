@@ -21,7 +21,8 @@ void timeserver_start();
 // Called from the main loop in response to COMM_TIMESERVER_WORK messages.
 void timeserver_work();
 
-// Stop trying to connect to the time server, if that's still going on.
+// Stop trying to connect to the time server, if that's still going on.  Can be called
+// without start having been called first.
 void timeserver_stop();
 
 #endif

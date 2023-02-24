@@ -299,29 +299,16 @@ String format_readings_as_json(const SnappySenseData& data) {
   return buf;
 }
 
-enum class MonitorState {
-  OFF,
-  WARMUP,
-  RUNNING,
-};
-
-static TimerHandle_t pir_timer;     // Also used for warmup
+static TimerHandle_t warmup_timer;
+static TimerHandle_t pir_timer;
 static TimerHandle_t mems_timer;
-static unsigned pir_ticks;
-static MonitorState monitor_state = MonitorState::OFF;
+static bool is_running;
 
-static uint32_t PIR_TIMER = 1;
-static uint32_t MEMS_TIMER = 2;
-
-void monitoring_timer_tick(TimerHandle_t t) {
-  if (monitor_state != MonitorState::OFF) {
-    if (t == pir_timer) {
-      put_main_event(EvCode::MONITOR_TICK, PIR_TIMER);
-    } else {
-      put_main_event(EvCode::MONITOR_TICK, MEMS_TIMER);
-    }
-  }
-}
+enum {
+  GO_TO_WORK,
+  SAMPLE_PIR,
+  SAMPLE_MEMS
+};
 
 // We have two timers.
 //
@@ -334,15 +321,35 @@ void monitoring_timer_tick(TimerHandle_t t) {
 // sensor data, and it will invalidate some current sensor data.
 
 void monitoring_init() {
-  pir_timer = xTimerCreate("pir", 1, pdFALSE, nullptr, monitoring_timer_tick);
-  mems_timer = xTimerCreate("mems", 1, pdFALSE, nullptr, monitoring_timer_tick);
+  warmup_timer = xTimerCreate("warmup",
+                              pdMS_TO_TICKS(sensor_warmup_time_s() * 1000),
+                              pdFALSE,
+                              nullptr,
+                              [](TimerHandle_t t) {
+                                put_main_event(EvCode::MONITOR_TICK, GO_TO_WORK);
+                              });
+  pir_timer = xTimerCreate("pir",
+                           pdMS_TO_TICKS(1000),
+                           pdTRUE,
+                           nullptr,
+                           [](TimerHandle_t t) {
+                             put_main_event(EvCode::MONITOR_TICK, SAMPLE_PIR);
+                           });
+  mems_timer = xTimerCreate("mems",
+                            pdMS_TO_TICKS(10),
+                            pdTRUE,
+                            nullptr,
+                            [](TimerHandle_t t) {
+                             put_main_event(EvCode::MONITOR_TICK, SAMPLE_MEMS);
+                            });
 }
 
 void monitoring_start() {
-  // Wait a little to let sensors warm up.
-  monitor_state = MonitorState::WARMUP;
-  assert(monitoring_window_s() > sensor_warmup_time_s());
-  xTimerChangePeriod(pir_timer, pdMS_TO_TICKS(sensor_warmup_time_s() * 1000), portMAX_DELAY);
+  if (!is_running) {
+    assert(monitoring_window_s() > sensor_warmup_time_s());
+    is_running = true;
+    xTimerStart(warmup_timer, portMAX_DELAY);
+  }
 }
 
 static void monitoring_report() {
@@ -352,41 +359,29 @@ static void monitoring_report() {
 }
 
 void monitoring_tick(uint32_t which) {
-  if (monitor_state == MonitorState::OFF) {
-    return;
-  }
-  if (monitor_state == MonitorState::WARMUP) {
-    // Initial tick after warmup.  Clear samplers, perform first sample, and
-    // setup timers.
-    assert(which == PIR_TIMER);
-    reset_pir_and_mems();
-    sample_pir();
-    sample_mems();
-    pir_ticks = max(1UL, monitoring_window_s() - sensor_warmup_time_s());
-    xTimerChangePeriod(pir_timer, pdMS_TO_TICKS(1000), portMAX_DELAY);
-    xTimerChangePeriod(mems_timer, pdMS_TO_TICKS(10), portMAX_DELAY);
-    monitor_state = MonitorState::RUNNING;
-    return;
-  }
-
-  assert(monitor_state == MonitorState::RUNNING);
-  if (which == PIR_TIMER) {
-    sample_pir();
-    if (--pir_ticks > 0) {
-      xTimerChangePeriod(pir_timer, pdMS_TO_TICKS(1000), portMAX_DELAY);
-    } else {
-      put_main_event(EvCode::MONITOR_STOP);
+  if (is_running) {
+    switch (which) {
+      case GO_TO_WORK:
+        reset_pir_and_mems();
+        sample_pir();
+        sample_mems();
+        xTimerStart(pir_timer, portMAX_DELAY);
+        xTimerStart(mems_timer, portMAX_DELAY);
+        break;
+      case SAMPLE_PIR:
+        sample_pir();
+        break;
+      case SAMPLE_MEMS:
+        sample_mems();
+        break;
     }
-  } else {
-    sample_mems();
-    xTimerChangePeriod(mems_timer, pdMS_TO_TICKS(10), portMAX_DELAY);
   }
 }
 
 void monitoring_stop() {
-  if (monitor_state != MonitorState::OFF) {
-    // Somebody asked to stop before the timer expired
-    monitor_state = MonitorState::OFF;
+  if (is_running) {
+    is_running = false;
+    xTimerStop(warmup_timer, portMAX_DELAY);
     xTimerStop(pir_timer, portMAX_DELAY);
     xTimerStop(mems_timer, portMAX_DELAY);
     monitoring_report();

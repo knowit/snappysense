@@ -63,7 +63,7 @@ static Pref factory_prefs[] = {
 // are used for anything sensible.  The reason is that that operation copies in values
 // from `factory_prefs`.
 
-Pref prefs[sizeof(factory_prefs)/sizeof(Pref)];
+static Pref prefs[sizeof(factory_prefs)/sizeof(Pref)];
 
 void reset_configuration() {
   Pref *fp = factory_prefs;
@@ -145,7 +145,7 @@ static const unsigned long MQTT_MAX_IDLE_TIME_S = 30;
 static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
 
 #ifdef SNAPPY_SERIAL_INPUT
-static const unsigned long SERIAL_INPUT_POLL_INTERVAL_S = 1;
+static const unsigned long SERIAL_INPUT_POLL_INTERVAL_MS = 1000;
 #endif
 
 #ifdef SNAPPY_WIFI
@@ -340,8 +340,8 @@ unsigned long slideshow_update_interval_s() {
 }
 
 #ifdef SNAPPY_SERIAL_INPUT
-unsigned long serial_input_poll_interval_s() {
-  return SERIAL_INPUT_POLL_INTERVAL_S;
+unsigned long serial_server_poll_interval_ms() {
+  return SERIAL_INPUT_POLL_INTERVAL_MS;
 }
 #endif
 
