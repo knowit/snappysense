@@ -105,242 +105,6 @@ void set_string_pref(const char* name, const char* value) {
   get_pref(name)->str_value = value;
 }
 
-// Non-configurable preferences
-
-#define MINUTE(s) ((s)*60)
-#define HOUR(s) ((s)*60*60)
-
-static const unsigned long SENSOR_POLL_SLIDESHOW_INTERVAL_S = 15;
-#if defined(DEVELOPMENT)
-static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = 15;
-#else
-# ifdef TEST_POWER_MANAGEMENT
-static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = MINUTE(5);
-# else
-static const unsigned long SENSOR_POLL_MONITORING_INTERVAL_S = HOUR(1);
-# endif
-#endif
-
-
-#ifdef MQTT_UPLOAD
-# if defined(DEVELOPMENT)
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(2);
-static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = MINUTE(2);
-# else
-#  ifdef TEST_POWER_MANAGEMENT
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(5);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(5);
-#  else
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
-#  endif
-static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
-static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
-# endif
-#endif
-
-static const unsigned long SLIDESHOW_UPDATE_INTERVAL_S = 2;
-
-#ifdef SNAPPY_SERIAL_INPUT
-static const unsigned long SERIAL_INPUT_POLL_INTERVAL_MS = 1000;
-#endif
-
-#ifdef SNAPPY_WIFI
-// Comm window remains open 1min after last activity
-unsigned long comm_activity_timeout_s() {
-  return 60;
-}
-
-// Let the slideshow run 1min after comm window closes
-unsigned long comm_relaxation_timeout_s() {
-#ifdef DEVELOPMENT
-  return 30;
-#else
-  return 60;
-#endif
-}
-#endif
-
-// How long to wait in the sleep window in monitoring mode
-unsigned long monitoring_mode_sleep_s() {
-#ifdef DEVELOPMENT
-  return 3*60;
-#else
-  return 60*60;
-#endif
-}
-// How long to wait in the sleep window in slideshow mode
-unsigned long slideshow_mode_sleep_s() {
-#ifdef DEVELOPMENT
-  return 1*60;
-#else
-  return 5*60;
-#endif
-}
-
-#ifdef MQTT_UPLOAD
-unsigned long mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S;
-#endif
-
-// Preference accessors
-
-// The monitoring window *must* be longer than the value returned here.
-unsigned long sensor_warmup_time_s() {
-  if (slideshow_mode) {
-    return 1;  // We're powered up, but zero is an invalid value
-  } else {
-    return 15; // Wild guess
-  }
-}
-
-unsigned long monitoring_window_s() {
-  // Constraints:
-  // - longer than the warmup time
-  // - long enough to get good readings from the PIR and MEMS
-  return 30;
-}
-
-bool device_enabled() {
-  return get_int_pref("enabled");
-}
-
-void set_device_enabled(bool flag) {
-  set_int_pref("enabled", flag);
-}
-
-const char* location_name() {
-  return get_string_pref("location");
-}
-
-void set_location_name(const char* name) {
-  set_string_pref("location", name);
-}
-
-const char* access_point_ssid(int n) {
-  switch (n) {
-    case 1: return get_string_pref("ssid1");
-    case 2: return get_string_pref("ssid2");
-    case 3: return get_string_pref("ssid3");
-    default: return "";
-  }
-}
-
-void set_access_point_ssid(int n, const char* value) {
-  switch (n) {
-    case 1: set_string_pref("ssid1", value); break;
-    case 2: set_string_pref("ssid2", value); break;
-    case 3: set_string_pref("ssid3", value); break;
-  }
-}
-
-const char* access_point_password(int n) {
-  switch (n) {
-    case 1: return get_string_pref("password1");
-    case 2: return get_string_pref("password2");
-    case 3: return get_string_pref("password3");
-    default: return "";
-  }
-}
-
-void set_access_point_password(int n, const char* value) {
-  switch (n) {
-    case 1: set_string_pref("password1", value); break;
-    case 2: set_string_pref("password2", value); break;
-    case 3: set_string_pref("password3", value); break;
-  }
-}
-
-#ifdef TIMESERVER
-const char* time_server_host() {
-  return get_string_pref("time-server-host");
-}
-
-int time_server_port() {
-  return get_int_pref("time-server-port");
-}
-
-unsigned long time_server_retry_s() {
-  return 10;
-}
-#endif
-
-#ifdef MQTT_UPLOAD
-unsigned long mqtt_capture_interval_s() {
-  if (slideshow_mode) {
-    return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
-  } else {
-    return mqtt_monitoring_capture_interval_s;
-  }
-}
-
-void set_mqtt_capture_interval_s(unsigned long interval) {
-  mqtt_monitoring_capture_interval_s = interval;
-}
-
-unsigned long mqtt_upload_interval_s() {
-  if (slideshow_mode) {
-    return MQTT_SLIDESHOW_UPLOAD_INTERVAL_S;
-  } else {
-    return MQTT_MONITORING_UPLOAD_INTERVAL_S;
-  }
-}
-
-unsigned long mqtt_max_unconnected_time_s() {
-  return 4*60*60;
-}
-
-const char* mqtt_endpoint_host() {
-  return get_string_pref("aws-iot-endpoint-host");
-}
-
-int mqtt_endpoint_port() {
-  return get_int_pref("aws-iot-endpoint-port");
-}
-
-const char* mqtt_device_id() {
-  return get_string_pref("aws-iot-id");
-}
-
-const char* mqtt_device_class() {
-  return get_string_pref("aws-iot-class");
-}
-
-const char* mqtt_root_ca_cert() {
-  return get_string_pref("aws-iot-root-ca");
-}
-
-const char* mqtt_device_cert() {
-  return get_string_pref("aws-iot-device-cert");
-}
-
-const char* mqtt_device_private_key() {
-  return get_string_pref("aws-iot-private-key");
-}
-#endif
-
-unsigned long slideshow_update_interval_s() {
-  return SLIDESHOW_UPDATE_INTERVAL_S;
-}
-
-#ifdef SNAPPY_SERIAL_INPUT
-unsigned long serial_server_poll_interval_ms() {
-  return SERIAL_INPUT_POLL_INTERVAL_MS;
-}
-#endif
-
-#ifdef WEB_CONFIGURATION
-const char* web_config_access_point() {
-  return get_string_pref("web-config-access-point");
-}
-#endif
-
-#ifdef SNAPPY_WIFI
-unsigned long wifi_retry_ms() {
-  return 500;
-}
-#endif
 
 // Provisioning and run-time configuration.
 
@@ -409,9 +173,8 @@ void show_configuration(Stream* out) {
   }
 }
 
-
-// Configuration file format version, see the 'config' statement help text further down.
-// This is intended to be used in a proper "semantic versioning" way.
+// Configuration file format version, see CONFIG.md.   This is intended to be used in a
+// proper "semantic versioning" way.
 //
 // Version 1.1:
 //   Added web-config-access-point
@@ -543,3 +306,228 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
   /*NOTREACHED*/
   panic("Unreachable state in evaluate_config");
 }
+
+// Non-configurable preferences.
+//
+// TODO: This is a bit of a mess; some are defined at the top and some are defined in-line.
+
+#define MINUTE(s) ((s)*60)
+#define HOUR(s) ((s)*60*60)
+
+#ifdef MQTT_UPLOAD
+# if defined(DEVELOPMENT)
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(2);
+static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = MINUTE(2);
+# else
+#  ifdef TEST_POWER_MANAGEMENT
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(5);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(5);
+#  else
+static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
+#  endif
+static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
+static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
+# endif
+#endif
+
+#ifdef SNAPPY_WIFI
+// Comm window remains open 1min after last activity
+unsigned long comm_activity_timeout_s() {
+  return 60;
+}
+
+// Let the slideshow run 1min after comm window closes
+unsigned long comm_relaxation_timeout_s() {
+#ifdef DEVELOPMENT
+  return 30;
+#else
+  return 60;
+#endif
+}
+#endif
+
+// How long to wait in the sleep window in monitoring mode
+unsigned long monitoring_mode_sleep_s() {
+#ifdef DEVELOPMENT
+  return MINUTE(3);
+#else
+  return HOUR(1);
+#endif
+}
+// How long to wait in the sleep window in slideshow mode
+unsigned long slideshow_mode_sleep_s() {
+#ifdef DEVELOPMENT
+  return MINUTE(1);
+#else
+  return MINUTE(5);
+#endif
+}
+
+#ifdef SNAPPY_WIFI
+unsigned long wifi_retry_ms() {
+  return 500;
+}
+#endif
+
+#ifdef MQTT_UPLOAD
+unsigned long mqtt_upload_interval_s() {
+  if (slideshow_mode) {
+    return MQTT_SLIDESHOW_UPLOAD_INTERVAL_S;
+  } else {
+    return MQTT_MONITORING_UPLOAD_INTERVAL_S;
+  }
+}
+
+unsigned long mqtt_max_unconnected_time_s() {
+  return HOUR(4);
+}
+#endif
+
+// The monitoring window *must* be longer than the value returned here.
+unsigned long sensor_warmup_time_s() {
+  if (slideshow_mode) {
+    return 1;  // We're powered up, but zero is an invalid value
+  } else {
+    return 15; // Wild guess
+  }
+}
+
+unsigned long monitoring_window_s() {
+  // Constraints:
+  // - longer than the warmup time
+  // - long enough to get good readings from the PIR and MEMS after warmup
+  return 30;
+}
+
+#ifdef TIMESERVER
+unsigned long time_server_retry_s() {
+  return 10;
+}
+#endif
+
+unsigned long slideshow_update_interval_s() {
+  return 2;
+}
+
+#ifdef SNAPPY_SERIAL_INPUT
+unsigned long serial_server_poll_interval_ms() {
+  return 1000;
+}
+#endif
+
+// Preference accessors
+
+#ifdef MQTT_UPLOAD
+unsigned long mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S;
+#endif
+
+bool device_enabled() {
+  return get_int_pref("enabled");
+}
+
+void set_device_enabled(bool flag) {
+  set_int_pref("enabled", flag);
+}
+
+const char* location_name() {
+  return get_string_pref("location");
+}
+
+void set_location_name(const char* name) {
+  set_string_pref("location", name);
+}
+
+const char* access_point_ssid(int n) {
+  switch (n) {
+    case 1: return get_string_pref("ssid1");
+    case 2: return get_string_pref("ssid2");
+    case 3: return get_string_pref("ssid3");
+    default: return "";
+  }
+}
+
+void set_access_point_ssid(int n, const char* value) {
+  switch (n) {
+    case 1: set_string_pref("ssid1", value); break;
+    case 2: set_string_pref("ssid2", value); break;
+    case 3: set_string_pref("ssid3", value); break;
+  }
+}
+
+const char* access_point_password(int n) {
+  switch (n) {
+    case 1: return get_string_pref("password1");
+    case 2: return get_string_pref("password2");
+    case 3: return get_string_pref("password3");
+    default: return "";
+  }
+}
+
+void set_access_point_password(int n, const char* value) {
+  switch (n) {
+    case 1: set_string_pref("password1", value); break;
+    case 2: set_string_pref("password2", value); break;
+    case 3: set_string_pref("password3", value); break;
+  }
+}
+
+#ifdef TIMESERVER
+const char* time_server_host() {
+  return get_string_pref("time-server-host");
+}
+
+int time_server_port() {
+  return get_int_pref("time-server-port");
+}
+#endif
+
+#ifdef MQTT_UPLOAD
+unsigned long mqtt_capture_interval_s() {
+  if (slideshow_mode) {
+    return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
+  } else {
+    return mqtt_monitoring_capture_interval_s;
+  }
+}
+
+void set_mqtt_capture_interval_s(unsigned long interval) {
+  mqtt_monitoring_capture_interval_s = interval;
+}
+
+const char* mqtt_endpoint_host() {
+  return get_string_pref("aws-iot-endpoint-host");
+}
+
+int mqtt_endpoint_port() {
+  return get_int_pref("aws-iot-endpoint-port");
+}
+
+const char* mqtt_device_id() {
+  return get_string_pref("aws-iot-id");
+}
+
+const char* mqtt_device_class() {
+  return get_string_pref("aws-iot-class");
+}
+
+const char* mqtt_root_ca_cert() {
+  return get_string_pref("aws-iot-root-ca");
+}
+
+const char* mqtt_device_cert() {
+  return get_string_pref("aws-iot-device-cert");
+}
+
+const char* mqtt_device_private_key() {
+  return get_string_pref("aws-iot-private-key");
+}
+#endif
+
+#ifdef WEB_CONFIGURATION
+const char* web_config_access_point() {
+  return get_string_pref("web-config-access-point");
+}
+#endif
