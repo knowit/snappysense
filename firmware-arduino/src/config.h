@@ -77,6 +77,14 @@ bool device_enabled();
 // Update the flag in RAM, but do not save the change in NVRAM.
 void set_device_enabled(bool flag);
 
+#ifdef MQTT_UPLOAD
+// The device identifier required by the remote service
+const char* mqtt_device_id();
+
+// The name of the device class to which this device belongs
+const char* mqtt_device_class();
+#endif
+
 /////////////////////////////////////////////////////////////////////////////////
 //
 // Sensors, monitoring, data capture
@@ -130,19 +138,9 @@ unsigned long time_server_retry_s();
 #endif
 
 #ifdef MQTT_UPLOAD
-// The longest time we will let pass without connecting, whether there are data
-// to upload or not.
-unsigned long mqtt_max_unconnected_time_s();
-
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();
 int mqtt_endpoint_port();
-
-// The device identifier required by the remote service
-const char* mqtt_device_id();
-
-// The name of the device class to which this device belongs
-const char* mqtt_device_class();
 
 // Keys and certificates
 const char* mqtt_root_ca_cert();
@@ -173,14 +171,18 @@ unsigned long comm_relaxation_timeout_s();
 #endif
 
 #ifdef SNAPPY_SERIAL_INPUT
-// How long to wait between looking for input on the serial channel.
-// This is typically a pretty low value.
+// How long to wait between polling for input on the serial channel. This is typically
+// a pretty low value.
 //
 // Note, SNAPPY_SERIAL_INPUT services will keep the device continually on.
 unsigned long serial_server_poll_interval_ms();
 #endif
 
 #ifdef MQTT_UPLOAD
+// The longest time we will let pass without connecting, whether there are data
+// to upload or not.
+unsigned long mqtt_max_unconnected_time_s();
+
 // Frequency of MQTT uploads, messages can be cached meanwhile.
 unsigned long mqtt_upload_interval_s();
 #endif

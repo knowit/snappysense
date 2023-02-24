@@ -39,7 +39,7 @@
 // and short time intervals for many things (to speed up testing).
 // Otherwise, we're in "production" mode and default values are mostly blank and
 // the device must be provisioned from interactive config mode.
-#define DEVELOPMENT
+//#define DEVELOPMENT
 
 // Stamp uploaded records with the current time.  For this to work, the time has to
 // be configured at startup, incurring a little extra network traffic, and a time server
@@ -52,7 +52,7 @@
 
 // Accept 'snappy/command/<device-name> messages from the server.  Currently none are
 // defined, so we don't normally accept them.
-#define MQTT_COMMAND_MESSAGES
+//#define MQTT_COMMAND_MESSAGES
 
 // Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
 // connected then log messages will appear there, otherwise they will be discarded.
@@ -92,7 +92,7 @@
 
 // With SERIAL_COMMAND_SERVER, the device listens for commands on the serial line, the
 // command "help" will provide a list of possible commands.
-#define SERIAL_COMMAND_SERVER
+//#define SERIAL_COMMAND_SERVER
 
 // (Obscure) This sets the power-off interval artificially low so that it's
 // easier to test it during development.
