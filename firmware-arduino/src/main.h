@@ -56,7 +56,7 @@
 
 // Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
 // connected then log messages will appear there, otherwise they will be discarded.
-#define LOGGING
+//#define LOGGING
 
 // WEB_CONFIGURATION causes a WiFi access point to be created with an SSID
 // printed on the display when the device comes up in config mode, allowing for both
@@ -110,7 +110,7 @@
 # define SNAPPY_COMMAND_PROCESSOR
 #endif
 
-#if defined(SERIAL_COMMAND_SERVER) || defined(SERIAL_CONFIGURATION)
+#if defined(SERIAL_COMMAND_SERVER)
 # define SNAPPY_SERIAL_INPUT
 #endif
 

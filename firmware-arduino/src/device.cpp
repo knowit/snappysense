@@ -121,8 +121,9 @@ static void button_handler() {
 // have been read at this point, see main.cpp.
 
 void device_setup() {
-  // Always connect serial on startup
+#if defined(LOGGING) || defined(SNAPPY_SERIAL_INPUT)
   Serial.begin(115200);
+#endif
 #ifdef LOGGING
   // Connect the serial port whether anyone's listening or not.  This is in favor
   // of being able to plug in a serial cable to check on what's going on, after startup.

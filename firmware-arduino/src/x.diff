@@ -1,0 +1,42 @@
+diff --git a/firmware-arduino/src/main.cpp b/firmware-arduino/src/main.cpp
+index b14e27b..5f98e7f 100644
+--- a/firmware-arduino/src/main.cpp
++++ b/firmware-arduino/src/main.cpp
+@@ -689,18 +690,6 @@ void loop() {
+         slideshow_next();
+         break;
+ 
+-      /////////////////////////////////////////////////////////////////////////////////////
+-      //
+-      // Button monitor task
+-
+-      case EvCode::BUTTON_DOWN:
+-        button_down();
+-        break;
+-
+-      case EvCode::BUTTON_UP:
+-        button_up();
+-        break;
+-
+       /////////////////////////////////////////////////////////////////////////////////////
+       //
+       // Serial monitor task
+@@ -765,18 +754,6 @@ static void ap_mode_loop() {
+       case EvCode::BUTTON_LONG_PRESS:
+         esp_restart();
+ 
+-      /////////////////////////////////////////////////////////////////////////////////////
+-      //
+-      // Button monitor tasks
+-
+-      case EvCode::BUTTON_DOWN:
+-        button_down();
+-        break;
+-
+-      case EvCode::BUTTON_UP:
+-        button_up();
+-        break;
+-
+       default:
+         log("AP loop: Ignoring event %d\n", (int)ev.code);
+         // Ignore the event

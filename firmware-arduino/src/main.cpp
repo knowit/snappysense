@@ -22,21 +22,25 @@
 //   Arduino, FreeRTOS and HAL
 //
 // Device layer:
-//   Microcontroller and peripheral management and clock, in device.{cpp,h}
+//   Microcontroller and peripheral management, in device.{cpp,h}
 //   Configuration and preferences management, in config.{cpp,h}
 //   Utility functions, in util.{cpp,h}
-//   Serial line logging, in log.{cpp,h}
 //
-// Connectivity layer:
-//   Serial line input, in serial_server.{cpp,h}
+// Event queue management
+//   In main.{h,cpp}
+//
+// Connectivity and user interaction layer:
+//   Serial line polling, in serial_server.{cpp,h}
 //   WiFi connection management, in network.{cpp,h}
 //   Web server infrastructure, in web_server.{cpp,h}
 //   Time configuration service, in time_server.{cpp,h}
+//   Serial line logging, in log.{cpp,h}
+//   Button logic, in button.{cpp,h}
 //
 // Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
 //   MQTT data upload and command handling, in mqtt_upload.{cpp,h}
-//   Serial & web interactive command processing (for development), in command.{cpp,h}
+//   Serial line interactive command processing (for development), in command.{cpp,h}
 //
 // Application UI layer:
 //   Sensor reading display management, in slideshow.{cpp,h} and icons.{cpp,h}
@@ -51,10 +55,7 @@
 // application logic, formatting for display part of the UI.  But it's probably
 // OK not to worry overmuch about that.)
 //
-// Note that in some cases, lower layers do call higher layers.  For example, the
-// tasking system deletes ad-hoc tasks when they're done and have not been rescheduled.
-// The task destructor is a virtual that may have been overridden by the task class,
-// which is managed by a higher level.
+// Generally speaking, lower levels never call to higher levels.
 //
 //
 // MODES and CONFIGURATION.
@@ -208,7 +209,7 @@ bool slideshow_mode = false;
 static TimerHandle_t master_timeout_timer;
 
 // The event queue that drives all activity except within the music player task
-static QueueHandle_t/*<int>*/ main_event_queue;
+static QueueHandle_t/*<SnappyEvent>*/ main_event_queue;
 
 void setup() {
   main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));

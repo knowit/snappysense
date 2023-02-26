@@ -28,7 +28,7 @@ void va_log(const char* fmt, va_list args);
 static inline void set_log_stream(Stream* output) {
   /* Nothing */
 }
-static inline void log(const char* fmt, ...) __attribute__ ((format (printf, 1, 2))) {
+static inline void log(const char* fmt, ...) {
   /* Nothing */
 }
 static inline void va_log(const char* fmt, va_list) {
