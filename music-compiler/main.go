@@ -12,7 +12,8 @@
 //
 // Syntax:
 //  Melody ::= Preamble Defaults Notes?
-//  Preamble ::= /[^:]*:/
+//  Preamble ::= /([^:])*:/
+//     where \1 is the name of the tune
 //  Defaults ::= /d=(\d*),o=(\d),b=(\d*):/
 //     where \1 is the duration in fractions of a whole note (default 4)
 //           \2 is the octave (default 6 but this is immaterial)
