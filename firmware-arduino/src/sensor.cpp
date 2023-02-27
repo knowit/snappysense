@@ -301,14 +301,18 @@ static TimerHandle_t warmup_timer;
 static TimerHandle_t pir_timer;
 static TimerHandle_t mems_timer;
 static bool is_running;
+static TickType_t warmup_count;
 
 enum {
+  WARMUP_WORK,
   GO_TO_WORK,
   SAMPLE_PIR,
   SAMPLE_MEMS
 };
 
-// We have two timers.
+static constexpr TickType_t WARMUP_ITERATIONS = 5;
+
+// We have three timers.
 //
 // One is driving the PIR: check every second throughout the window, the final reading is 1
 // if the sensor was ever read as 1.
@@ -317,14 +321,22 @@ enum {
 // the window.  The final reading is the max of any reading in the window.  (This is probably
 // a little aggressive.)  This will require rethinking how the noise sensor is represented in
 // sensor data, and it will invalidate some current sensor data.
+//
+// The last is driving the warmup work, when we read the sensors a little and wait for things
+// to stabilize.  (The stabilization thing is a little experimental.)
 
 void monitoring_init() {
+  unsigned long warmup_ticks_per_iter = pdMS_TO_TICKS(sensor_warmup_time_s() * 1000) / WARMUP_ITERATIONS;
   warmup_timer = xTimerCreate("warmup",
-                              pdMS_TO_TICKS(sensor_warmup_time_s() * 1000),
+                              warmup_ticks_per_iter,
                               pdFALSE,
                               nullptr,
                               [](TimerHandle_t t) {
-                                put_main_event(EvCode::MONITOR_TICK, GO_TO_WORK);
+                                if (++warmup_count < WARMUP_ITERATIONS) {
+                                  put_main_event(EvCode::MONITOR_TICK, WARMUP_WORK);
+                                } else {
+                                  put_main_event(EvCode::MONITOR_TICK, GO_TO_WORK);
+                                }
                               });
   pir_timer = xTimerCreate("pir",
                            pdMS_TO_TICKS(1000),
@@ -346,6 +358,7 @@ void monitoring_start() {
   if (!is_running) {
     assert(monitoring_window_s() > sensor_warmup_time_s());
     is_running = true;
+    warmup_count = 0;
     xTimerStart(warmup_timer, portMAX_DELAY);
   }
 }
@@ -359,6 +372,15 @@ static void monitoring_report() {
 void monitoring_tick(uint32_t which) {
   if (is_running) {
     switch (which) {
+      case WARMUP_WORK: {
+        // Read the sensors to let them know we care, but discard the readings.
+        SnappySenseData dummy;
+        get_sensor_values(&dummy);
+        sample_pir();
+        sample_mems();
+        xTimerStart(warmup_timer, portMAX_DELAY);
+        break;
+      }
       case GO_TO_WORK:
         reset_pir_and_mems();
         sample_pir();
