@@ -11,13 +11,27 @@
 
 #ifdef TIMESERVER
 
+#define USE_NTP
+
 #include <WiFi.h>
+#ifdef USE_NTP
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#else
 #include <WiFiClient.h>
 #include <HTTPClient.h>
+#endif
 
 struct TimeServerState {
+#ifdef USE_NTP
+  TimeServerState() : timeClient(ntpUDP) {}
+  WiFiUDP ntpUDP;
+  NTPClient timeClient;
+  bool first_time = true;
+#else
   WiFiClient wifiClient;
   HTTPClient httpClient;
+#endif
 };
 
 static TimeServerState* timeserver_state;
@@ -28,11 +42,28 @@ static void put_delayed_retry() {
   xTimerStart(timeserver_timer, portMAX_DELAY);
 }
 
-void configure_clock(time_t t) {
+static void configure_clock(time_t t) {
   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
   settimeofday(&tv, nullptr);
 }
 
+#ifdef USE_NTP
+static void maybe_configure_time() {
+  if (!timeserver_state->first_time) {
+    // FIXME: this function just discards the error code, no way to check
+    timeserver_state->timeClient.begin();
+  }
+  put_main_event(EvCode::COMM_ACTIVITY);
+  // FIXME: update() blocks, this is not what we want.
+  if (timeserver_state->timeClient.update()) {
+    log("Time configured\n");
+    time_configured = true;
+    configure_clock(timeserver_state->timeClient.getEpochTime());
+  } else {
+    put_delayed_retry();
+  }
+}
+#else
 static void maybe_configure_time() {
   // GET /time returns a number, representing the number of seconds UTC since the start
   // of the Posix epoch.
@@ -61,6 +92,7 @@ static void maybe_configure_time() {
   time_configured = true;
   // timeserver_stop will clean up the state
 }
+#endif
 
 void timeserver_init() {
   // We retry every 10s through the comm window if we can't get a connection.
