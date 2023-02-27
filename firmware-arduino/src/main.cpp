@@ -506,6 +506,7 @@ void loop() {
           cancel_master_timeout();
           power_peripherals_on();
           log("Is anyone there?\n");
+          in_sleep_window = false;
           put_main_event(EvCode::SLIDESHOW_RESET);
           put_main_event(EvCode::SLIDESHOW_START);
         }
