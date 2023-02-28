@@ -636,7 +636,7 @@ void loop() {
       // Monitor task
 
       case EvCode::MONITOR_WORK:
-        monitoring_tick(ev.scalar_data);
+        monitoring_work(ev.scalar_data);
         break;
 
       /////////////////////////////////////////////////////////////////////////////////////

@@ -8,8 +8,10 @@
 #include "main.h"
 
 #ifdef SNAPPY_PIEZO
-// TODO: Spec the syntax of the song, or better, switch to compiled music.
+// Play a song.  The syntax for the song is defined in a comment in the cpp file
 void play_song(const char* song);
+
+// Stop playing a song, if it's playing.
 void stop_song();
 #endif
 

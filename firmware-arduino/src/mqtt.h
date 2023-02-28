@@ -1,4 +1,5 @@
-// Code for uploading data to a remote MQTT broker.
+// Code for uploading data to a remote MQTT broker and receiving config and
+// command messages from it.
 
 #ifndef mqtt_h_included
 #define mqtt_h_included

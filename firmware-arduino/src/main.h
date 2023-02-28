@@ -128,10 +128,12 @@
 #define WARN_UNUSED __attribute__((warn_unused_result))
 #define NO_RETURN __attribute__ ((noreturn))
 
+// Flag indicating whether the device is in slideshow mode or not.  This can be used esp
+// by the prefs code to return different prefs values for slideshow mode than for monitoring
+// mode.
 extern bool slideshow_mode;
 
 // Event codes for events posted to main_event_queue
-
 enum class EvCode {
   NONE = 0,
 

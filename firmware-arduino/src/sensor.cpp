@@ -366,7 +366,7 @@ static void monitoring_report() {
   put_main_event(EvCode::MONITOR_DATA, data);
 }
 
-void monitoring_tick(uint32_t which) {
+void monitoring_work(uint32_t which) {
   if (is_running) {
     switch (which) {
       case WARMUP_WORK: {

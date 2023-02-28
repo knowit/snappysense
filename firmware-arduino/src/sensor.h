@@ -136,7 +136,7 @@ String format_readings_as_json(const SnappySenseData& data);
 
 void monitoring_init();
 void monitoring_start();
-void monitoring_tick(uint32_t which);
+void monitoring_work(uint32_t which);
 void monitoring_stop();
 
 #endif // !sensor_h_included

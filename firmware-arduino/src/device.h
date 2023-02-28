@@ -36,11 +36,17 @@ unsigned long entropy();
 // Print a reading on the display with the accompanying bitmap and unit description.
 void render_oled_view(const uint8_t *bitmap, const char* value, const char *units);
 
-// Read the sensors and store the readings in `*data`.
+// Read the sensors and store the readings in `*data`.  Transfer PIR and MEMS sampling
+// data into `data` at this point.
 void get_sensor_values(SnappySenseData* data);
 
+// Reset private sampler data for PIR and MEMS
 void reset_pir_and_mems();
+
+// Sample the PIR and incorporate the result into the PIR sampling data
 void sample_pir();
+
+// Sample the MEMS and incorporate the result into the MEMS sampling data
 void sample_mems();
 
 // Go into a state where `msg` is displayed on all available surfaces and the
@@ -49,8 +55,13 @@ void sample_mems();
 void enter_end_state(const char* msg, bool is_error = false) NO_RETURN;
 
 #ifdef SNAPPY_PIEZO
+// Initialize the sound subsystem
 void setup_sound();
+
+// Start playing a note of the given frequency
 void start_note(int frequency);
+
+// Stop playing whatever note is playing, if any
 void stop_note();
 #endif
 
