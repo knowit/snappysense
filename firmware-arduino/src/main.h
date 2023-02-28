@@ -206,12 +206,6 @@ void put_main_event_from_isr(EvCode code);
 void put_main_event(EvCode code, void* data);
 void put_main_event(EvCode code, uint32_t payload);
 
-struct Actuator {
-  Actuator(double reading, double ideal) : reading(reading), ideal(ideal) {}
-  double reading;
-  double ideal;
-};
-
 struct WebRequest {
   WebRequest(String request, Stream& client) : request(request), client(client) {}
   String request;
