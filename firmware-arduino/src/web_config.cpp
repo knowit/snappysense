@@ -92,7 +92,7 @@ static void handle_get_user_config(Stream& client) {
 
 static void handle_post_user_config(Stream& client, const char* buf) {
   bool updated = false;
-  bool failed = true;
+  bool failed = false;
   const char* p = (char*)buf;
   for (;;) {
     String key, value;
