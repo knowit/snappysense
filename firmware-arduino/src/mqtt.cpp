@@ -28,9 +28,9 @@
 // current state of that factor is), and "ideal" (numeric, a value representing what
 // the server thinks the factor should be).
 
-#include "mqtt_upload.h"
+#include "mqtt.h"
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 
 #include "config.h"
 #include "log.h"
@@ -102,7 +102,7 @@ bool mqtt_have_work() {
     return true;
   }
 
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
   // For now, in development mode, upload always if there's stuff to upload.
   if (!mqtt_queue.is_empty()) {
     return true;
@@ -278,13 +278,11 @@ static void subscribe() {
   }
   String control_msg("snappy/control-all");
   mqtt_client.subscribe(control_msg, /* QoS= */ 1);
-#ifdef MQTT_COMMAND_MESSAGES
   if (*mqtt_device_id() != 0) {
     String command_msg("snappy/command/");
     command_msg += mqtt_device_id();
     mqtt_client.subscribe(command_msg, /* QoS= */ 1);
   }
-#endif
 }
 
 static void generate_startup_message() {
@@ -379,20 +377,9 @@ static void mqtt_handle_message(int payload_size) {
     if (fields == 0) {
       log("Mqtt: invalid control message\n%s\n", buf);
     }
-#ifdef MQTT_COMMAND_MESSAGES
   } else if (topic.startsWith("snappy/command/")) {
-    if (json.hasOwnProperty("actuator") &&
-        json.hasOwnProperty("reading") &&
-        json.hasOwnProperty("ideal")) {
-      const char* key = (const char*)json["actuator"];
-      double reading = (double)json["reading"];
-      double ideal = (double)json["ideal"];
-      log("Mqtt: actuate %s %f %f\n", key, reading, ideal);
-      put_main_event(EvCode::ACTUATOR, new Actuator(reading, ideal));
-    } else {
-      log("Mqtt: invalid command message\n%s\n", buf);
-    }
-#endif
+    // No command messages defined at present
+    log("Mqtt: invalid command message\n%s\n", buf);
   } else {
     log("Mqtt: unknown incoming message\n%s\n%s\n", topic.c_str(), buf);
   }

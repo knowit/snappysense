@@ -32,43 +32,29 @@
 // FUNCTIONAL CONFIGURATION
 
 // Hardware version you're compiling for.  Pick one.  See device.cpp for more.
-//#define HARDWARE_1_0_0
-#define HARDWARE_1_1_0
+//#define SNAPPY_HARDWARE_1_0_0
+#define SNAPPY_HARDWARE_1_1_0
 
 // Set this to make config.cpp include development_config.h with compiled-in values
 // and short time intervals for many things (to speed up testing).
 // Otherwise, we're in "production" mode and default values are mostly blank and
 // the device must be provisioned from interactive config mode.
-//#define DEVELOPMENT
+//#define SNAPPY_DEVELOPMENT
 
-// Stamp uploaded records with the current time.  For this to work, the time has to
-// be configured at startup, incurring a little extra network traffic, and a time server
-// has to be provisioned.  See time_server.h.
-#define TIMESERVER
+// With SNAPPY_NTP, synchronize the time with an ntp server at startup (only).
+// See time_server.h.
+#define SNAPPY_NTP
 
-// With MQTT_UPLOAD, the device will upload readings to a predefined mqtt broker
-// every so often.  See mqtt_upload.h.
-#define MQTT_UPLOAD
+// With SNAPPY_MQTT, the device will upload readings to a predefined mqtt broker
+// every so often, and download config messages and commands.  See mqtt.h.
+#define SNAPPY_MQTT
 
-// Accept 'snappy/command/<device-name> messages from the server.  Currently none are
-// defined, so we don't normally accept them.
-//#define MQTT_COMMAND_MESSAGES
-
-// Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
-// connected then log messages will appear there, otherwise they will be discarded.
-//#define LOGGING
-
-// WEB_CONFIGURATION causes a WiFi access point to be created with an SSID
+// SNAPPY_WEBCONFIG causes a WiFi access point to be created with an SSID
 // printed on the display when the device comes up in config mode, allowing for both
 // factory provisioning of ID, certificates, and so on, as well as user provisioning
 // of network names and other local information.  See CONFIG.md at the root of the
 // repo.
-#define WEB_CONFIGURATION
-
-// In this mode, the display is updated frequently with readings.  The device and
-// display are on continually, and the device uses a lot of power.  It is useful in
-// production only when we can count on a non-battery power source.
-#define SLIDESHOW_MODE
+#define SNAPPY_WEBCONFIG
 
 // Control the various sensors
 #define SENSE_TEMPERATURE
@@ -87,6 +73,10 @@
 // The following are mostly useful during development and would not normally be
 // enabled in production.
 
+// Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
+// connected then log messages will appear there, otherwise they will be discarded.
+//#define LOGGING
+
 // Play a tune when starting the device
 //#define STARTUP_SONG
 
@@ -94,15 +84,11 @@
 // command "help" will provide a list of possible commands.
 //#define SERIAL_COMMAND_SERVER
 
-// (Obscure) This sets the power-off interval artificially low so that it's
-// easier to test it during development.
-//#define TEST_POWER_MANAGEMENT
-
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(WEB_CONFIGURATION) || defined(MQTT_UPLOAD) || defined(TIMESERVER)
+#if defined(SNAPPY_WEBCONFIG) || defined(SNAPPY_MQTT) || defined(SNAPPY_NTP)
 # define SNAPPY_WIFI
 #endif
 
@@ -114,34 +100,28 @@
 # define SNAPPY_SERIAL_INPUT
 #endif
 
-#if defined(WEB_CONFIGURATION)
+#if defined(SNAPPY_WEBCONFIG)
 # define SNAPPY_WEB_SERVER
 #endif
 
-#if !defined(HARDWARE_1_0_0)
+#if !defined(SNAPPY_HARDWARE_1_0_0)
 # define SNAPPY_PIEZO
 #endif
 
-#if !defined(DEVELOPMENT)
+#if !defined(SNAPPY_DEVELOPMENT)
 # ifdef SERIAL_COMMAND_SERVER
 #  warning "SERIAL_COMMAND_SERVER not usually enabled in production"
 # endif
 #endif
 
-#if defined(TEST_POWER_MANAGEMENT) && (defined(DEVELOPMENT) || \
-                                       defined(SNAPPY_SERIAL_INPUT) || \
-                                       defined(SNAPPY_WEB_SERVER))
-# error "Power management test won't work when the device is mostly busy"
-#endif
-
 // In V1.0.0, there's a resource conflict between WiFi and the noise sensor / mic.
-#if defined(HARDWARE_1_0_0) && defined(SNAPPY_WIFI)
+#if defined(SNAPPY_HARDWARE_1_0_0) && defined(SNAPPY_WIFI)
 # undef SENSE_NOISE
 #endif
 
 // Altitude is broken on HW 1.x.y: it's a crude formula wrapped around the pressure sensor,
 // this simply can't be right.
-#if defined(HARDWARE_1_0_0) || defined(HARDWARE_1_1_0)
+#if defined(SNAPPY_HARDWARE_1_0_0) || defined(SNAPPY_HARDWARE_1_1_0)
 # undef SENSE_ALTITUDE
 #endif
 
@@ -180,24 +160,23 @@ enum class EvCode {
   ENABLE_DEVICE,      // Enable monitoring, from comm task
   DISABLE_DEVICE,     // Disable monitoring, from comm task
   SET_INTERVAL,       // Set monitoring interval, from comm task
-  ACTUATOR,           // Actuator command, from comm task; transfers an Actuator object
   PERFORM,            // Interactive command, from serial listener; transfers a String object
   WEB_REQUEST,        // Successful request, transfers a WebRequest object
   WEB_REQUEST_FAILED, // Failed request, transfers a WebRequest object
 
   // Monitoring task state machine (timer-driven)
-  MONITOR_TICK,
+  MONITOR_WORK,       // Payload: integer code
 
   // Communication task state machine (timer-driven)
   COMM_MQTT_WORK,
-  COMM_TIMESERVER_WORK,
+  COMM_NTP_WORK,
 
   // Slideshow/display task state machine (timer-driven)
   MESSAGE,
   SLIDESHOW_START,
   SLIDESHOW_RESET,
   SLIDESHOW_STOP,
-  SLIDESHOW_TICK,
+  SLIDESHOW_WORK,
 
   // Button listener task state machine (interrupt-driven)
   BUTTON_DOWN,

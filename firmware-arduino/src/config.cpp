@@ -9,7 +9,7 @@
 
 // Configuration parameters.
 
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
 // The file client_config.h provides compiled-in values so as to simplify development.
 //
 // Note, development_config.h is not in the repo, as it contains private values.  DO NOT ADD IT.
@@ -17,17 +17,12 @@
 # include "development_config.h"
 #endif
 
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
 # define IF_DEVEL(x, y) x
 #else
 # define IF_DEVEL(x, y) y
 #endif
-#if defined(DEVELOPMENT) && defined(TIMESERVER)
-# define IF_TIMESERVER(x, y) x
-#else
-# define IF_TIMESERVER(x, y) y
-#endif
-#if defined(DEVELOPMENT) && defined(MQTT_UPLOAD)
+#if defined(SNAPPY_DEVELOPMENT) && defined(SNAPPY_MQTT)
 # define IF_MQTT_UP(x, y) x
 #else
 # define IF_MQTT_UP(x, y) y
@@ -44,10 +39,6 @@ static Pref factory_prefs[] = {
   {"password1",               "p1",    Pref::Str|Pref::Passwd, 0, IF_DEVEL(WIFI_PASSWORD, ""),           "Password for the first WiFi network"},
   {"password2",               "p2",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the second WiFi network"},
   {"password3",               "p3",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the third WiFi network"},
-  {"time-server-host",        "tsh",   Pref::Str,              0, IF_TIMESERVER(TIME_SERVER_HOST, ""),   "Host name of ad-hoc time server"},
-  {"time-server-port",        "tsp",   Pref::Int,              IF_TIMESERVER(TIME_SERVER_PORT, 8086), "","Port name on the ad-hoc time server"},
-  {"http-upload-host",        "huh",   Pref::Str,              0, "",                                    "Host name of ad-hoc http sensor-reading upload server"},
-  {"http-upload-port",        "hup",   Pref::Int,              8086, "",                                 "Port number on the ad-hoc http sensor-reading upload server"},
   {"web-config-access-point", "wcap",  Pref::Str,              0, "",                                    "Unique access point name for end-user web config"},
   {"aws-iot-id",              "aid",   Pref::Str,              0, IF_MQTT_UP(AWS_CLIENT_IDENTIFIER, ""), "IoT device ID"},
   {"aws-iot-class",           "acls",  Pref::Str,              0, IF_MQTT_UP("snappysense", ""),         "IoT device class"},
@@ -57,6 +48,16 @@ static Pref factory_prefs[] = {
   {"aws-iot-device-cert",     "acert", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_CRT, ""),          "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
   {"aws-iot-private-key",     "akey",  Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_PRIVATE, ""),      "Private key (XXXXXXXXXX-private.pem.key"},
   { nullptr }
+};
+
+static const char* const ignored_names[] = {
+  // These are defined in prefs v1.1.0 but are ignored now, as the services they reference
+  // have been removed from the code.
+  "time-server-host",  // short name "tsh"
+  "time-server-port",  // short name "tsp"
+  "http-upload-host",  // short name "huh"
+  "http-upload-port",  // short name "hup"
+  nullptr
 };
 
 // `prefs` *must* be initialized with a call to reset_configuration() before its values
@@ -105,6 +106,16 @@ void set_string_pref(const char* name, const char* value) {
   get_pref(name)->str_value = value;
 }
 
+bool is_ignored_name(const char* name) {
+  for (int i=0 ; ; i++ ) {
+    if (ignored_names[i] == nullptr) {
+      return false;
+    }
+    if (strcmp(ignored_names[i], name) == 0) {
+      return true;
+    }
+  }
+}
 
 // Provisioning and run-time configuration.
 
@@ -240,6 +251,9 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
         return fmt("Line %d: Missing value for variable [%s]", *lineno, varname.c_str());
       }
       Pref* p = get_pref(varname.c_str());
+      if (p != nullptr && is_ignored_name(varname.c_str())) {
+        continue;
+      }
       if (p == nullptr || p->is_cert()) {
         *msg = "Bad name";
         return fmt("Line %d: Unknown or inappropriate variable name for 'set': [%s]", *lineno, varname.c_str());
@@ -314,20 +328,15 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
 #define MINUTE(s) ((s)*60)
 #define HOUR(s) ((s)*60*60)
 
-#ifdef MQTT_UPLOAD
-# if defined(DEVELOPMENT)
+#ifdef SNAPPY_MQTT
+# if defined(SNAPPY_DEVELOPMENT)
 static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(2);
 static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
-#  ifdef TEST_POWER_MANAGEMENT
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(5);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(5);
-#  else
 static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
-#  endif
 static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
 static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
 # endif
@@ -341,7 +350,7 @@ unsigned long comm_activity_timeout_s() {
 
 // Let the slideshow run 1min after comm window closes
 unsigned long comm_relaxation_timeout_s() {
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
   return 30;
 #else
   return 60;
@@ -351,7 +360,7 @@ unsigned long comm_relaxation_timeout_s() {
 
 // How long to wait in the sleep window in monitoring mode
 unsigned long monitoring_mode_sleep_s() {
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
   return MINUTE(3);
 #else
   return HOUR(1);
@@ -359,7 +368,7 @@ unsigned long monitoring_mode_sleep_s() {
 }
 // How long to wait in the sleep window in slideshow mode
 unsigned long slideshow_mode_sleep_s() {
-#ifdef DEVELOPMENT
+#ifdef SNAPPY_DEVELOPMENT
   return MINUTE(1);
 #else
   return MINUTE(5);
@@ -372,7 +381,7 @@ unsigned long wifi_retry_ms() {
 }
 #endif
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 unsigned long mqtt_upload_interval_s() {
   if (slideshow_mode) {
     return MQTT_SLIDESHOW_UPLOAD_INTERVAL_S;
@@ -402,7 +411,7 @@ unsigned long monitoring_window_s() {
   return 30;
 }
 
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
 unsigned long time_server_retry_s() {
   return 10;
 }
@@ -420,7 +429,7 @@ unsigned long serial_server_poll_interval_ms() {
 
 // Preference accessors
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 unsigned long mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S;
 #endif
 
@@ -474,17 +483,7 @@ void set_access_point_password(int n, const char* value) {
   }
 }
 
-#ifdef TIMESERVER
-const char* time_server_host() {
-  return get_string_pref("time-server-host");
-}
-
-int time_server_port() {
-  return get_int_pref("time-server-port");
-}
-#endif
-
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 unsigned long mqtt_capture_interval_s() {
   if (slideshow_mode) {
     return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
@@ -526,7 +525,7 @@ const char* mqtt_device_private_key() {
 }
 #endif
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 const char* web_config_access_point() {
   return get_string_pref("web-config-access-point");
 }

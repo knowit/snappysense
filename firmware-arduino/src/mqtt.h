@@ -1,11 +1,11 @@
 // Code for uploading data to a remote MQTT broker.
 
-#ifndef mqtt_upload_h_included
-#define mqtt_upload_h_included
+#ifndef mqtt_h_included
+#define mqtt_h_included
 
 #include "main.h"
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 
 #include "sensor.h"
 
@@ -24,6 +24,6 @@ void mqtt_stop();
 
 void mqtt_work();
 
-#endif // MQTT_UPLOAD
+#endif // SNAPPY_MQTT
 
-#endif // !mqtt_upload_h_included
+#endif // !mqtt_h_included

@@ -1,37 +1,20 @@
-// Stuff to obtain the current time from an ad-hoc web server and configure the clock.
-//
-// The remote server must know how to handle GET to /time; it must respond with a payload that is
-// the decimal encoding of the number of seconds elapsed since the Posix epoch (ie, what time()
-// would return on a properly configured Posix system).  For a simple server that can do this, see
-// `../server`.
+// Interaction with an ntp server; configuring the time.
 
 #include "time_server.h"
 #include "config.h"
 #include "log.h"
 
-#ifdef TIMESERVER
-
-#define USE_NTP
+#ifdef SNAPPY_NTP
 
 #include <WiFi.h>
-#ifdef USE_NTP
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#else
-#include <WiFiClient.h>
-#include <HTTPClient.h>
-#endif
 
 struct TimeServerState {
-#ifdef USE_NTP
   TimeServerState() : timeClient(ntpUDP) {}
   WiFiUDP ntpUDP;
   NTPClient timeClient;
   bool first_time = true;
-#else
-  WiFiClient wifiClient;
-  HTTPClient httpClient;
-#endif
 };
 
 static TimeServerState* timeserver_state;
@@ -47,7 +30,6 @@ static void configure_clock(time_t t) {
   settimeofday(&tv, nullptr);
 }
 
-#ifdef USE_NTP
 static void maybe_configure_time() {
   if (!timeserver_state->first_time) {
     // FIXME: this function just discards the error code, no way to check
@@ -63,41 +45,11 @@ static void maybe_configure_time() {
     put_delayed_retry();
   }
 }
-#else
-static void maybe_configure_time() {
-  // GET /time returns a number, representing the number of seconds UTC since the start
-  // of the Posix epoch.
-  if (!timeserver_state->httpClient.begin(timeserver_state->wifiClient, time_server_host(), time_server_port(), "/time")) {
-    put_delayed_retry();
-    return;
-  }
-  put_main_event(EvCode::COMM_ACTIVITY);
-  int retval = timeserver_state->httpClient.GET();
-  if (retval < 200 || retval > 299) {
-    // The server seems dead, so no sense in retrying now.  Retry in next comm window.
-    // timeserver_stop() will clean up.
-    log("Time configuration failed: server rejected\n");
-    return;
-  }
-  unsigned long timebase;
-  if (sscanf(timeserver_state->httpClient.getString().c_str(), "%lu", &timebase) != 1) {
-    log("Time configuration failed: bogus time from server\n");
-    // As above
-    return;
-  }
-  log("Time configured\n");
-  configure_clock(timebase);
-  timeserver_state->httpClient.end();
-  timeserver_state->wifiClient.stop();
-  time_configured = true;
-  // timeserver_stop will clean up the state
-}
-#endif
 
 void timeserver_init() {
   // We retry every 10s through the comm window if we can't get a connection.
   timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(time_server_retry_s() * 1000), pdFALSE, nullptr,
-                                  [](TimerHandle_t){ put_main_event(EvCode::COMM_TIMESERVER_WORK); });
+                                  [](TimerHandle_t){ put_main_event(EvCode::COMM_NTP_WORK); });
 }
 
 bool timeserver_have_work() {
@@ -120,7 +72,7 @@ void timeserver_start() {
   maybe_configure_time();
 }
 
-// Called from the main loop in response to COMM_TIMESERVER_WORK messages.
+// Called from the main loop in response to COMM_NTP_WORK messages.
 void timeserver_work() {
   if (time_configured) {
     return;
@@ -139,4 +91,4 @@ void timeserver_stop() {
   xTimerStop(timeserver_timer, portMAX_DELAY);
 }
 
-#endif // TIMESERVER
+#endif // SNAPPY_NTP

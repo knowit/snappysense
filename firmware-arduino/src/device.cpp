@@ -78,10 +78,10 @@
 // Pin definitions
 #define POWER_ENABLE_PIN A0
 #define BUTTON_PIN A1  // WAKE on 1.0.0, BTN1 on 1.1.0
-#if defined(HARDWARE_1_0_0)
+#if defined(SNAPPY_HARDWARE_1_0_0)
 # define PIR_SENSOR_PIN A4
 # define MIC_PIN A5
-#elif defined(HARDWARE_1_1_0)
+#elif defined(SNAPPY_HARDWARE_1_1_0)
 # define PIR_SENSOR_PIN A2
 # define MIC_PIN A3
 #else

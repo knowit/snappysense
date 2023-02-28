@@ -28,7 +28,7 @@ void slideshow_init() {
                                  pdFALSE,
                                  nullptr,
                                  [](TimerHandle_t t) {
-                                   put_main_event(EvCode::SLIDESHOW_TICK);
+                                   put_main_event(EvCode::SLIDESHOW_WORK);
                                  });
 }
 
@@ -38,7 +38,7 @@ static void advance() {
 
 void slideshow_start() {
   if (!is_running) {
-    put_main_event(EvCode::SLIDESHOW_TICK);
+    put_main_event(EvCode::SLIDESHOW_WORK);
     is_running = true;
   }
 }
@@ -55,7 +55,7 @@ void slideshow_show_message_once(String* msg) {
   delete current_message;  // Overwrite another one that wasn't shown yet (for now)
   current_message = msg;
   if (is_running) {
-    put_main_event(EvCode::SLIDESHOW_TICK);
+    put_main_event(EvCode::SLIDESHOW_WORK);
   }
 }
 

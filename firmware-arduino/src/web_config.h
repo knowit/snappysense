@@ -6,12 +6,12 @@
 
 #include "main.h"
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 
 bool webcfg_start_access_point();
 void webcfg_process_request(Stream& client, const String& request);
 void webcfg_failed_request(Stream& client, const String& request);
 
-#endif // WEB_CONFIGURATION
+#endif // SNAPPY_WEBCONFIG
 
 #endif // !web_config_h_included

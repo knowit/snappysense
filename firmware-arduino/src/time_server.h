@@ -5,7 +5,7 @@
 
 #include "main.h"
 
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
 
 // Call this before anything else.
 void timeserver_init();
@@ -14,11 +14,11 @@ void timeserver_init();
 bool timeserver_have_work();
 
 // WIFI must be up.  Try to connect to the time server, if the time has not been set
-// already.  This will result in COMM_TIMESERVER_WORK messages being posted on the
+// already.  This will result in COMM_NTP_WORK messages being posted on the
 // main queue every so often if retries are required.
 void timeserver_start();
 
-// Called from the main loop in response to COMM_TIMESERVER_WORK messages.
+// Called from the main loop in response to COMM_NTP_WORK messages.
 void timeserver_work();
 
 // Stop trying to connect to the time server, if that's still going on.  Can be called

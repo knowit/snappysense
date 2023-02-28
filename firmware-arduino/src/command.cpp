@@ -108,10 +108,10 @@ static void cmd_get(const String& cmd, const SnappySenseData& data, Stream& out)
 }
 
 static void cmd_inet(const String& cmd, const SnappySenseData&, Stream& out) {
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
   out.println("MQTT upload is enabled");
 #endif
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
   out.printf("Web configuration is enabled, ap %s\n", web_config_access_point());
 #endif
 }

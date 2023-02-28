@@ -14,7 +14,7 @@
 // Configuration management
 
 // Reset the configuration (in memory) to "factory defaults", which is either almost nothing
-// in release mode or the developer settings in DEVELOPMENT mode.
+// in release mode or the developer settings in SNAPPY_DEVELOPMENT mode.
 void reset_configuration();
 
 // Read configuration from some nonvolatile source, or revert to a default.
@@ -77,7 +77,7 @@ bool device_enabled();
 // Update the flag in RAM, but do not save the change in NVRAM.
 void set_device_enabled(bool flag);
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 // The device identifier required by the remote service
 const char* mqtt_device_id();
 
@@ -95,7 +95,7 @@ unsigned long sensor_warmup_time_s();
 // How long is the monitoring window overall (including warmup)?
 unsigned long monitoring_window_s();
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 // How often readings are captured and enqueued for mqtt upload.
 //
 // Note this is independent of sensor reading frequency; fewer readings
@@ -126,18 +126,12 @@ void set_access_point_ssid(int n, const char* val);
 const char* access_point_password(int n);
 void set_access_point_password(int n, const char* val);
 
-#ifdef TIMESERVER
-// Host name of remote web server used for web upload and time service.
-const char* time_server_host();
-
-// Port of remote web server used for web upload and time service.
-int time_server_port();
-
+#ifdef SNAPPY_NTP
 // Interval between connection attempts to time server in the communication window.
 unsigned long time_server_retry_s();
 #endif
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 // Host name and port to contact for MQTT traffic
 const char* mqtt_endpoint_host();
 int mqtt_endpoint_port();
@@ -148,7 +142,7 @@ const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 // Name of the access point used for web configuration (AP mode).
 const char* web_config_access_point();
 #endif
@@ -178,7 +172,7 @@ unsigned long comm_relaxation_timeout_s();
 unsigned long serial_server_poll_interval_ms();
 #endif
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 // The longest time we will let pass without connecting, whether there are data
 // to upload or not.
 unsigned long mqtt_max_unconnected_time_s();

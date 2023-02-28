@@ -39,7 +39,7 @@
 //
 // Application logic layer:
 //   Sensor data model, in sensor.{cpp,h}
-//   MQTT data upload and command handling, in mqtt_upload.{cpp,h}
+//   MQTT data upload and command handling, in mqtt.{cpp,h}
 //   Serial line interactive command processing (for development), in command.{cpp,h}
 //
 // Application UI layer:
@@ -70,7 +70,7 @@
 // display and the peripherals when they are not needed.  It uploads data rarely.
 // This mode conserves power (relatively).
 //
-// SnappySense can also be configured at compile time to run in DEVELOPMENT mode, which
+// SnappySense can also be configured at compile time to run in SNAPPY_DEVELOPMENT mode, which
 // usually allows for interactivity over the serial line, configuration values that are
 // compiled into the code, more frequent observation and upload activity, and other things.
 //
@@ -78,8 +78,7 @@
 // to set configuration variables.  See CONFIG.md at the root for more information.
 //
 // The device may be configured to fetch the current time from a time server.
-// Follow breadcrumbs from the definition of TIMESERVER in main.h for more information.
-// A simple time server is in the test-server/ directory in the present repo.
+// Follow breadcrumbs from the definition of SNAPPY_NTP in main.h for more information.
 //
 // The device can be configured to upload results to an MQTT broker (typically AWS)
 // or to a Web server (for development and testing), or to neither.  For uploading to
@@ -186,7 +185,7 @@
 #include "device.h"
 #include "icons.h"
 #include "log.h"
-#include "mqtt_upload.h"
+#include "mqtt.h"
 #include "network.h"
 #include "piezo.h"
 #include "sensor.h"
@@ -196,14 +195,10 @@
 #include "web_config.h"
 #include "web_server.h"
 
-// Whether the slideshow mode is enabled or not.  The default is to start the slideshow on startup.
-// It can be toggled to monitoring mode by a press on the wake button.  Slideshow mode really only
-// affects what we do after communication and before monitoring, and for how long.
-#ifdef SLIDESHOW_MODE
+// The default is to start the slideshow on startup.  It can be toggled to monitoring
+// mode by a press on the wake button.  Slideshow mode really only affects what we do
+// after communication and before monitoring, and for how long.
 bool slideshow_mode = true;
-#else
-bool slideshow_mode = false;
-#endif // SLIDESHOW_MODE
 
 // The timer used for timing out the major sections of the main loop.
 static TimerHandle_t master_timeout_timer;
@@ -276,7 +271,7 @@ static void cancel_master_timeout() {
   xTimerStop(master_timeout_timer, portMAX_DELAY);
 }
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 static void ap_mode_loop() NO_RETURN;
 #endif
 
@@ -331,10 +326,10 @@ void loop() {
 #ifdef SNAPPY_WIFI
   wifi_init();
 #endif
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
   timeserver_init();
 #endif
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
   mqtt_init();
 #endif
 #ifdef SNAPPY_SERIAL_INPUT
@@ -369,10 +364,10 @@ void loop() {
         // data to upload.
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
         comm_work = comm_work || timeserver_have_work();
 #endif
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
         comm_work = comm_work || mqtt_have_work();
 #endif
         if (comm_work) {
@@ -408,12 +403,12 @@ void loop() {
 
       case EvCode::COMM_WIFI_CLIENT_UP: {
         in_communication_window = true;
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
         if (timeserver_have_work()) {
           timeserver_start();
         }
 #endif
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
         if (mqtt_have_work()) {
           mqtt_start();
         }
@@ -446,10 +441,10 @@ void loop() {
           put_main_event(EvCode::POST_COMM);
         }
         if (in_communication_window) {
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
           mqtt_stop();
 #endif
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
           timeserver_stop();
 #endif
           in_communication_window = false;
@@ -537,7 +532,7 @@ void loop() {
         // monitor data arrived after closing the monitoring window
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
         assert(new_data != nullptr);
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
         mqtt_add_data(new SnappySenseData(*new_data));
 #endif
 #ifdef SNAPPY_COMMAND_PROCESSOR
@@ -574,11 +569,6 @@ void loop() {
         set_mqtt_capture_interval_s(ev.scalar_data);
         break;
 
-      case EvCode::ACTUATOR:
-        log("Ignoring actuator event, IMPLEMENTME\n");
-        delete (Actuator*)ev.pointer_data;
-        break;
-
 #ifdef SNAPPY_COMMAND_PROCESSOR
       case EvCode::PERFORM: {
         String* cmd = (String*)ev.pointer_data;
@@ -588,7 +578,7 @@ void loop() {
       }
 #endif
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
       case EvCode::BUTTON_LONG_PRESS:
         // Major mode change.  This is special: it knows a bit too much about the rest of the
         // state machine but that's just how it's going to be.  We're trying to avoid having
@@ -618,10 +608,10 @@ void loop() {
         // but nobody really cares about a little lost data.
         if (in_communication_window) {
           // This must stop all timers in the communication code
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
           mqtt_stop();
 #endif
-#ifdef TIMESERVER
+#ifdef SNAPPY_NTP
           timeserver_stop();
 #endif
           in_communication_window = false;
@@ -640,13 +630,13 @@ void loop() {
 
         // ap_mode_loop() never returns, it restarts the device.
         ap_mode_loop();
-#endif // WEB_CONFIGURATION
+#endif // SNAPPY_WEBCONFIG
 
       /////////////////////////////////////////////////////////////////////////////////////
       //
       // Monitor task
 
-      case EvCode::MONITOR_TICK:
+      case EvCode::MONITOR_WORK:
         monitoring_tick(ev.scalar_data);
         break;
 
@@ -654,13 +644,13 @@ void loop() {
       //
       // Communication task
 
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
       case EvCode::COMM_MQTT_WORK:
         mqtt_work();
         break;
 #endif
-#ifdef TIMESERVER
-      case EvCode::COMM_TIMESERVER_WORK:
+#ifdef SNAPPY_NTP
+      case EvCode::COMM_NTP_WORK:
         timeserver_work();
         break;
 #endif
@@ -687,7 +677,7 @@ void loop() {
         slideshow_stop();
         break;
 
-      case EvCode::SLIDESHOW_TICK:
+      case EvCode::SLIDESHOW_WORK:
         slideshow_next();
         break;
 
@@ -720,7 +710,7 @@ void loop() {
   }
 }
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 
 // Event processing loop that never returns.  Processes events from the main queue, but
 // ignores most of them.  In particular, the serial line commands are not available in

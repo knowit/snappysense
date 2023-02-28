@@ -16,16 +16,7 @@ static const char WIFI_PASSWORD[] = "......";   // FIXME
 
 static const char LOCATION_NAME[] = "...";      // FIXME
 
-#ifdef TIMESERVER
-// -------------------------------------------------------------------------------
-//
-// Time server address.  This is obsolete if using NTP (now the default).
-
-static const char TIME_SERVER_HOST[] = "...";     // FIXME
-static int TIME_SERVER_PORT = 8086;               // Useful default
-#endif
-
-#ifdef MQTT_UPLOAD
+#ifdef SNAPPY_MQTT
 // -------------------------------------------------------------------------------
 //
 // AWS MQTT credentials

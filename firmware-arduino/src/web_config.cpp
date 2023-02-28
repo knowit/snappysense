@@ -7,7 +7,7 @@
 #include "network.h"
 #include "web_server.h"
 
-#ifdef WEB_CONFIGURATION
+#ifdef SNAPPY_WEBCONFIG
 
 bool webcfg_start_access_point() {
   char buf[32];
@@ -244,4 +244,4 @@ void webcfg_failed_request(Stream& client, const String& request) {
   log("Web server: Incomplete request [%s]\n", request.c_str());
 }
 
-#endif // WEB_CONFIGURATION
+#endif // SNAPPY_WEBCONFIG

@@ -333,9 +333,9 @@ void monitoring_init() {
                               nullptr,
                               [](TimerHandle_t t) {
                                 if (++warmup_count < WARMUP_ITERATIONS) {
-                                  put_main_event(EvCode::MONITOR_TICK, WARMUP_WORK);
+                                  put_main_event(EvCode::MONITOR_WORK, WARMUP_WORK);
                                 } else {
-                                  put_main_event(EvCode::MONITOR_TICK, GO_TO_WORK);
+                                  put_main_event(EvCode::MONITOR_WORK, GO_TO_WORK);
                                 }
                               });
   pir_timer = xTimerCreate("pir",
@@ -343,14 +343,14 @@ void monitoring_init() {
                            pdTRUE,
                            nullptr,
                            [](TimerHandle_t t) {
-                             put_main_event(EvCode::MONITOR_TICK, SAMPLE_PIR);
+                             put_main_event(EvCode::MONITOR_WORK, SAMPLE_PIR);
                            });
   mems_timer = xTimerCreate("mems",
                             pdMS_TO_TICKS(10),
                             pdTRUE,
                             nullptr,
                             [](TimerHandle_t t) {
-                             put_main_event(EvCode::MONITOR_TICK, SAMPLE_MEMS);
+                             put_main_event(EvCode::MONITOR_WORK, SAMPLE_MEMS);
                             });
 }
 

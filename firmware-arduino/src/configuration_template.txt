@@ -22,14 +22,6 @@ set password1 ...FIXME...
 # defined in the backend systems' database.
 set location ...FIXME...
 
-# Time service on port 8086 on this host, responds to GET /time.
-# NOTE, this is obsolete now that NTP is the default but it is still accepted.
-#set time-server-host ...FIXME...
-
-# HTTP upload service on port 8086 on this host, responds to POST /data
-# NOTE, this is obsolete, the functionality has been removed, but it's still accepted.
-#set http-upload-host ...FIXME...
-
 # Access point name (used for end-user config) is per-device since multiple devices
 # can be active in the same area at the same time.  Something derived from the aws-iot-id
 # is sensible, eg, if aws-iot-id is snp_1_1_no_48 (v1.1 device s/n 48) then using
