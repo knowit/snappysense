@@ -1,12 +1,12 @@
 // Support for the device acting as a simple web server
 
 #include "web_server.h"
-#include "device.h"
 
 #ifdef SNAPPY_WEB_SERVER
 
 #include "command.h"
 #include "config.h"
+#include "device.h"
 #include "log.h"
 #include "network.h"
 #include "util.h"

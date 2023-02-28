@@ -4,13 +4,12 @@
 
 #ifdef SNAPPY_WIFI
 
+#include <WiFi.h>
+#include <WiFiAP.h>
 #include "config.h"
 #include "device.h"
 #include "log.h"
 #include "slideshow.h"
-
-#include <WiFi.h>
-#include <WiFiAP.h>
 
 /* Server/Client wifi state machine is basically similar to the Unix stack:
  *  WiFi.begin() connects the system to a local access point.

@@ -32,12 +32,11 @@
 
 #ifdef SNAPPY_MQTT
 
-#include "config.h"
-#include "log.h"
-
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
 #include <Arduino_Json.h>
+#include "config.h"
+#include "log.h"
 
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.

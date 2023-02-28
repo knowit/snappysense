@@ -1,14 +1,14 @@
 // Interaction with an ntp server; configuring the time.
 
 #include "time_server.h"
-#include "config.h"
-#include "log.h"
 
 #ifdef SNAPPY_NTP
 
 #include <WiFi.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include "config.h"
+#include "log.h"
 
 struct TimeServerState {
   TimeServerState() : timeClient(ntpUDP) {}

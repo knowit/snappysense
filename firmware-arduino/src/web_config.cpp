@@ -2,12 +2,13 @@
 // by a server on that access point.
 
 #include "web_config.h"
+
+#ifdef SNAPPY_WEBCONFIG
+
 #include "config.h"
 #include "device.h"
 #include "network.h"
 #include "web_server.h"
-
-#ifdef SNAPPY_WEBCONFIG
 
 bool webcfg_start_access_point() {
   char buf[32];
