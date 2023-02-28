@@ -71,7 +71,6 @@ static const char config_page[] = R"EOF(
             <td>Password</td> <td><input name=password2 type="text" value="%s"/></td></tr>
           <tr> <td>SSID3</td> <td><input name=ssid3 type="text" value="%s"/></td>
             <td>Password</td> <td><input name=password3 type="text" value="%s"/></td></tr>
-          <tr> <td>Location</td> <td><input name=location type="text" value="%s"/></td> <td></td> </tr>
         </table>
         <button>Submit</button>
       </form>
@@ -87,8 +86,7 @@ static void handle_get_user_config(Stream& client) {
   client.printf(config_page, "",
                 access_point_ssid(1), access_point_password(1),
                 access_point_ssid(2), access_point_password(2),
-                access_point_ssid(3), access_point_password(3),
-                location_name());
+                access_point_ssid(3), access_point_password(3));
 }
 
 static void handle_post_user_config(Stream& client, const char* buf) {
@@ -115,11 +113,6 @@ static void handle_post_user_config(Stream& client, const char* buf) {
       updated = true;
       continue;
     }
-    if (key == "location") {
-      set_location_name(value.c_str());
-      updated = true;
-      continue;
-    }
     failed = true;
   }
   if (!failed && *p) {
@@ -139,8 +132,7 @@ static void handle_post_user_config(Stream& client, const char* buf) {
     client.printf(config_page, "VALUES UPDATED!",
                   access_point_ssid(1), access_point_password(1),
                   access_point_ssid(2), access_point_password(2),
-                  access_point_ssid(3), access_point_password(3),
-                  location_name());
+                  access_point_ssid(3), access_point_password(3));
   }
 }
 

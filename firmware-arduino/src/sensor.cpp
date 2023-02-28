@@ -269,9 +269,6 @@ SnappyMetaDatum snappy_metadata[] = {
 String format_readings_as_json(const SnappySenseData& data) {
   String buf;
   buf += '{';
-  buf += "\"location\":\"";
-  buf += location_name();
-  buf += '"';
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
     // Skip data that are not valid
     if (r->flag_offset > 0 &&

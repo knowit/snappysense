@@ -32,7 +32,6 @@
 
 static Pref factory_prefs[] = {
   {"enabled",                 "en",    Pref::Int,              1, "",                                    "Device recording is enabled"},
-  {"location",                "loc",   Pref::Str,              0, IF_DEVEL(LOCATION_NAME, ""),           "Name of device location"},
   {"ssid1",                   "s1",    Pref::Str,              0, IF_DEVEL(WIFI_SSID, ""),               "SSID name for the first WiFi network"},
   {"ssid2",                   "s2",    Pref::Str,              0, "",                                    "SSID name for the second WiFi network"},
   {"ssid3",                   "s3",    Pref::Str,              0, "",                                    "SSID name for the third WiFi network"},
@@ -53,10 +52,11 @@ static Pref factory_prefs[] = {
 static const char* const ignored_names[] = {
   // These are defined in prefs v1.1.0 but are ignored now, as the services they reference
   // have been removed from the code.
-  "time-server-host",  // short name "tsh"
-  "time-server-port",  // short name "tsp"
-  "http-upload-host",  // short name "huh"
-  "http-upload-port",  // short name "hup"
+  "location",          // short name "loc" - this was the location ID
+  "time-server-host",  // short name "tsh" - this was a host name for the ad-hoc time server
+  "time-server-port",  // short name "tsp" -   and this was its port
+  "http-upload-host",  // short name "huh" - this was the host name for the ad-hoc http upload server
+  "http-upload-port",  // short name "hup" -   and this was its port
   nullptr
 };
 
@@ -439,14 +439,6 @@ bool device_enabled() {
 
 void set_device_enabled(bool flag) {
   set_int_pref("enabled", flag);
-}
-
-const char* location_name() {
-  return get_string_pref("location");
-}
-
-void set_location_name(const char* name) {
-  set_string_pref("location", name);
 }
 
 const char* access_point_ssid(int n) {

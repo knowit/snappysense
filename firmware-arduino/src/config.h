@@ -63,12 +63,6 @@ Pref* get_pref(const char* name);
 //
 // Device ID and status
 
-// The name of the location at which this device is placed.
-const char* location_name();
-
-// Update the location in RAM, but do not save the change in NVRAM.
-void set_location_name(const char* name);
-
 // The device can be disabled and enabled by an mqtt message or during provisioning.
 // If it is disabled is is still operable (responds to mqtt messages, for one thing)
 // but does not read sensors or report their values.

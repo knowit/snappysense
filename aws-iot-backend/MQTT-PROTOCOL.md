@@ -30,7 +30,6 @@ a JSON payload:
 
 ```
   { sent: <integer, seconds since epoch UTC or seconds since boot>,
-    location: <string, location-id>,
     sequenceno: <nonnegative integer, observation sequence number since startup>
     ... }
 ```
@@ -44,10 +43,6 @@ not possible to detect all reboots using this fact).
 The payload contains fields that represent the last valid observations of the sensors that are on the
 device.  Each factor is reported by the device under the field name `F#<factor-name>` to avoid name
 clashes.  See the FACTOR table of DATA-MODEL.md for the `<factor-name>` values.
-
-TODO: One might ask whether `location` is not redundant, since the location of the device should be
-recorded in the back-end databases, but since the user can change it independently of that it is OK
-to send it, for the time being.
 
 ## Control message
 
