@@ -71,6 +71,11 @@ again:
       }
       num_timeouts = 0;
       log("Trying access point: [%s]\n", ap);
+      // WIFI_AUTH_OPEN allows for WEP and open networks, and so WiFi passwords, if there are any,
+      // will be transmitted in the clear.  This is a problem with the network and not with the
+      // device however, so allow it.  All traffic to AWS is still over TLS.  Also, this does not
+      // affect AP mode.
+      WiFi.setMinSecurity(WIFI_AUTH_OPEN);
       WiFi.begin(ap, pw);
       put_delayed_retry();
       wifi_state = WiFiState::RETRYING;
