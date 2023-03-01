@@ -109,9 +109,12 @@ static Adafruit_SSD1306 display(128, 32, &Wire);
 static DFRobot_ENS160_I2C ENS160(&Wire, I2C_AIR_ADDRESS);
 static DFRobot_EnvironmentalSensor environment(I2C_DHT_ADDRESS, /*pWire = */&Wire);
 static bool peripherals_powered_on = false;
-static bool have_environment = false;
-static bool have_air = false;
-static bool air_is_primed = false;
+static bool have_environment;
+static bool have_air;
+static bool air_is_primed;
+static unsigned sequence_number;
+static unsigned pir_value;
+static unsigned mems_value;
 
 static void button_handler() {
   put_main_event_from_isr(digitalRead(BUTTON_PIN) ? EvCode::BUTTON_DOWN : EvCode::BUTTON_UP);
@@ -146,13 +149,19 @@ void device_setup() {
 
 void power_peripherals_on() {
   if (!peripherals_powered_on) {
-    // turn on peripheral power, must be on for i2c to work!
+    // Initialize state variables
+    have_air = false;
+    have_environment = false;
+    air_is_primed = false;
+    reset_pir_and_mems();
+
+    // Turn on peripheral power, must be on for i2c to work!
     digitalWrite(POWER_ENABLE_PIN, HIGH);
-    // wait until peripherals are stable.  100ms is not enough (issue #14), and 1000ms does not
+    // Wait until peripherals are stable.  100ms is not enough (issue #14), and 1000ms does not
     // really seem to be a hardship, so why not.
     delay(1000);
 
-    // init i2c
+    // Init i2c
     // Note the (int) cast, some versions of the ESP32 libs need this, ref
     // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
     Wire.begin((int) I2C_SDA, I2C_SCL);
@@ -173,12 +182,6 @@ void power_peripherals_off() {
   digitalWrite(POWER_ENABLE_PIN, LOW);
   peripherals_powered_on = false;
 }
-
-// The sequence_number is not very useful any more, but it's a fallback for when we don't have a time
-// stamp, and may help us out when the time changes under our feet.
-static unsigned sequence_number;
-static unsigned pir_value;
-static unsigned mems_value;
 
 void reset_pir_and_mems() {
   pir_value = 0;
@@ -269,6 +272,17 @@ void get_sensor_values(SnappySenseData* data) {
       data->have_eco2 = data->eco2 > 400;
 #endif
     }
+  } else {
+    data->have_air_sensor_status = false;
+#ifdef SENSE_AIR_QUALITY_INDEX
+    data->have_aqi = false;
+#endif
+#ifdef SENSE_TVOC
+    data->have_tvoc = false;
+#endif
+#ifdef SENSE_CO2
+    data->have_eco2 = false;
+#endif
   }
 #endif
 
