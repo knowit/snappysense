@@ -2,6 +2,12 @@
 
 # Factory provisioning
 
+This document is only about "factory provisioning" the SnappySense devices - installing the device
+ID, certificates and keys, and so on.  This is typically done by a device developer.
+
+For end user configuration of WiFi network names and data of that type, see
+[firmware-arduino/MANUAL.md](firmware-arduino/MANUAL.md).
+
 ## Individual factory provisioning
 
 In "individual factory provisioning mode" the SnappySense device is brought up in "access point
