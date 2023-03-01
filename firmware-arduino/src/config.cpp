@@ -49,10 +49,12 @@ static Pref factory_prefs[] = {
   { nullptr }
 };
 
+// Obsolete variable names.  By and large we should avoid reusing both the long
+// names and the short names so that we can reliably revert to older versions of the
+// firmware, but this isn't really all that important probably.
 static const char* const ignored_names[] = {
-  // These are defined in prefs v1.1.0 but are ignored now, as the services they reference
-  // have been removed from the code.
-  "location",          // short name "loc" - this was the location ID
+  // Defined in prefs v1.1.0 but obsolete and ignored.
+  "location",          // short name "loc" - this was the location ID, now server-side only.
   "time-server-host",  // short name "tsh" - this was a host name for the ad-hoc time server
   "time-server-port",  // short name "tsp" -   and this was its port
   "http-upload-host",  // short name "huh" - this was the host name for the ad-hoc http upload server
@@ -250,10 +252,10 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
         *msg = "Missing value";
         return fmt("Line %d: Missing value for variable [%s]", *lineno, varname.c_str());
       }
-      Pref* p = get_pref(varname.c_str());
-      if (p != nullptr && is_ignored_name(varname.c_str())) {
+      if (is_ignored_name(varname.c_str())) {
         continue;
       }
+      Pref* p = get_pref(varname.c_str());
       if (p == nullptr || p->is_cert()) {
         *msg = "Bad name";
         return fmt("Line %d: Unknown or inappropriate variable name for 'set': [%s]", *lineno, varname.c_str());
