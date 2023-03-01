@@ -22,7 +22,7 @@ create a new Thing, obtain its identity documents, and install them on SnappySen
 
 SnappySense devices communicate by WiFi and need to be configured for the WiFi available at their
 location; they also need to be given a location name appropriate for the location.  This end-user
-process is described in [../UX.md](../UX.md).
+process is described in [../firmware-arduino/MANUAL.md](../firmware-arduino/MANUAL.md).
 
 On the backend, data are stored in a DynamoDB database.  The database is updated by a Lambda when
 observations arrive at AWS IoT.

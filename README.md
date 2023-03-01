@@ -4,13 +4,18 @@
 
 [This repo](https://github.com/knowit/snappysense) holds the hardware designs, firmware source code,
 design documents, and backend code for KnowIt ObjectNet's _SnappySense_ environmental sensor device
-and its AWS IoT based backend.  See `BACKGROUND.md` for background, requirements, and that type of
-discussion.
+and its AWS IoT based backend.
+
+End users want to go directly to the user manual: [firmware-arduino/MANUAL.md](firmware-arduino/MANUAL.md).
+
+Developers can start looking in [BACKGROUND.md](BACKGROUND.md) for background, requirements, and
+that type of discussion.
 
 ## Device
 
-The v1.0.0 device has an esp32 MoC and a number of environmental sensors (temperature, humidity, air
-quality, and other things - see `firmware-arduino/src/sensor.h`), as well as a small OLED display.
+The v1.0.0 device has an Espressif ESP32 module-on-a-chip and a number of environmental sensors
+(temperature, humidity, air quality, and other things - see `firmware-arduino/src/sensor.h`), as
+well as a small OLED display.
 
 The v1.1.0 device additionally has a small speaker.  Note the pinout for v1.1 differs from v1.0 in
 some respects, be sure to use the correct firmware.
@@ -20,8 +25,8 @@ written in C++, see `firmware-arduino/src`.
 
 ### Design documents
 
-The device user experience during setup and use is outlined in `UX.md`; this is what currently
-passes for a user manual.
+The device user experience during setup and use is described in the user manual:
+[firmware-arduino/MANUAL.md](firmware-arduino/MANUAL.md).
 
 The firmware architecture is documented at the beginning of `firmware-arduino/src/main.cpp`, with
 pointers to other files.
@@ -56,7 +61,7 @@ setup, as this file is required to provide default settings.
 
 To make a release build:
 
-* Be sure to disable `DEVELOPMENT` in `firmware-arduino/src/main.h`.
+* Be sure to disable `SNAPPY_DEVELOPMENT` in `firmware-arduino/src/main.h`.
 * Adjust any other switches in `firmware-arduino/src/main.h` that might feel like they are
   development-only.
 * Pay attention to warnings during build, as some switches that should not be on during release
@@ -64,10 +69,9 @@ To make a release build:
 
 ### ESP32-IDF based firmware
 
-Experimental code for firmware based on the esp32-idf framework (lower level than Arduino but better
-engineered) is in `firmware-idf/`.
+Experimental code for firmware based directly on the esp32-idf framework and FreeRTOS (lower level
+than Arduino but better engineered) is in `firmware-idf/`.
 
-## AWS IoT backend
+## AWS IoT backend and frontend
 
 Work in progress.  See documents in `aws-iot-backend` for more.
-

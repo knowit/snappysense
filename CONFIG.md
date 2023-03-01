@@ -5,9 +5,9 @@
 ## Individual factory provisioning
 
 In "individual factory provisioning mode" the SnappySense device is brought up in "access point
-mode" (AP mode) as described in [UX.md](UX.md), offering a WiFi access point with a name advertised on its
-screen (the AP name is generated randomly if none has been cconfigured).  The screen will also show
-an IP address.
+mode" (AP mode) as described in [../firmware-arduino/MANUAL.md](../firmware-arduino/MANUAL.md),
+offering a WiFi access point with a name advertised on its screen (the AP name is generated randomly
+if none has been cconfigured).  The screen will also show an IP address.
 
 ### Factory config query
 
