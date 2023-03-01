@@ -205,12 +205,22 @@ static TimerHandle_t master_timeout_timer;
 // The event queue that drives all activity except within the music player task
 static QueueHandle_t/*<SnappyEvent>*/ main_event_queue;
 
+#if defined(SNAPPY_HARDWARE_1_1_0)
+# define HARDWARE_NAME "1.1"
+#elif defined(SNAPPY_HARDWARE_1_0_0)
+# define HARDWARE_NAME "1.0"
+#else
+# error "Hardware name"
+#endif
+
 void setup() {
   main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));
 
   // Power up the device.
   device_setup();
   // Serial port and display are up now and can be used for output.
+
+  render_text("SnappySense " HARDWARE_NAME "\nKnowIt ObjectNet\n\n" __DATE__ " / Arduino");
 
   // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
@@ -315,7 +325,9 @@ void loop() {
 
   // The slideshow task starts whether we're in slideshow mode or not, since slideshow
   // mode only affects what happens between communication and monitoring, and for how long.
-  // The first thing the task does is show the splash screen.
+  // The first thing the task does is show the splash screen.  But give the user a little
+  // time to read the version message.
+  vTaskDelay(pdMS_TO_TICKS(4000));
   put_main_event(EvCode::SLIDESHOW_START);
 
   // Start the main task.
