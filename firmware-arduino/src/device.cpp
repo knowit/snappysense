@@ -177,8 +177,22 @@ void power_peripherals_on() {
 }
 
 void power_peripherals_off() {
-  // Do this unconditionally so that we can use it as a kind of fail-safe to reset
+  // Do all of this unconditionally so that we can use it as a kind of fail-safe to reset
   // the peripherals.
+
+  // Shut down I2C and remove the driver.
+  Wire.end();
+
+  // Force the I2C signals to 0V.
+  gpio_pullup_dis((gpio_num_t)I2C_SDA);
+  gpio_set_direction((gpio_num_t)I2C_SDA, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)I2C_SDA, 0);
+
+  gpio_pullup_dis((gpio_num_t)I2C_SCL);
+  gpio_set_direction((gpio_num_t)I2C_SCL, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)I2C_SCL, 0);
+
+  // Shut off power.
   digitalWrite(POWER_ENABLE_PIN, LOW);
   peripherals_powered_on = false;
 }
