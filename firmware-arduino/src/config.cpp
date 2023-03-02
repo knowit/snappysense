@@ -410,7 +410,7 @@ unsigned long monitoring_window_s() {
   // Constraints:
   // - longer than the warmup time
   // - long enough to get good readings from the PIR and MEMS after warmup
-  return 30;
+  return sensor_warmup_time_s() + 15;
 }
 
 #ifdef SNAPPY_NTP
