@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- two dropdowns, one for "device" and one for "factor", and a button, "query".
+  --
+  -- the two dropdowns are inactive initially and populated after fetching device
+  -- names and factor names from the databases.
+  --
+  -- when the button is pushed with both fields populated, we fetch the data.
+  --
+  -- when the data arrive, we plot a time series on a canvas, ideally with some
+  -- semblance of dates, at least starting and ending dates.
+  --
+  -- canvas can be dimensioned for "nice" laptop
+  --
+  -- TO DO HIGH PRI
+  --  - server needs to actually parse the device and factor and return appropriate data,
+  --    so that we can test that
+  --  - label the graph in several ways
+  --    - both axes with some data values (probably no more than 10, and dates should be
+  --      written compactly with eg "nov 10" on top of "2023")
+  --    - it's tricky that time resolution is hourly
+  --    - there should be a legend somewhere with device (or location) name
+  --  - test with the real server by serving the html file from the lambda
+  --
+  -- TO DO MEDIUM PRI
+  --  - select by location rather than by device (equivalent to multiselecting device)
+  --  - multiselect by device
+  --  - when multiple devices are selected, they should be plotted together with the
+  --    axes determined by the totality of the data set, and with legends for each device
+  --    or location
+  --  - select date range
+  -->
+<html>
+<head>
+  <title>SnappySense console</title>
+</head>
+<body onload="setup()">
+  <script>
+    function setup() {
+	fetch("/devices").
+	    then((response) => response.json()).
+	    then((devices) => {
+		let devs = document.getElementById("select-device-id")
+		for (let d of devices) {
+		    let opt = document.createElement('option')
+		    opt.value = d.device
+		    opt.label = d.device
+		    devs.add(opt)
+		}
+		devs.disabled = false
+	    })
+
+	fetch("/factors").
+	    then((response) => response.json()).
+	    then((factors) => {
+		let facts = document.getElementById("select-factor")
+		for (let f of factors) {
+		    let opt = document.createElement('option')
+		    opt.value = f
+		    opt.label = f
+		    facts.add(opt)
+		}
+		facts.disabled = false
+	    })
+    }
+
+    function perform_query() {
+	let dev_sel = document.getElementById("select-device-id")
+	if (dev_sel.selectedIndex == -1) {
+	    return
+	}
+	let dev_id = dev_sel.options[dev_sel.selectedIndex].value
+	if (dev_id == "") {
+	    return
+	}
+	let fac_sel = document.getElementById("select-factor")
+	if (fac_sel.selectedIndex == -1) {
+	    return
+	}
+	let factor = fac_sel.options[fac_sel.selectedIndex].value
+	if (factor == "") {
+	    return
+	}
+	fetch(`/observations?device=${dev_id}&factor=${factor}`).
+	    then((response) => response.json()).
+	    then((data) => {
+		plot_data(dev_id, factor, data)
+	    })
+    }
+
+    function plot_data(dev_id, factor, data) {
+	// data should be array of arrays: [[sent, observation], ...]
+	// as it comes from aws, the two numeric values are represented as strings
+	// sort increasing by sent (numeric value) and then plot the observations
+	data.sort(function (x, y) {
+	    a = parseInt(x[0])
+	    b = parseInt(x[1])
+	    return a - b
+	})
+	let obs = data.map((x) => Math.round(x[1]*10)/10)
+	let max = Math.max.apply(null, obs)
+	let min = Math.min.apply(null, obs)
+	let cv = document.getElementById("plot")
+	let border = 20
+	let width = cv.width - 2*border
+	let height = cv.height - 2*border
+	let xstep = obs.length <= 1 ? width : width / (obs.length - 1)
+	let cx = cv.getContext("2d")
+	let p = cx.beginPath()
+	let x = border;
+	for ( let o of obs ) {
+	    let y = border + Math.round((o - min) / (max - min) * height)
+	    if (x == border) {
+		cx.moveTo(x, y)
+	    } else {
+		cx.lineTo(x, y)
+	    }
+	    x += xstep
+	}
+	cx.stroke()
+	let s = obs.join("\n")
+	document.getElementById("xs").innerText = dev_id + "\n" + factor + "\n\n" + s
+    }
+  </script>
+
+  <select disabled multiple name="device" id="select-device-id">
+    <option value="">Select the device</option>
+  </select>
+
+  <select disabled name="factor" id="select-factor">
+    <option value="">Select the factor</option>
+  </select>
+
+  <button name="query" onclick="perform_query()">Query</button>
+  <br>
+  <!-- 640x480 ought to be enough for anyone -->
+  <canvas id=plot width=640 height=480 style="border: 1px solid black"></canvas>
+  <br>
+  <!-- debugging -->
+  <pre id=xs></pre>
+</body>
+</html>
