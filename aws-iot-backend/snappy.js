@@ -3,6 +3,7 @@
 // Application logic for the snappysense front-end
 
 const BORDER = 20
+const COLORS = ["black","red","fuchsia","green","yellow","blue","teal","aqua"]
 
 // At setup time, populate the selectors with devices and factors
 function setup() {
@@ -68,8 +69,6 @@ function fetch_and_plot_all(dev_ids, factor) {
     }
 }
 
-let COLORS = ["black","red","fuchsia","green","yellow","blue","teal","aqua"];
-
 // datas ::= [{"device":device-id, "observations":[[sent, observation], ...]}, ...]
 function plot_data(factor, datas) {
     // Filter the data: if the time is not credible (due to device not being properly configured
@@ -104,15 +103,15 @@ function plot_data(factor, datas) {
 
     let cv = the_canvas()
     let cx = cv.getContext("2d")
-    let blank = cx.createImageData(cv.width, cv.height);
+    let blank = cx.createImageData(cv.width, cv.height)
     cx.putImageData(blank, 0, 0)
 
-    let colornum = 0;
+    let colornum = 0
     for ( let d of datas ) {
 	let c = COLORS[colornum++ % COLORS.length]
 	plot_one_device(cv, d, min_time, max_time, min_obs, max_obs, c)
 	cx.font = "16px serif"
-	cx.fillStyle = c;
+	cx.fillStyle = c
 	cx.fillText(d.device, cv.width - 200, colornum * 15)
 	cx.fillStyle = "black"
     }
@@ -147,7 +146,7 @@ function plot_data(factor, datas) {
 
 function plot_one_device(cv, data, min_time, max_time, min_obs, max_obs, color) {
     let cx = cv.getContext("2d")
-    cx.strokeStyle = color;
+    cx.strokeStyle = color
     cx.lineWidth = 2
     //let dev_id = data.device
     let width = cv.width - 2*BORDER
