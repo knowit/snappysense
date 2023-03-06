@@ -19,12 +19,19 @@
     <option value="">Select the factor</option>
   </select>
 
+  <select name="dates" id="select-dates">
+    <option value="last-day">Last day</option>
+    <option value="last-two-days">Last two days</option>
+    <option value="last-week" selected>Last week</option>
+    <option value="last-month">Last month</option>
+    <option value="last-year">Last year</option>
+    <option value="forever">Everything</option>
+  </select>
+
   <button name="query" id="query-btn" onclick="perform_query()">Query</button>
   <br>
   <!-- 640x480 ought to be enough for anyone -->
   <canvas id=plot width=1200 height=480 style="border: 1px solid black"></canvas>
   <br>
-  <!-- debugging -->
-  <pre id=xs></pre>
 </body>
 </html>

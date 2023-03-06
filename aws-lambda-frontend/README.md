@@ -10,8 +10,7 @@ During development it's possible to test many things against the test server in 
 
 ## TODO (lots of things)
 
+- better labeling of the plot
 - point data (motion) are not usefully plotted on a line plot?
 - be able to deselect in the multiselects without reloading page
 - probably want to rename the lambda from snappyStartup to something else...
-- better labeling of the plot
-- select date range
