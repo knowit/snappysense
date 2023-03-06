@@ -4,18 +4,27 @@
 //
 // GET / returns the file index.html in the working directory
 //
-// GET /devices returns a list of device objects as a JSON array
+// GET /devices returns a list of device objects as a JSON array, each object has
+//   at least "device" (device ID) and "location" (device location ID) keys.
+//   (Probably the device should also have last-seen, maybe other things.)
 //
-// GET /factors returns a list of factor objects as a JSON array
+// GET /factors returns a list of factor objects as a JSON array, each object has
+//   at least "factor" (factor ID) and "description" (factor description) keys
 //
-// GET /observations?device=<device-id>&factor=<factor-id> returns the observations for <factor-id>
-// for the <device-id>
+// GET /locations returns a list of location objects as a JSON array, each object has
+//   at least "location" (location ID) and "description" (location description) keys
+//   (Possibly the location should have a list of devices there.)
+//
+// GET /observations?device=<device-id>&factor=<factor-id> returns the observations
+//   for <factor-id> for the <device-id> as a JSON array, each object in the array
+//   is a two-element array, [<sent-timestamp>, <observation-value>] where the
+//   timestamp is an integer and the observation is a number (depends on the factor)
 //
 // GET /time returns a string that is the decimal number of seconds since
-// the Posix epoch, UTC.  (ie, it's a primitive time server.)
+//   the Posix epoch, UTC.  (ie, it's a primitive time server.)
 //
 // POST /data takes a JSON object and writes it to a file.  It does not
-// check the validity of the object.
+//   check the validity of the object.
 
 package main
 
@@ -32,18 +41,27 @@ import (
 // The port we're listening on
 const PORT = 8086
 
-func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/")
+func serve_static(request, content string) {
+	http.HandleFunc(request, func(w http.ResponseWriter, r *http.Request) {
+		w.Header()["Content-Length"] = []string{strconv.Itoa(len(content))}
+		w.Header()["Content-Type"] = []string{"application/json"}
+		w.WriteHeader(200)
+		w.Write([]byte(content))
+	})
+}
+
+func serve_file(request, fn, ty string) {
+	http.HandleFunc(request, func(w http.ResponseWriter, r *http.Request) {
+		log.Print(request)
 		if r.Method != "GET" {
 			w.WriteHeader(403)
 			fmt.Fprintf(w, "Bad method")
 			return
 		}
-		f, err := os.Open("index.html")
+		f, err := os.Open(fn)
 		if err != nil {
 			w.WriteHeader(403)
-			fmt.Fprintf(w, "No such file")
+			fmt.Fprintf(w, "No such file: %s", fn)
 			return
 		}
 		b, err := io.ReadAll(f)
@@ -53,42 +71,15 @@ func main() {
 			return
 		}
 		w.Header()["Content-Length"] = []string{strconv.Itoa(len(b))}
-		w.Header()["Content-Type"] = []string{"text/html"}
+		w.Header()["Content-Type"] = []string{ty}
 		w.WriteHeader(200)
 		w.Write(b)
 	})
+}
 
-	http.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
-		result := "[{\"device\":\"snp_1_1_no_1\"},{\"device\":\"snp_1_1_no_2\"},{\"device\":\"snp_1_1_no_3\"}]"
-		w.Header()["Content-Length"] = []string{strconv.Itoa(len(result))}
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.WriteHeader(200)
-		w.Write([]byte(result))
-	})
-
-	http.HandleFunc("/factors", func(w http.ResponseWriter, r *http.Request) {
-		result := "[\"temperature\",\"humidity\",\"light\"]"
-		w.Header()["Content-Length"] = []string{strconv.Itoa(len(result))}
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.WriteHeader(200)
-		w.Write([]byte(result))
-	})
-
-	http.HandleFunc("/observations", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Different results for different devices and factors
-		// TODO: Actually parse the header
-		// This returns string values because the current lambda code does that, but
-		// I think there's no reason why the lambda code couldn't convert these to numbers,
-		// it would be more sensible for everyone.
-		result := "[[\"1677665373\",\"27.442245\"],[\"1677686346\",\"24.096375\"],[\"1677678349\",\"27.407532\"],[\"1677683839\",\"27.185898\"],[\"1677669904\",\"24.374084\"],[\"1677687058\",\"25.677185\"],[\"1677674691\",\"26.92421\"],[\"1677672836\",\"25.848083\"],[\"1677684278\",\"27.065735\"],[\"1677682344\",\"27.338104\"],[\"1677687455\",\"26.542358\"],[\"1677673975\",\"28.326111\"],[\"1677677547\",\"26.865463\"],[\"1677678771\",\"27.818756\"],[\"1677673491\",\"28.219299\"],[\"1677675826\",\"26.504974\"],[\"1677674238\",\"27.719955\"],[\"1677666150\",\"25.714569\"],[\"1677676470\",\"26.876144\"],[\"1677681905\",\"25.890808\"],[\"1677684717\",\"26.253967\"]]"
-		w.Header()["Content-Length"] = []string{strconv.Itoa(len(result))}
-		w.Header()["Content-Type"] = []string{"application/json"}
-		w.WriteHeader(200)
-		w.Write([]byte(result))
-	})
-
-	http.HandleFunc("/time", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/time")
+func serve_time(request string) {
+	http.HandleFunc(request, func(w http.ResponseWriter, r *http.Request) {
+		log.Printf(request)
 		if r.Method != "GET" {
 			w.WriteHeader(403)
 			fmt.Fprintf(w, "Bad method")
@@ -100,9 +91,11 @@ func main() {
 		w.WriteHeader(200)
 		w.Write([]byte(payload))
 	})
+}
 
-	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("/data")
+func receive_data(request, logfile string) {
+	http.HandleFunc(request, func(w http.ResponseWriter, r *http.Request) {
+		log.Printf(request)
 		if r.Method != "POST" {
 			w.WriteHeader(403)
 			fmt.Fprintf(w, "Bad method")
@@ -121,7 +114,7 @@ func main() {
 			fmt.Fprintf(w, "Bad content")
 		} else {
 			w.WriteHeader(202)
-			f, err := os.OpenFile("snappy.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			f, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err == nil {
 				f.Write(payload)
 				f.Write([]byte{'\n'})
@@ -129,6 +122,73 @@ func main() {
 			}
 		}
 	})
+}
+
+// TODO: Fill this in
+var results = map[string]map[string]string{
+	"snp_1_1_no_1": map[string]string{
+		"temperature": `
+[[1677665373,27.442245],[1677686346,24.096375],[1677678349,27.407532],[1677683839,27.185898],[1677669904,24.374084],[1677687058,25.677185],[1677674691,26.92421],[1677672836,25.848083],[1677684278,27.065735],[1677682344,27.338104],[1677687455,26.542358],[1677673975,28.326111],[1677677547,26.865463],[1677678771,27.818756],[1677673491,28.219299],[1677675826,26.504974],[1677674238,27.719955],[1677666150,25.714569],[1677676470,26.876144],[1677681905,25.890808],[1677684717,26.253967]]`,
+		"humidity": `[]`,
+		"light": `[]`},
+	"snp_1_1_no_3": map[string]string{
+		"temperature": `[[1677655373,21],[1677656346,22],[1677658349,23],[1677653839,22],[1677659904,21],[1677657058,22],[1677654691,22],[1677652836,22],[1677654278,23],[1677652344,24],[1677657455,25],[1677653975,25],[1677657547,26],[1677658771,27],[1677653491,26],[1677655826,25],[1677654238,24],[1677656150,23],[1677665373,23.442245],[1677686346,21.096375],[1677678349,23.407532],[1677683839,23.185898],[1677669904,21.374084],[1677687058,20.677185],[1677674691,21.92421],[1677672836,20.848083],[1677684278,23.065735],[1677682344,23.338104],[1677687455,21.542358],[1677673975,28.326111],[1677677547,21.865463],[1677678771,23.818756],[1677673491,28.219299],[1677675826,21.504974],[1677674238,23.719955],[1677666150,20.714569],[1677676470,21.876144],[1677681905,20.890808],[1677684717,21.253967]]`,
+		"humidity": `[]`,
+		"light": `[]`}}
+
+func serve_observations(request string) {
+	http.HandleFunc(request, func(w http.ResponseWriter, r *http.Request) {
+		{
+			q := r.URL.Query()
+			devs, ok := q["device"]
+			if !ok || len(devs) != 1 {
+				goto borked
+			}
+			device := devs[0]
+			facs, ok := q["factor"]
+			if !ok || len(facs) != 1 {
+				goto borked
+			}
+			factor := facs[0]
+			if results[device] == nil || results[device][factor] == "" {
+				goto borked
+			}
+			result := results[device][factor]
+			w.Header()["Content-Length"] = []string{strconv.Itoa(len(result))}
+			w.Header()["Content-Type"] = []string{"application/json"}
+			w.WriteHeader(200)
+			w.Write([]byte(result))
+			return
+		}
+	borked:
+		w.WriteHeader(400)
+		fmt.Fprintf(w, "Bad request")
+	})
+}
+
+func main() {
+	serve_static("/devices",
+`[{"device":"snp_1_1_no_1", "location":"ambulatory"},
+  {"device":"snp_1_1_no_3", "location":"takterrassen"}]`)
+
+	serve_static("/locations",
+`[{"location":"ambulatory", "description":"Here and there"},
+ {"location":"takterrassen", "description":"Roof terrace U1"}]`)
+
+	serve_static("/factors",
+`[{"factor":"temperature", "description": "temperature degrees C"},
+  {"factor":"humidity", "description": "relative humidity %"},
+  {"factor":"light", "description": "light lux"}]`)
+
+	serve_file("/", "index.html", "text/html")
+	serve_file("/index.html", "index.html", "text/html")
+	serve_file("/snappy.js", "snappy.js", "application/javascript")
+
+	serve_time("/time")
+
+	serve_observations("/observations")
+
+	receive_data("/data", "snappy.log")
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil))
 }
