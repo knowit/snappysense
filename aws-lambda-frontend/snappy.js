@@ -2,8 +2,14 @@
 
 // Application logic for the snappysense front-end
 
+// Border around the canvas, px
 const BORDER = 20
+
+// Colors we pick from to plot multiple things together
 const COLORS = ["black","red","fuchsia","green","yellow","blue","teal","aqua"]
+
+// The biggest gap in time we allow between observations that are part of the same run
+const DELTA = 2*60*60
 
 // At setup time, populate the selectors with devices and factors
 function setup() {
@@ -170,7 +176,24 @@ function plot_data(factor, datas) {
     let colornum = 0
     for ( let d of datas ) {
 	let c = COLORS[colornum++ % COLORS.length]
-	plot_one_device(cv, d, min_time, max_time, min_obs, max_obs, c)
+	// Split the time series into separate stretches for which we have data
+	let observations = d.observations
+	let buckets = []
+	let bucket = []
+	for ( let obs of observations ) {
+	    if (bucket.length == 0 || bucket[bucket.length-1][0] + DELTA > obs[0]) {
+		bucket.push(obs)
+	    } else {
+		buckets.push(bucket)
+		bucket = [obs]
+	    }
+	}
+	if (bucket.length > 0) {
+	    buckets.push(bucket)
+	}
+	for ( let b of buckets ) {
+	    plot_one_device(cv, b, min_time, max_time, min_obs, max_obs, c)
+	}
 	cx.font = "16px serif"
 	cx.fillStyle = c
 	cx.fillText(d.device, cv.width - 200, colornum * 15)
@@ -205,17 +228,16 @@ function plot_data(factor, datas) {
 //    the_debug_dump().innerText = dev_id + "\n" + factor + "\n\n" + s
 }
 
-function plot_one_device(cv, data, min_time, max_time, min_obs, max_obs, color) {
+function plot_one_device(cv, observations, min_time, max_time, min_obs, max_obs, color) {
     let cx = cv.getContext("2d")
     cx.strokeStyle = color
     cx.lineWidth = 2
-    //let dev_id = data.device
     let width = cv.width - 2*BORDER
     let height = cv.height - 2*BORDER
     // Dang it, y axis has to be inverted...
     let p = cx.beginPath()
     let first = true
-    for ( let [t,o] of data.observations ) {
+    for ( let [t,o] of observations ) {
 	let x = BORDER + Math.round((t - min_time) / (max_time - min_time) * width)
 	let y = BORDER + Math.round((o - min_obs) / (max_obs - min_obs) * height)
 	if (first) {

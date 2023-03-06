@@ -1,1 +1,1 @@
-../aws-iot-backend/snappy.js
+../aws-lambda-frontend/snappy.js
