@@ -28,11 +28,61 @@ function setup() {
 	    }
 	    facts.disabled = false
 	})
+
+    // {"location":location-id, "description":text}
+    fetch("/locations").
+	then((response) => response.json()).
+	then((locations) => {
+	    let locs = the_locations()
+	    for (let f of locations) {
+		locs.add(new_option(f.location))
+	    }
+	    locs.disabled = false
+	})
 }
 
+// Selection logic:
+//  - we want to compute a list of device names
+//  - if any locations are selected, then we must obtain the devices at thos
+//    locations, this entails an extra query
+//  - if any devices are selected, they also go into the list
+//  - once we have all data, we perform the plotting
+
 function perform_query() {
-    let dev_sel = the_devices()
+    let loc_sel = the_locations()
+    if (loc_sel.selectedIndex != -1) {
+	// there are locations
+	// we perform /devices_by_location?location=loc-id for all locations selected
+	fetch_devices_from_locations_then_query_stage_2()
+    } else {
+	perform_query_stage_2([])
+    }
+}
+
+function fetch_devices_from_locations_then_query_stage_2() {
+    let loc_sel = the_locations()
+    let opts = loc_sel.selectedOptions
+    let remaining = opts.length
     let dev_ids = []
+    for ( let i = 0 ; i < opts.length; i++ ) {
+	// The response here is a list of device objects, for better or worse
+	let loc_id = opts[i].value
+	fetch(`/devices_by_location?location=${loc_id}`).
+	    then((response) => response.json()).
+	    then((data) => {
+		for ( let d of data ) {
+		    dev_ids.push(d.device)
+		}
+		remaining--
+		if (remaining == 0) {
+		    perform_query_stage_2(dev_ids)
+		}
+	    })
+    }
+}
+
+function perform_query_stage_2(dev_ids) {
+    let dev_sel = the_devices()
     let opts = dev_sel.selectedOptions
     for ( let i = 0; i < opts.length; i++ ) {
 	dev_ids.push(opts[i].value)
@@ -40,6 +90,16 @@ function perform_query() {
     if (dev_ids.length == 0) {
 	return
     }
+    // Remove duplicates: sort + compress runs
+    dev_ids.sort((x, y) => x < y ? -1 : (x > y ? 1 : 0))
+    let xs = dev_ids
+    dev_ids = [xs[0]]
+    for ( let i = 1; i < xs.length ; i++ ) {
+	if (xs[i] != dev_ids[dev_ids.length-1]) {
+	    dev_ids.push(xs[i])
+	}
+    }
+
     let fac_sel = the_factor()
     if (fac_sel.selectedIndex == -1) {
 	return
@@ -48,6 +108,7 @@ function perform_query() {
     if (factor == "") {
 	return
     }
+
     fetch_and_plot_all(dev_ids, factor)
 }
 
@@ -57,7 +118,7 @@ function fetch_and_plot_all(dev_ids, factor) {
     let num_left = dev_ids.length
     let accum = []
     for ( let dev_id of dev_ids ) {
-	fetch(`/observations?device=${dev_id}&factor=${factor}`).
+	fetch(`/observations_by_device_and_factor?device=${dev_id}&factor=${factor}`).
 	    then((response) => response.json()).
 	    then((data) => {
 		accum.push({"device":dev_id, "observations":data})
@@ -170,7 +231,7 @@ function plot_one_device(cv, data, min_time, max_time, min_obs, max_obs, color) 
 function mmm_dd(n) {
     let d = new Date(n*1000)
     let mmm = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]
-    return mmm[d.getMonth()] + "-" + d.getDay()
+    return mmm[d.getMonth()] + "-" + d.getDate()
 }
 
 function onedec(n) {
@@ -179,6 +240,10 @@ function onedec(n) {
 
 function the_devices() {
     return document.getElementById("select-device-id")
+}
+
+function the_locations() {
+    return document.getElementById("select-location-id")
 }
 
 function the_factor() {

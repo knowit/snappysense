@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SnappySense console</title>
+  <script src="snappy.js"></script>
+</head>
+<body onload="setup()">
+  <p> Multiselect devices and/or locations, and a factor, and then press Query</p>
+  
+  <select multiple disabled name="device" id="select-device-id">
+    <option disabled value="">Select the device</option>
+  </select>
+
+  <select multiple disabled name="location" id="select-location-id">
+    <option disabled value="">Select the location</option>
+  </select>
+
+  <select disabled name="factor" id="select-factor">
+    <option value="">Select the factor</option>
+  </select>
+
+  <button name="query" id="query-btn" onclick="perform_query()">Query</button>
+  <br>
+  <!-- 640x480 ought to be enough for anyone -->
+  <canvas id=plot width=1200 height=480 style="border: 1px solid black"></canvas>
+  <br>
+  <!-- debugging -->
+  <pre id=xs></pre>
+</body>
+</html>
