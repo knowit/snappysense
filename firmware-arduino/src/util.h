@@ -49,10 +49,15 @@ class List {
   // Invariant: last == nullptr || last->next = nullptr;
   Node* first = nullptr;
   Node* last = nullptr;
+  size_t len = 0;
 
 public:
   bool is_empty() const {
     return first == nullptr;
+  }
+
+  size_t length() const {
+    return len;
   }
 
   void clear() {
@@ -69,6 +74,7 @@ public:
         last->next = node;
         last = node;
     }
+    len++;
   }
 
   T& peek_front() const {
@@ -89,6 +95,7 @@ public:
     }
     T value = std::move(node->value);
     delete node;
+    len--;
     return value;
   }
 };

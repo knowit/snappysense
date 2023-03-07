@@ -49,6 +49,10 @@
 // calculation.
 static const size_t MQTT_BUFFER_SIZE = 1024;
 
+// The maximum number of messages to hold.  Each message can be, say, 0.5KB.  Once the
+// queue fills up we discard the oldest messages.
+static const size_t MAX_QUEUED = 100;
+
 struct MqttMessage {
   MqttMessage(String&& topic, String&& message)
     : topic(std::move(topic)), message(std::move(message))
@@ -216,6 +220,9 @@ void mqtt_add_data(SnappySenseData* data) {
     log("mqtt: holding message for later\n");
     SnappySenseData d = *data;
     delayed_data_queue.add_back(std::move(d));
+    if (delayed_data_queue.length() > MAX_QUEUED) {
+      delayed_data_queue.pop_front();
+    }
     delete data;
     return;
   }
@@ -231,6 +238,9 @@ void mqtt_add_data(SnappySenseData* data) {
 
 static void mqtt_enqueue(String&& topic, String&& body) {
   mqtt_queue.add_back(std::move(MqttMessage(std::move(topic), std::move(body))));
+  if (mqtt_queue.length() > MAX_QUEUED) {
+    mqtt_queue.pop_front();
+  }
 }
 
 static void put_delayed_retry() {
