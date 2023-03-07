@@ -29,18 +29,23 @@ def handle_observation_event(db, event, context):
     device_class = event["class"]
     sent = event["sent"]
     sequenceno = event["sequenceno"]
-    # TODO: Probably if location is absent we should get it from the device record?
-    location = event["location"] if "location" in event else ""
-    factors = {}
-    for k in event:
-        if k.startswith("F#"):
-            factors[k] = event[k]
     received = math.floor(time.time())
     salt = random.randint(1, 100000)
     key = device + "#" + str(received) + "#" + str(sequenceno) + "#" + str(salt)
 
-    # Update the device entry with time of last contact.  We assume server time is monotonic...
     device_entry = snappy_data.get_device(db, device)
+
+    if "location" in event:
+        location = event["location"]
+    else:
+        location = snappy_data.opt_string_field(device_entry, "location", "")
+
+    factors = {}
+    for k in event:
+        if k.startswith("F#"):
+            factors[k] = event[k]
+
+    # Update the device entry with time of last contact
     if device_entry:
         snappy_data.device_set_last_contact(device_entry, received)
         snappy_data.write_device_entry(db, device_entry)
