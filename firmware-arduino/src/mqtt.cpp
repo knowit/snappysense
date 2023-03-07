@@ -154,9 +154,11 @@ void mqtt_work() {
     return;
   }
   if (mqtt_state == MqttState::CONNECTED) {
-    subscribe();
     mqtt_state = MqttState::SUBSCRIBED;
-    put_main_event(EvCode::COMM_ACTIVITY);
+    if (mqtt_client.connected()) {
+      subscribe();
+      put_main_event(EvCode::COMM_ACTIVITY);
+    }
     put_main_event(EvCode::COMM_MQTT_WORK);
     return;
   }
@@ -170,20 +172,22 @@ void mqtt_work() {
     }
   }
   if (mqtt_state == MqttState::RUNNING) {
-    if (!mqtt_queue.is_empty()) {
-      send();
-      put_main_event(EvCode::COMM_ACTIVITY);
-      put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
-      return;
+    if (mqtt_client.connected()) {
+      if (!mqtt_queue.is_empty()) {
+        send();
+        put_main_event(EvCode::COMM_ACTIVITY);
+        put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
+        return;
+      }
+      // The normal case is that there's very little incoming traffic.  There will be
+      // few actuators and the server should definitely limit the update frequency
+      // for those.  There will be few instances of wishing to disable/enable devices
+      // and changing their report frequencies.
+      if (poll()) {
+        put_main_event(EvCode::COMM_ACTIVITY);
+      }
+      put_delayed_retry();
     }
-    // The normal case is that there's very little incoming traffic.  There will be
-    // few actuators and the server should definitely limit the update frequency
-    // for those.  There will be few instances of wishing to disable/enable devices
-    // and changing their report frequencies.
-    if (poll()) {
-      put_main_event(EvCode::COMM_ACTIVITY);
-    }
-    put_delayed_retry();
   }
 }
 
@@ -357,18 +361,20 @@ static void send() {
     return;
   }
 
-  // TODO: Status code!
-  mqtt_client.beginMessage(first.topic.c_str(), false, 1, 0);
-  // TODO: Status code!
+  if (!mqtt_client.beginMessage(first.topic.c_str(), false, 1, 0)) {
+    log("Mqtt: failed to setup connection\n");
+    return;
+  }
   if (mqtt_client.write((uint8_t*)first.message.c_str(), msg_len) != msg_len) {
     log("Mqtt: Message was chopped by mqtt layer!\n");
+    // More than likely, the message will fail the next time too, so just discard it
+    mqtt_queue.pop_front();
+    return;
   }
-  // TODO: Status code!
-  mqtt_client.endMessage();
-
-  // FIXME: Issue 20: We could fail to send because the connection drops.  In that
-  // case, detect the error and do not dequeue the message, but leave it in the buffer
-  // for a subsequent attempt and exit the loop here.
+  if (!mqtt_client.endMessage()) {
+    log("Mqtt: Sending failed\n");
+    return;
+  }
 
   mqtt_queue.pop_front();
   log("Mqtt: Sent one datum\n");
