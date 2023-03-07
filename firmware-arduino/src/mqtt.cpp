@@ -37,6 +37,8 @@
 #include <Arduino_Json.h>
 #include "config.h"
 #include "log.h"
+#include "sensor.h"
+#include "time_server.h"
 
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.
@@ -78,6 +80,7 @@ static bool early_times = true;
 static int num_times = 0;
 static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
+static List<SnappySenseData> delayed_data_queue;
 
 static void subscribe();
 static void connect();
@@ -97,7 +100,8 @@ bool mqtt_have_work() {
   time_t delta = time(nullptr) - last_connect;
 
   // Hold data for a while, don't connect every time just because there's work to do.
-  if (!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) {
+  if ((!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) ||
+      (!delayed_data_queue.is_empty() && time_adjustment() > 0)) {
     return true;
   }
 
@@ -179,6 +183,21 @@ void mqtt_work() {
   }
 }
 
+static void enqueue_data(const SnappySenseData& data) {
+  String topic;
+  String body;
+
+  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
+  topic += "snappy/observation/";
+  topic += mqtt_device_class();
+  topic += "/";
+  topic += mqtt_device_id();
+
+  body = format_readings_as_json(data);
+
+  mqtt_enqueue(std::move(topic), std::move(body));
+}
+
 void mqtt_add_data(SnappySenseData* data) {
   if (!device_enabled()) {
     delete data;
@@ -191,18 +210,22 @@ void mqtt_add_data(SnappySenseData* data) {
 
   last_capture = time(nullptr);
 
-  String topic;
-  String body;
+  time_t adj = time_adjustment();
+  if (adj == 0) {
+    // Time has not been configured.  Need to enqueue the data for later.
+    log("mqtt: holding message for later\n");
+    SnappySenseData d = *data;
+    delayed_data_queue.add_back(std::move(d));
+    delete data;
+    return;
+  }
 
-  // The topic string and JSON data format are defined by aws-iot-backend/MQTT-PROTOCOL.md
-  topic += "snappy/observation/";
-  topic += mqtt_device_class();
-  topic += "/";
-  topic += mqtt_device_id();
-
-  body = format_readings_as_json(*data);
-
-  mqtt_enqueue(std::move(topic), std::move(body));
+  while (!delayed_data_queue.is_empty()) {
+    SnappySenseData d = delayed_data_queue.pop_front();
+    d.time += adj;
+    enqueue_data(d);
+  }
+  enqueue_data(*data);
   delete data;
 }
 
@@ -338,6 +361,7 @@ static void send() {
   // for a subsequent attempt and exit the loop here.
 
   mqtt_queue.pop_front();
+  log("Mqtt: Sent one datum\n");
 }
 
 static void mqtt_handle_message(int payload_size) {
