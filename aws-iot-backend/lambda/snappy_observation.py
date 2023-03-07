@@ -39,6 +39,14 @@ def handle_observation_event(db, event, context):
     salt = random.randint(1, 100000)
     key = device + "#" + str(received) + "#" + str(sequenceno) + "#" + str(salt)
 
+    # Update the device entry with time of last contact.  We assume server time is monotonic...
+    device_entry = snappy_data.get_device(db, device)
+    if device_entry:
+        snappy_data.device_set_last_contact(device_entry, received)
+        snappy_data.write_device_entry(db, device_entry)
+
+    # Log it!
+    # If no device was found above, we log the data anyway; is this really the right thing though?
     snappy_data.put_observation(db, key, device, location, sequenceno, received, sent, factors)
 
     # Here we could check if the device has become reconfigured on the back-end (eg become disabled)
