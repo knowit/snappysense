@@ -8,7 +8,7 @@ firmware-arduino/src/configuration.cfg
 firmware-idf/build
 music-compiler/musiccomp
 test-server/httpsrv
-aws-iot-backend/dbop/dbop
+aws-dynamodb/dbop/dbop
 aws-iot-backend/lambda/snappy.zip
 aws-lambda-frontend/snappy-frontend.zip
 *~

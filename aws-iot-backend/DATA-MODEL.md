@@ -15,7 +15,7 @@ LOCATION) are not uniform, but vary with the device that reported data (or the n
 location).
 
 Technically speaking the data model is defined not here, but jointly by two programs: the AWS Lambda
-code in `lambda/`, and the database command-line interface in `dbop/`.  Those programs MUST be in
+code in `lambda/`, and the database command-line interface in `../aws-dynamodb/dbop/`.  Those programs MUST be in
 agreement, and they jointly also describe the JSON layout expected by the databases.  (For example,
 whether something is an "L" list containing string values or an "SS" string set, and whether
 something is an "N" number or an "S" string that happens always to have a numeric value.)

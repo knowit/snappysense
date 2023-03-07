@@ -331,7 +331,7 @@ The `dbop` command line utility is a simple Go program that talks to AWS DynamoD
 `go` on your machine, which you can get from `https://golang.org`, your package manager, and in
 other ways.
 
-To build, go to `aws-iot-backend/dbop` and run `go build`.  The executable should appear in that
+To build, go to `aws-dynamodb/dbop` and run `go build`.  The executable should appear in that
 directory.  It is run as explained in earlier sections.
 
 To run it, you must have set up your AWS credentials in the normal way for the AWS CLI, either as
