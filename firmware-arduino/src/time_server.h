@@ -25,6 +25,11 @@ void timeserver_work();
 // without start having been called first.
 void timeserver_stop();
 
+// This is either 0 (time has not been configured) or a number of seconds to be added
+// to time readings that were made before time was adjusted in order to bring them
+// into the present.
+time_t time_adjustment();
+
 #endif
 
 #endif // !time_server_h_included

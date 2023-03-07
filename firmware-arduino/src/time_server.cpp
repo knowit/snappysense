@@ -19,15 +19,26 @@ struct TimeServerState {
 
 static TimeServerState* timeserver_state;
 static TimerHandle_t timeserver_timer;
+
+// Set to true if we have received a time from the time server and have set the
+// system clock.
 static bool time_configured;
+
+// When time_configured is true, this is the number of seconds that was added to the
+// clock at the time when time was adjusted.  This can be used to adjust time readings
+// that were made before time was adjusted.
+static time_t time_adjust;
 
 static void put_delayed_retry() {
   xTimerStart(timeserver_timer, portMAX_DELAY);
 }
 
 static void configure_clock(time_t t) {
+  time_t now = time(nullptr);
   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
   settimeofday(&tv, nullptr);
+  time_adjust = t - now;
+  time_configured = true;
 }
 
 static void maybe_configure_time() {
@@ -39,11 +50,17 @@ static void maybe_configure_time() {
   // FIXME: update() blocks, this is not what we want.
   if (timeserver_state->timeClient.update()) {
     log("Time configured\n");
-    time_configured = true;
     configure_clock(timeserver_state->timeClient.getEpochTime());
   } else {
     put_delayed_retry();
   }
+}
+
+time_t time_adjustment() {
+  if (time_configured) {
+    return time_adjust;
+  }
+  return 0;
 }
 
 void timeserver_init() {
