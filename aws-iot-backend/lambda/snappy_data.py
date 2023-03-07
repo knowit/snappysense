@@ -81,6 +81,7 @@ def device_location(device_entry):
 def device_last_contact(device_entry):
     return opt_int_field(device_entry, "last_contact", DEFAULT_DEV_LAST_CONTACT)
 
+# 'lc' is reliable because it is 'received' time, ie generated on the server
 def device_set_last_contact(device_entry, lc):
     set_opt_int_field(device_entry, "last_contact", lc)
 
