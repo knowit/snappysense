@@ -28,6 +28,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// The identity is currently taken from ~/.aws/credentials, but the dynamodb region
+// is configurable.
+const aws_region = "eu-central-1"
+
 const helptext string = `
 Usage:
  dbop help
@@ -236,7 +240,7 @@ func main() {
 		return
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("eu-central-1"))
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(aws_region))
 	if err != nil {
 		log.Fatalf("unable to load SDK config\n%v", err)
 	}
@@ -339,7 +343,7 @@ func scan_table(svc *dynamodb.Client, the_table *Table) {
 	if err != nil {
 		log.Fatalf("failed to scan table %s\n%v", the_table.short_name, err)
 	}
-	// TODO: Sort by primary key value
+	// TODO: Sort by primary key value or perhaps by the received or sent fields
 	for _, row := range resp.Items {
 		display_row(the_table, row)
 	}
