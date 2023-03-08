@@ -1,5 +1,5 @@
 # Live test of snappy_data
-# This assumes you've set up test data with ../snappysense-demo-data.sh
+# This assumes you've set up test data with ../test-code/snappysense-demo-data.sh
 
 import snappy_data
 

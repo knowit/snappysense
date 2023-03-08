@@ -1,6 +1,6 @@
 # Live test of snappy_observation
 #
-# This assumes you've set up test data with ../snappysense-demo-data.sh and that you've run
+# This assumes you've set up test data with ../test-code/snappysense-demo-data.sh and that you've run
 # and passed both livetest_snappy_data.py and livetest_snappy_startup.py
 
 import snappy_data

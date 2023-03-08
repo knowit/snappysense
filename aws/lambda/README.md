@@ -17,3 +17,5 @@ Application logic for the front end is in `snappy_http.py`, which handles HTTP r
 See various `*.md` files in the parent directory for design documents.
 
 To upload, either run `make` in this directory or duplicate the actions in Makefile.
+
+Some test programs are in `../lambda-test`.

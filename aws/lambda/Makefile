@@ -1,3 +1,5 @@
+.PHONY: upload
+
 upload: snappy.zip
 	aws lambda update-function-code --function-name snappySense --zip-file fileb://`pwd`/snappy.zip
 

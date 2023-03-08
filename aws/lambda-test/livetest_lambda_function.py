@@ -1,6 +1,6 @@
 # Live test of the lambda itself
 #
-# This assumes you've set up test data with ../snappysense-demo-data.sh and that you've run
+# This assumes you've set up test data with ../test-code/snappysense-demo-data.sh and that you've run
 # and passed livetest_snappy_data.py
 
 import lambda_function
