@@ -62,6 +62,13 @@ def string_list(item, name):
             ds.append(d["S"])
     return ds
 
+def format_devices(response):
+    result = []
+    for l in response["Items"]:
+        result.append({'location':l['location']['S'],
+                       'device':l['device']['S']})
+    return result
+
 ################################################################################
 #
 # DEVICE
@@ -94,6 +101,31 @@ def device_interval(device_entry):
 def device_factors(device_entry):
     return string_list(device_entry, "factors")
 
+def list_devices(db):
+    response = db.scan(
+        TableName='snappy_device',
+        ExpressionAttributeNames={
+            '#DEV': 'device',
+            '#LOC': 'location',
+        },
+        ProjectionExpression='#DEV, #LOC')
+    return format_devices(response)
+
+def query_devices_by_location(db, location):
+    response = db.scan(
+        TableName='snappy_device',
+        ExpressionAttributeNames={
+            '#LOC':'location',
+            '#DEV':'device',
+        },
+        ExpressionAttributeValues={
+            ':l': {
+                'S': location,
+            },
+        },
+        FilterExpression='#LOC = :l',
+        ProjectionExpression='#DEV, #LOC')
+    return format_devices(response)
 
 ################################################################################
 #
@@ -117,6 +149,20 @@ def factor_description(factor_entry):
     return string_field(factor_entry, "description")
 
 
+def list_factors(db):
+    response = db.scan(
+        TableName='snappy_factor',
+        ExpressionAttributeNames={
+            '#FAC': 'factor',
+            '#DES': 'description',
+        },
+        ProjectionExpression='#DES, #FAC')
+    result = []
+    for l in response["Items"]:
+        result.append({'factor':l['factor']['S'],
+                       'description':l['description']['S']})
+    return result
+
 ################################################################################
 #
 # LOCATION
@@ -134,6 +180,20 @@ def location_timezone(location_entry):
     return opt_string_field(location_entry, "timezone", DEFAULT_LOC_TIMEZONE)
 
 
+def list_locations(db):
+    response = db.scan(
+        TableName='snappy_location',
+        ExpressionAttributeNames={
+            '#LOC': 'location',
+            '#DES': 'description',
+        },
+        ProjectionExpression='#LOC, #DES')
+    result = []
+    for l in response["Items"]:
+        result.append({'location':l['location']['S'], 
+                       'description':l['description']['S']})
+    return result
+
 ################################################################################
 #
 # OBSERVATION
@@ -149,4 +209,36 @@ def put_observation(db, key, device, location, sequenceno, received, sent, facto
         record[k] = {"N":str(factors[k])}
     db.put_item(TableName="snappy_observation", Item=record)
 
+# Returns a list of observations, each observation is itself a list:
+#   [sent, value]
+# where `value` is the value of the field with name F#<factor> and `sent` is the value of the `sent`
+# field of the observation.  Both values are numbers.
 
+def query_observations_by_device_and_factor(db, device, factor):
+    field = "F#" + factor
+    response = db.scan(
+        TableName='snappy_observation',
+        ExpressionAttributeNames={
+            '#FAC': field,
+            '#SEN': 'sent',
+        },
+        ExpressionAttributeValues={
+            ':d': {
+                'S': device,
+            },
+        },
+        FilterExpression='device = :d',
+        ProjectionExpression='#SEN, #FAC')
+    result = []
+    # Not real happy about the use of float() here, the conversion is really
+    # field-specific.  But if there's JS or Python on the other end of the
+    # pipeline this will be OK.
+    for d in response["Items"]:
+        sent = 0
+        if "sent" in d:
+            sent = int(d["sent"]["N"])
+        fac = 0
+        if field in d:
+            fac = float(d[field]["N"])
+        result.append([sent, fac])
+    return result
