@@ -1,16 +1,20 @@
 -*- fill-column: 100 -*-
 
-# AWS Lambda front-end for SnappySense
+# Notes about the SnappySense front-end
 
-This maintains the SnappySense databases jointly with the back-end (see ../aws-iot-backend), and
-allows data to be queried.  See [../aws-iot-backend/README.md](../aws-iot-backend/README.md) and
-other files in that directory for information about the data model and so on.
+The front-end currently consists of hand-written HTML and JavaScript that talks to the lambda to
+receive static assets and query results.  (There is currently no way to update data from the
+front-end.)  Simply load the root document at the Function URL for the lambda to be served the
+application.
 
-During development it's possible to test many things against the test server in ../test-server.
+The application has some selection boxes where one can select devices by ID or by location, and then
+the factor to display and the time range of interest.  Pressing `Query` will then display the
+results of the query in the plot.
 
-## TODO (lots of things)
+This is all fairly primitive, but we don't need anything else right now.
+
+## TODO (lots of things, many more than this)
 
 - better labeling of the plot
-- point data (motion) are not usefully plotted on a line plot?
+- point data (motion) are not usefully plotted on a line plot
 - be able to deselect in the multiselects without reloading page
-- probably want to rename the lambda from snappyStartup to something else...
