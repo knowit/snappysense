@@ -35,7 +35,8 @@ Technical documents about data formats and protocols:
 
 Code is mostly in subdirectories:
 
-* The AWS Lambda function that implements the back-end is in `lambda/`.
-* A utility command line program that talks directly to the databases (bypassing the lambda) and
-  allows tables to be created, deleted, and inspected is in `dbop/`.
-* Test programs for the setup phase are in `test-lambdas/`
+* [lambda/](lambda/) has the AWS Lambda function that implements the back-end.
+* [dbop/](dbop/) has a utility command line program that talks directly to the databases (bypassing the 
+  lambda) and allows tables to be created, deleted, and inspected.
+* [test-code/](test-code/) has some simple test programs that can be used during the setup phase,
+  see [test-code/README.md](test-code/README.md).
