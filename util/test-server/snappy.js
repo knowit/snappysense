@@ -1,1 +1,1 @@
-../aws-lambda-frontend/snappy.js
+../../aws/lambda/snappy.js
