@@ -11,5 +11,4 @@ music-compiler/.vscode
 test-server/httpsrv
 aws/dbop/dbop
 aws/lambda/snappy.zip
-aws-lambda-frontend/snappy-frontend.zip
 *~
