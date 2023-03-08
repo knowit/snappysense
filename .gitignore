@@ -10,6 +10,6 @@ music-compiler/musiccomp
 music-compiler/.vscode
 test-server/httpsrv
 aws-dynamodb/dbop/dbop
-aws-iot-backend/lambda/snappy.zip
+aws/lambda/snappy.zip
 aws-lambda-frontend/snappy-frontend.zip
 *~
