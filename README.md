@@ -74,4 +74,4 @@ than Arduino but better engineered) is in `firmware-idf/`.
 
 ## AWS IoT backend and frontend
 
-Work in progress.  See documents in `aws-iot-backend` for more.
+Work in progress.  See documents in `aws/` for more.

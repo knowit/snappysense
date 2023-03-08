@@ -5,41 +5,12 @@
 This document pertains to how "things" are set up one by one; for a fleet of devices, the
 instructions will be different.
 
-
-## High-level SnappySense network architecture
-
-Each device in the SnappySense network can optionally report its observations to AWS IoT, where they
-will be ingested and stored in a database for display and analysis.  Also optionally, AWS IoT can
-transmit data back to the device to control it in various ways.
-
-(Devices in the network can be SnappySense devices of various kinds but also sensors connected to
-other types of devices; for simplicity I will mainly consider the standard SnappySense devices in
-the following.)
-
-Currently the only communication protocol between a device and AWS IoT is MQTT, a pub/sub protocol.
-The device publishes observatins and subscribes to control messages.  The server subscribes to observations
-and publishes control messages.  The full protocol is defined in MQTT-PROTOCOL.md.
-
-Each device must be configured so that it can connect to AWS IoT: It must be provisioned with an AWS
-"Thing" identity and the necessary certificates for that Thing.  Sections below describe how to
-create a new Thing, obtain its identity documents, and install them on SnappySense devices.
-
-SnappySense devices communicate by WiFi and need to be configured for the WiFi available at their
-location; they also need to be given a location name appropriate for the location.  This end-user
-process is described in [../firmware-arduino/MANUAL.md](../firmware-arduino/MANUAL.md).
-
-On the backend, data are stored in a DynamoDB database.  The database is updated by a Lambda when
-observations arrive at AWS IoT.
-
-At present (February 2023) there is no convenient UI for database access.  All work must be done
-from AWS consoles or from the AWS CLI.  In the future the UI must allow the registration of things,
-locations, sensor types, and so on.  It must allow alerts to be viewed and stats to be shown.  All
-of this is TBD.
-
+There are four major steps.  First, a new Thing is registered with AWS and its identity documents
+are obtained.  Second, the Thing is registered with the SnappySense backend.  Third, the device
+itself is provisioned with the identity documents.  Finally, the identity documents and device
+configuration are stored safely for later reuse.
 
 ## Creating a Thing and obtaining its identity documents
-
-(This is suitable for a very small fleet of devices.  There are other methods suitable for larger fleets.)
 
 Every device ("Thing") needs a unique _Thing Name_.  The format for a SnappySense Thing name shall
 be `snp_x_y_no_z` for devices with hardware version `x.y` and serial number `z` within that version,
@@ -51,7 +22,7 @@ type is `SnappySense`.  Non-SnappySense Things should have Thing Types that are 
 `RaspberryPi`); stick to letters, digits, `-` and `.`, or you'll be sorry.
 
 In addition to being created in AWS IoT, the Thing must be registered in our backend databases; see
-[DESIGN.md](DESIGN.md) and the "Creating a Thing" section below.
+the "Registering a new Thing with the SnappySense backend" section below.
 
 Every Thing is associated with a number of files containing secrets specific to the Thing:
 certificates from AWS, and a configuration file containing these certificates along with WiFi
@@ -65,9 +36,9 @@ the Thing's identity will be long-lived then you should _not_ create it in your 
 
 ### Creating a security policy
 
-You need to create a security policy for SnappySense devices if it does not already exist.  It
-should be called `SnappySensePolicy`.  The JSON for the policy is in the file `thing_policy.json` in
-the current directory.
+You need to create a security policy for SnappySense devices if it does not already exist; you need
+to do this only once.  It should be called `SnappySensePolicy`.  The JSON for the policy is in the
+file `thing_policy.json` in the current directory.
 
 Go to AWS > Management console > IoT Core > Security > Policies.
 
@@ -107,7 +78,20 @@ TODO: How to do this with the AWS CLI or something like `dbop`.
 
 ### Registering a new Thing with the SnappySense backend
 
-This is covered in the document [BACKEND.md](BACKEND.md) under "Setting up the database tables".
+Before you can do this you must have set up the backend, as described in [SETUP.md](SETUP.md), and you
+must have compiled the `dbop` program as described there.
+
+For a normal SnappySense 1.1 device with serial number XX and location YY, run:
+```
+dbop device add device=snp_1_1_no_XX class=SnappySense location=YY factors=temperature,humidity,uv,light,pressure,airsensor,airquality,tvoc,co2,motion,noise
+```
+
+To inspect devices already in the table, run:
+```
+dbop device list
+```
+
+If you know how, you can also manipulate the databases through the AWS DynamoDB dashboard.
 
 ### Some notes about the security policy (for the specially interested only)
 
@@ -127,13 +111,12 @@ Even better would be if a Thing would only be allowed to subscribe to those mess
 to itself: this would require a separate policy per Thing however, and might not be practical in a
 large fleet of devices.
 
-
 ## Factory provisioning a SnappySense device
 
 Start by making a copy of `firmware-arduino/src/configuration_template.txt` into a new file in the
-directory `snp_x_y_no_z`.  I find it useful to call this file `snp_x_y_no_z.cfg`.  (Or copy a file
-you already have, but be careful to update the AWS ID and certs in the file.)  The format of this
-file is described in detail in [../CONFIG.md](../CONFIG.md).
+directory `snp_x_y_no_z`.  I find it useful to call this file `snp_x_y_no_z.cfg`.  (Or if you like,
+copy a file you already have, but be careful to update the AWS ID and certs in the file.)  The
+format of this file is described in detail in [../CONFIG.md](../CONFIG.md).
 
 _This file will contain secrets and must not be checked into github._
 

@@ -2,20 +2,19 @@
 
 # SnappySense Data Model
 
-This is the data model definition for the SnappySense back-end based on AWS Lambda.  For notes on
-the overall design, see DESIGN.md in this directory.
+This is the data model definition for the SnappySense back-end based on AWS Lambda.
 
 This back-end maintains or uses a number of AWS DynamoDB tables: LOCATION (`snappy_location`),
 DEVICE (`snappy_device`), CLASS (`snappy_class`), FACTOR (`snappy_factor`), and OBSERVATION
-(`snappy_observation`).  The first four are mostly static, while OBSERVATION is updated in
-response to data received from the devices.
+(`snappy_observation`).  LOCATION, CLASS, and FACTOR are mostly static, while OBSERVATION and DEVICE
+are updated in response to data received from the devices.
 
 Right now this is a NoSQL model, and the data stored in OBSERVATION (and to some extent in
 LOCATION) are not uniform, but vary with the device that reported data (or the nature of the
 location).
 
 Technically speaking the data model is defined not here, but jointly by two programs: the AWS Lambda
-code in `lambda/`, and the database command-line interface in `../aws-dynamodb/dbop/`.  Those programs MUST be in
+code in `lambda/`, and the database command-line interface in `dbop/`.  Those programs MUST be in
 agreement, and they jointly also describe the JSON layout expected by the databases.  (For example,
 whether something is an "L" list containing string values or an "SS" string set, and whether
 something is an "N" number or an "S" string that happens always to have a numeric value.)

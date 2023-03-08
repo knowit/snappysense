@@ -34,7 +34,7 @@ To configure the device, run
 ```
 
 where `snp_x_y_no_z.cfg` is the name of the configuration file for the device whose name is
-`snp_x_y_no_z`, see `aws-iot-backend/README.md`, and `192.168.a.b` is the IP address printed on the
+`snp_x_y_no_z`, see `aws/README.md`, and `192.168.a.b` is the IP address printed on the
 device screen.
 
 The `-i` argument to `curl` ensures that the server response is shown.  For a successful upload, the
@@ -48,7 +48,7 @@ outlined above while still connected to the AP.
 
 The syntax of the config file is as follows.  (An example configuration file is also in
 `firmware-arduino/src/configuration_template.txt`, and it will be useful to read
-`aws-iot-backend/README.md` about how to obtain the device identity and certficiates.)
+`aws/IOT-THINGS.md` about how to obtain the device identity and certficiates.)
 
 The config file has a line-oriented syntax.  Blank lines are ignored and generally whitespace is
 insignificant except within quoted values and in the payloads for `cert`.  Comment lines start with
@@ -92,7 +92,7 @@ Annotated grammar:
 
 It's important not to proliferate device IDs and certs too much, so save the config file and other
 key files for each device for use during future re-provisioning, should it become necessary.  See
-also `aws-iot-backend/README.md` about this.
+also `aws/IOT-THINGS.md` about this.
 
 
 ## Bulk provisioning (sketch; not implemented, but not hard)

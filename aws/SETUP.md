@@ -2,15 +2,24 @@
 
 # Setting up the back-end
 
+The back-end comprises:
+
+* Routing code that ensures incoming MQTT traffic is routed to lambda code, and that results from
+  the lambda code is routed back to the device
+* Lambda code to process MQTT traffic and HTTP queries from the front end
+* DynamoDB tables to hold data about devices, device classes, locations, measurement factors, and 
+  observations
+
+This file explains how to set all of that up
+
 ## Routing messages from the Things to Lambdas
 
-Now that we have Things that can publish and subscribe to messages, we must route incoming MQTT
-traffic to Lambda functions for processing.
+We must route incoming MQTT traffic to Lambda functions for processing.
 
 There is a single Lambda function, `snappySense`, that responds to traffic from Things, but two
 routes in AWS IoT to route traffic to it, one for startup messages and one for sensor observation
-messages.  (The reason for this is to avoid wildcards on the second token of the topic, so as to
-avoid every chance of message loops.)
+messages.  (The reason for having two routes is to avoid wildcards on the second token of the topic,
+so as to avoid every chance of message loops.)
 
 ### Setting up the lambdas with test code
 
@@ -66,7 +75,7 @@ In AWS > Management console > Lambda, click "Create function" and give it these 
 
 Next, you're in the function code view.
 
-* Paste in the code from the file `echo_lambda.py` in the present directory
+* Paste in the code from the file `test-code/echo_lambda.py`
 * In the Runtime settings panel, set the handler name to `lambda_function.snappysense_event`
 * Click "Deploy" to update the code
 
@@ -98,11 +107,12 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 #### Testing it all
 
 Go to AWS > Management console > IoT Core.  Select "MQTT Test client".  Subscribe to '#'.  Go to the
-Publish pane and publish anything you like to `snappy/startup/1/1`.  In the message log you should
-see two messages, the one you sent and the echoed message, with a three fields added (message_type,
-class, and device).  Repeat the experiment for `snappy/observation/1/1`.
+Publish pane and publish any valid JSON you like to `snappy/startup/1/1`.  In the message log you
+should see two messages, the one you sent and the echoed message.  The latter has three fields added
+(message_type, class, and device).  Repeat the experiment for `snappy/observation/1/1`.
 
 Once this test passes, you know that message routing works within AWS.
+
 
 ## Setting up the database tables
 
@@ -124,7 +134,7 @@ The `dbop` program (see later section) is used to initialize the five tables if 
 Similarly `delete-table` can be used to delete tables that need to be cleaned out before creating
 them afresh.
 
-TODO: Link to the snappysense-demo-data.sh script here.
+There is a test script, `test-code/snappysense-demo-data.sh`, that may be useful.
 
 ### Adding data to the database without any UI
 
@@ -149,8 +159,8 @@ To examine just one item in a table:
 
 ### Testing that database access works from the lambda
 
-Open the lambda console and paste in the code from `db_lambda.py` in the present directory to
-replace the earlier test code.  Deploy it.
+Open the lambda console and paste in the code from `test-code/db_lambda.py` to replace the earlier
+test code.  Deploy it.
 
 In the MQTT console, subscribe to `#` if you haven't, then publish a message with the topic
 `snappy/startup/1/1` and a body like this:
@@ -168,10 +178,32 @@ The `dbop` command line utility is a simple Go program that talks to AWS DynamoD
 `go` on your machine, which you can get from `https://golang.org`, your package manager, and in
 other ways.
 
-To build, go to `aws-dynamodb/dbop` and run `go build`.  The executable should appear in that
-directory.  It is run as explained in earlier sections.
+To build, go to `aws/dbop` and run `go build`.  The executable should appear in that directory.  It
+is run as explained in earlier sections.
 
 To run it, you must have set up your AWS credentials in the normal way for the AWS CLI, either as
-environment variables or in a ~/.aws/credentials file.
+environment variables or in a `~/.aws/credentials` file.
 
 For some general help, run `dbop help`.
+
+
+## Uploading the real Lambda code
+
+Go to `lambda/`, then run `make` or duplicate the actions of the `Makefile` in that directory.
+
+
+## Creating a Function URL for the Lambda
+
+In AWS Lambda, click on the Configuration tab and the Function URL pane, it will allow you to create
+a function URL.  Choose "None" as the security - security by obscurity rules!
+
+## Testing the Function URL and the Lambda
+
+Supposing that your function URL is `https://xxx.on.aws` and that you have added some device data to
+the tables using dbop as described above, this should produce a list of devices:
+```
+  curl https://xxx.on.aws/devices
+```
+
+If you paste `https://xxx.on.aws` into a browser address bar, you should see a web application for
+querying the databased.
