@@ -6,6 +6,8 @@
 firmware-arduino/src/development_config.h
 firmware-arduino/src/configuration.cfg
 firmware-idf/build
+util/config-compiler/confcomp
+util/config-compiler/.vscode
 util/music-compiler/musiccomp
 util/music-compiler/.vscode
 util/test-server/httpsrv
