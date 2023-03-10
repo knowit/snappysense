@@ -8,6 +8,10 @@ and commands generated while the window is closed will be queued (modulo device 
 window is open.  The device fleet is small and messages are fairly infrequent, so messages should be
 sent with MQTT QoS=1 to avoid data loss.
 
+Since the device class ID and device ID are in the message topics, it is best to keep these IDs very
+simple.  Obviously avoid `/` in either ID, but for RabbitMQ it is also necessary to avoid `.`.
+Probably both `_` and `-` are safe in addition to ASCII alphanumeric characters.
+
 ## Startup message
 
 At startup the device sends a message with topic `snappy/startup/<device-class>/<device-id>` and a

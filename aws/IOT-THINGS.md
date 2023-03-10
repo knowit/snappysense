@@ -19,7 +19,8 @@ own, compact, class designators (eg `rpi` would make sense for Raspberry Pis).
 
 Every Thing also has a _Thing Type_, this aids device management.  For SnappySense Things, the Thing
 type is `SnappySense`.  Non-SnappySense Things should have Thing Types that are descriptive (eg
-`RaspberryPi`); stick to letters, digits, `-` and `.`, or you'll be sorry.
+`RaspberryPi`); stick to letters, digits, `-` and `.`, or you'll be sorry.  (And if you plan to use
+RabbitMQ as your message broker, avoid `.` as well.)
 
 In addition to being created in AWS IoT, the Thing must be registered in our backend databases; see
 the "Registering a new Thing with the SnappySense backend" section below.
