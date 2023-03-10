@@ -10,37 +10,41 @@
 static const char WIFI_SSID[] = "...";          // FIXME
 static const char WIFI_PASSWORD[] = "......";   // FIXME
 
-// -------------------------------------------------------------------------------
-//
-// Sensor location identification
-
-static const char LOCATION_NAME[] = "...";      // FIXME
-
 #ifdef SNAPPY_MQTT
 // -------------------------------------------------------------------------------
 //
-// AWS MQTT credentials
+// Basic MQTT credentials
 
-static const char AWS_IOT_ENDPOINT[] = "...";     // FIXME
-static const int AWS_MQTT_PORT=8883;              // Useful default
-static const char AWS_CLIENT_IDENTIFIER[]="...";  // FIXME
+static const char MQTT_ENDPOINT[] = "...";     // FIXME
+static const int MQTT_PORT=8883;              // Useful default
+static const char MQTT_ID[]="...";  // FIXME
+static const int MQTT_TLS = ...FIXME...; // 0 or 1
+static const char MQTT_AUTH[] = ...FIXME...; // "x509" or "pass"
+static const char MQTT_USER[] = ...FIXME...; // username if "pass", otherwise empty
+static const char MQTT_PASS[] = ...FIXME...; // password if "pass", otherwise empty
 
-// Amazon Root CA 1 (AmazonRootCA1.pem)
-static const char AWS_CERT_CA[] = R"ROOTCA(
+// This is for MQTT_TLS==1
+// There must be no spurious newlines at the beginning or end of the certs
+// Root certificate if using TLS (AmazonRootCA1.pem)
+static const char MQTT_ROOT_CERT[] = R"ROOTCA(
 -----BEGIN CERTIFICATE-----
 ...                                               // FIXME
 -----END CERTIFICATE-----
 )ROOTCA";
 
-// Device Certificate (XXXXXXXXXX-certificate.pem.crt)
-static const char AWS_CERT_CRT[] = R"DEVICECERT(
+// This is for MQTT_AUTH=="x509"
+// There must be no spurious newlines at the beginning or end of the certs
+// Device Certificate if using x509 authenticiation (XXXXXXXXXX-certificate.pem.crt)
+static const char MQTT_DEVICE_CERT[] = R"DEVICECERT(
 -----BEGIN CERTIFICATE-----
 ...                                               // FIXME
 -----END CERTIFICATE-----
 )DEVICECERT";
 
-// Device Private Key (XXXXXXXXXX-private.pem.key)
-static const char AWS_CERT_PRIVATE[] = R"PRIVATEKEY(
+// This is for MQTT_AUTH=="x509"
+// There must be no spurious newlines at the beginning or end of the certs
+// Device Private Key if using x509 authenticiation (XXXXXXXXXX-private.pem.key)
+static const char MQTT_DEVICE_KEY[] = R"PRIVATEKEY(
 -----BEGIN RSA PRIVATE KEY-----
 ...                                               // FIXME
 -----END RSA PRIVATE KEY-----

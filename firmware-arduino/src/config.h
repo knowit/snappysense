@@ -130,8 +130,28 @@ unsigned long time_server_retry_s();
 const char* mqtt_endpoint_host();
 int mqtt_endpoint_port();
 
+enum class MqttAuth {
+  UNKNOWN = 0,
+  CERT_BASED = 1,
+  USER_AND_PASS = 2
+};
+MqttAuth mqtt_auth_type();
+
+// Use a Tls connection or not.  This can be configured as a setting, but the setting
+// must be true for mqtt_auth_type() == CERT_BASED.  If a root cert is not defined then
+// this must return false.  See the config consistency checks for more.
+bool mqtt_tls();
+
 // Keys and certificates
+// Root cert for TLS connection
 const char* mqtt_root_ca_cert();
+
+// For user+pass-based connection (eg RabbitMQ testing setup): username and password
+// These could be the same as device ID but that seems unnecessarily constraining
+const char* mqtt_username();
+const char* mqtt_password();
+
+// For cert-based connection (eg AWS setup): device cert and device private key
 const char* mqtt_device_cert();
 const char* mqtt_device_private_key();
 #endif

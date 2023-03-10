@@ -29,37 +29,33 @@
 #endif
 
 // Each table of prefs has a last element whose long_key is nullptr.
+//
+// See comments further down about how these have evolved over time - additions, deletions, and name changes.
+//
+// Be sure not to duplicate short keys or to reuse short keys from deleted settings, old devices still
+// have them in NVRAM.
 
 static Pref factory_prefs[] = {
-  {"enabled",                 "en",    Pref::Int,              1, "",                                    "Device recording is enabled"},
-  {"ssid1",                   "s1",    Pref::Str,              0, IF_DEVEL(WIFI_SSID, ""),               "SSID name for the first WiFi network"},
-  {"ssid2",                   "s2",    Pref::Str,              0, "",                                    "SSID name for the second WiFi network"},
-  {"ssid3",                   "s3",    Pref::Str,              0, "",                                    "SSID name for the third WiFi network"},
-  {"password1",               "p1",    Pref::Str|Pref::Passwd, 0, IF_DEVEL(WIFI_PASSWORD, ""),           "Password for the first WiFi network"},
-  {"password2",               "p2",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the second WiFi network"},
-  {"password3",               "p3",    Pref::Str|Pref::Passwd, 0, "",                                    "Password for the third WiFi network"},
-  {"web-config-access-point", "wcap",  Pref::Str,              0, "",                                    "Unique access point name for end-user web config"},
-  {"aws-iot-id",              "aid",   Pref::Str,              0, IF_MQTT_UP(AWS_CLIENT_IDENTIFIER, ""), "IoT device ID"},
-  {"aws-iot-class",           "acls",  Pref::Str,              0, IF_MQTT_UP("snappysense", ""),         "IoT device class"},
-  {"aws-iot-endpoint-host",   "ahost", Pref::Str,              0, IF_MQTT_UP(AWS_IOT_ENDPOINT, ""),      "IoT endpoint host name"},
-  {"aws-iot-endpoint-port",   "aport", Pref::Int,              IF_MQTT_UP(AWS_MQTT_PORT, 8883), "",      "IoT port number"},
-  {"aws-iot-root-ca",         "aroot", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_CA, ""),           "Root CA certificate (AmazonRootCA1.pem)"},
-  {"aws-iot-device-cert",     "acert", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_CRT, ""),          "Device certificate (XXXXXXXXXX-certificate.pem.crt)"},
-  {"aws-iot-private-key",     "akey",  Pref::Str|Pref::Cert,   0, IF_MQTT_UP(AWS_CERT_PRIVATE, ""),      "Private key (XXXXXXXXXX-private.pem.key"},
+  {"enabled",                 "en",    Pref::Int,              1, "",                               "Device recording is enabled"},
+  {"ssid1",                   "s1",    Pref::Str,              0, IF_DEVEL(WIFI_SSID, ""),          "SSID name for the first WiFi network"},
+  {"ssid2",                   "s2",    Pref::Str,              0, "",                               "SSID name for the second WiFi network"},
+  {"ssid3",                   "s3",    Pref::Str,              0, "",                               "SSID name for the third WiFi network"},
+  {"password1",               "p1",    Pref::Str|Pref::Passwd, 0, IF_DEVEL(WIFI_PASSWORD, ""),      "Password for the first WiFi network"},
+  {"password2",               "p2",    Pref::Str|Pref::Passwd, 0, "",                               "Password for the second WiFi network"},
+  {"password3",               "p3",    Pref::Str|Pref::Passwd, 0, "",                               "Password for the third WiFi network"},
+  {"web-config-access-point", "wcap",  Pref::Str,              0, "",                               "Unique access point name for end-user web config"},
+  {"mqtt-use-tls",            "tls",   Pref::Int,              IF_MQTT_UP(MQTT_TLS, 0), "",         "MQTT TLS connection required (requires root cert)"},
+  {"mqtt-auth",               "auth",  Pref::Str,              0, IF_MQTT_UP(MQTT_AUTH, ""),        "MQTT authorization method, \"pass\" or \"x509\""},
+  {"mqtt-id",                 "aid",   Pref::Str,              0, IF_MQTT_UP(MQTT_ID, ""),          "MQTT device ID"},
+  {"mqtt-class",              "acls",  Pref::Str,              0, IF_MQTT_UP("snappysense", ""),    "MQTT device class"},
+  {"mqtt-endpoint-host",      "ahost", Pref::Str,              0, IF_MQTT_UP(MQTT_ENDPOINT, ""),    "MQTT endpoint host name"},
+  {"mqtt-endpoint-port",      "aport", Pref::Int,              0, "",                               "MQTT port number"},
+  {"mqtt-root-cert",          "aroot", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(MQTT_ROOT_CERT, ""),   "MQTT root certificate (eg AmazonRootCA1.pem)"},
+  {"mqtt-device-cert",        "acert", Pref::Str|Pref::Cert,   0, IF_MQTT_UP(MQTT_DEVICE_CERT, ""), "MQTT device certificate (eg XXXXXXXXXX-certificate.pem.crt)"},
+  {"mqtt-private-key",        "akey",  Pref::Str|Pref::Cert,   0, IF_MQTT_UP(MQTT_DEVICE_KEY, ""),  "MQTT private key (eg XXXXXXXXXX-private.pem.key"},
+  {"mqtt-username",           "unm",   Pref::Str,              0, IF_MQTT_UP(MQTT_USER, ""),        "MQTT username, for user/pass connection"},
+  {"mqtt-password",           "pwd",   Pref::Str|Pref::Passwd, 0, IF_MQTT_UP(MQTT_PASS, ""),        "MQTT password, for user/pass connection"},
   { nullptr }
-};
-
-// Obsolete variable names.  By and large we should avoid reusing both the long
-// names and the short names so that we can reliably revert to older versions of the
-// firmware, but this isn't really all that important probably.
-static const char* const ignored_names[] = {
-  // Defined in prefs v1.1.0 but obsolete and ignored.
-  "location",          // short name "loc" - this was the location ID, now server-side only.
-  "time-server-host",  // short name "tsh" - this was a host name for the ad-hoc time server
-  "time-server-port",  // short name "tsp" -   and this was its port
-  "http-upload-host",  // short name "huh" - this was the host name for the ad-hoc http upload server
-  "http-upload-port",  // short name "hup" -   and this was its port
-  nullptr
 };
 
 // `prefs` *must* be initialized with a call to reset_configuration() before its values
@@ -106,17 +102,6 @@ const char* get_string_pref(const char* name) {
 
 void set_string_pref(const char* name, const char* value) {
   get_pref(name)->str_value = value;
-}
-
-bool is_ignored_name(const char* name) {
-  for (int i=0 ; ; i++ ) {
-    if (ignored_names[i] == nullptr) {
-      return false;
-    }
-    if (strcmp(ignored_names[i], name) == 0) {
-      return true;
-    }
-  }
 }
 
 // Provisioning and run-time configuration.
@@ -189,11 +174,43 @@ void show_configuration(Stream* out) {
 // Configuration file format version, see CONFIG.md.   This is intended to be used in a
 // proper "semantic versioning" way.
 //
-// Version 1.1:
-//   Added web-config-access-point
+// Config version 1.1:
+//   Introduced these new settings
+//     web-config-access-point // short name "wcap" - name of snappysense access point
+//
+//   Made these identifiers no-ops
+//     location              // short name "loc" - this was the location ID, now server-side only.
+//     time-server-host      // short name "tsh" - this was a host name for the ad-hoc time server
+//     time-server-port      // short name "tsp" -   and this was its port
+//     http-upload-host      // short name "huh" - this was the host name for the ad-hoc http upload server
+//     http-upload-port      // short name "hup" -   and this was its port
+//
+// Config version 2.0
+//
+//   Introduced these new settings
+//     mqtt-use-tls          // short name "tls" - a flag, whether to require tls or not.  Required for mqtt-auth=="x509"
+//     mqtt-auth             // short name "auth" - a string, "pass" or "x509"
+//     mqtt-username         // short name "unm" - a string, the user name for "pass" authentication
+//     mqtt-password         // short name "pwd" - a string, the password for "pass" authentication
+//
+//   Removed all support for these settings, which were obsoleted in v1.1
+//     location              // short name "loc" - this was the location ID, now server-side only.
+//     time-server-host      // short name "tsh" - this was a host name for the ad-hoc time server
+//     time-server-port      // short name "tsp" -   and this was its port
+//     http-upload-host      // short name "huh" - this was the host name for the ad-hoc http upload server
+//     http-upload-port      // short name "hup" -   and this was its port
+//
+//   Changed the names of these settings
+//     mqtt-endpoint-port    // short name "aport" - previously known as aws-iot-endpoint-port
+//     mqtt-endpoint-host    // short name "ahost" - previously known as aws-iot-endpoint-host
+//     mqtt-id               // short name "aid" - previously known as aws-iot-id
+//     mqtt-class            // short name "acls" - previously known as aws-iot-class
+//     mqtt-root-cert        // short name "aroot" - previously known as aws-iot-root-ca
+//     mqtt-device-cert      // short name "acert" - previously known as aws-iot-device-cert, the device cert for "x509" authentication
+//     mqtt-private-key      // short name "akey" - previously known as aws-iot-private-key, the private key for "x509" authentication
 
-#define MAJOR_VERSION 1
-#define MINOR_VERSION 1
+#define MAJOR_VERSION 2
+#define MINOR_VERSION 0
 #define BUGFIX_VERSION 0
 
 // evaluate_config() evaluates a configuration program, using the `read_line` parameter
@@ -251,9 +268,6 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
       if (!flag) {
         *msg = "Missing value";
         return fmt("Line %d: Missing value for variable [%s]", *lineno, varname.c_str());
-      }
-      if (is_ignored_name(varname.c_str())) {
-        continue;
       }
       Pref* p = get_pref(varname.c_str());
       if (p == nullptr || p->is_cert()) {
@@ -490,34 +504,70 @@ void set_mqtt_capture_interval_s(unsigned long interval) {
   mqtt_monitoring_capture_interval_s = interval;
 }
 
+MqttAuth mqtt_auth_type() {
+  const char* auth = get_string_pref("mqtt-auth");
+  if (strcmp(auth, "pass") == 0) {
+    if (mqtt_password() == nullptr || mqtt_username() == nullptr) {
+      return MqttAuth::UNKNOWN;
+    }
+    return MqttAuth::USER_AND_PASS;
+  }
+  if (strcmp(auth, "x509") == 0) {
+    if (!mqtt_tls() || mqtt_device_cert() == nullptr || mqtt_device_private_key() == nullptr) {
+      return MqttAuth::UNKNOWN;
+    }
+    return MqttAuth::CERT_BASED;
+  }
+  return MqttAuth::UNKNOWN;
+}
+
+bool mqtt_tls() {
+  return get_int_pref("mqtt-use-tls");
+}
+
+const char* mqtt_username() {
+  return get_string_pref("mqtt-username");
+}
+
+const char* mqtt_password() {
+  return get_string_pref("mqtt-password");
+}
+
 const char* mqtt_endpoint_host() {
-  return get_string_pref("aws-iot-endpoint-host");
+  return get_string_pref("mqtt-endpoint-host");
 }
 
 int mqtt_endpoint_port() {
-  return get_int_pref("aws-iot-endpoint-port");
+  int port = get_int_pref("mqtt-endpoint-port");
+  if (port != 0) {
+    return port;
+  }
+  if (mqtt_tls()) {
+    return 8883;
+  }
+  return 1883;
 }
 
 const char* mqtt_device_id() {
-  return get_string_pref("aws-iot-id");
+  return get_string_pref("mqtt-id");
 }
 
 const char* mqtt_device_class() {
-  return get_string_pref("aws-iot-class");
+  return get_string_pref("mqtt-class");
 }
 
 const char* mqtt_root_ca_cert() {
-  return get_string_pref("aws-iot-root-ca");
+  return get_string_pref("mqtt-root-cert");
 }
 
 const char* mqtt_device_cert() {
-  return get_string_pref("aws-iot-device-cert");
+  return get_string_pref("mqtt-device-cert");
 }
 
 const char* mqtt_device_private_key() {
-  return get_string_pref("aws-iot-private-key");
+  return get_string_pref("mqtt-private-key");
 }
-#endif
+#endif // SNAPPY_MQTT
 
 #ifdef SNAPPY_WEBCONFIG
 const char* web_config_access_point() {

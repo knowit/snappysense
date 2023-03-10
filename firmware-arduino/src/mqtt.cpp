@@ -73,7 +73,8 @@ enum class MqttState {
 };
 
 static MqttState mqtt_state;
-static WiFiClientSecure wifi_client;
+static WiFiClient wifi_client;
+static WiFiClientSecure wifi_client_secure;
 static MqttClient mqtt_client(nullptr);
 static int num_retries = 0;
 static bool work_done;
@@ -255,16 +256,37 @@ static void connect() {
 again:
   switch (mqtt_state) {
     case MqttState::STARTING: {
-      wifi_client.setCACert(mqtt_root_ca_cert());
-      wifi_client.setCertificate(mqtt_device_cert());
-      wifi_client.setPrivateKey(mqtt_device_private_key());
+      if (mqtt_tls()) {
+        wifi_client_secure.setCACert(mqtt_root_ca_cert());
+      }
+      if (mqtt_auth_type() == MqttAuth::CERT_BASED && mqtt_device_cert() != nullptr && mqtt_device_private_key() != nullptr) {
+        if (!mqtt_tls()) {
+          panic("Secure client required for cert-based authentication\n");
+        }
+        wifi_client_secure.setCertificate(mqtt_device_cert());
+        wifi_client_secure.setPrivateKey(mqtt_device_private_key());
+      } else if (mqtt_auth_type() == MqttAuth::USER_AND_PASS && mqtt_username() != nullptr && mqtt_password() != nullptr) {
+        // do nothing yet
+      } else {
+        log("Mqtt: Bad auth setting, possibly missing data?\n");
+        mqtt_state = MqttState::FAILED;
+        return;
+      }
 
-      mqtt_client.setClient(wifi_client);
-      mqtt_client.setId(mqtt_device_id());
+      if (mqtt_tls()) {
+        mqtt_client.setClient(wifi_client_secure);
+      } else {
+        mqtt_client.setClient(wifi_client);
+      }
       mqtt_client.setTxPayloadSize(MQTT_BUFFER_SIZE);
       mqtt_client.setCleanSession(false);
 
-      log("Mqtt: Connecting to AWS IOT\n");
+      mqtt_client.setId(mqtt_device_id());
+      if (mqtt_auth_type() == MqttAuth::USER_AND_PASS) {
+        mqtt_client.setUsernamePassword(mqtt_username(), mqtt_password());
+      }
+
+      log("Mqtt: Connecting to MQTT broker\n");
       mqtt_state = MqttState::CONNECTING;
       goto again;
     }
