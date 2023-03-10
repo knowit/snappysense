@@ -105,8 +105,8 @@ const (
 	TY_B  = "bool"								// "BOOL"
 	TY_N  = "number"							// "N"
 	TY_SL = "string list"					// "L" holding "S" nodes, because AWS disallows empty "SS"
-	TY_ST = "server_timestamp"		// "N", seconds since epoch server-side
-	TY_DT = "device_timestamp"		// "N", seconds since epoch client-side
+	TY_ST = "server_timestamp"		// "N", UTC seconds since Unix epoch server-side
+	TY_DT = "device_timestamp"		// "N", UTC seconds since Unix epoch client-side
 )
 
 var tables = []*Table{
@@ -121,7 +121,7 @@ var tables = []*Table{
 				gloss: "Class ID, shall exist in CLASS"},
 
 			&Field{name: "last_contact", ty: TY_ST, opt: true, def: "0",
-				gloss: "Timestamp (server time) of last message from the device, seconds since epoch"},
+				gloss: "Timestamp (server time) of last message from the device, UTC seconds since Unix epoch"},
 
 			&Field{name: "location", ty: TY_S, opt: true,
 				gloss: "Location ID, shall exist in LOCATION"},
@@ -130,7 +130,7 @@ var tables = []*Table{
 				gloss: "Whether device should report observation data or not"},
 
 			&Field{name: "interval", ty: TY_I, opt: true, def: "3600",
-				gloss: "Interval between observations, in seconds"},
+				gloss: "Interval between observations recorded for upload, in seconds"},
 
 			&Field{name: "factors", ty: TY_SL,
 				gloss: "Factors observable by device, all shall exist in FACTOR"},
@@ -190,16 +190,16 @@ var tables = []*Table{
 				gloss: "The device that reported this observation, it shall exist in DEVICE"},
 
 			&Field{name: "location", ty: TY_S, opt: true, def: "",
-				gloss: "The location self-reported by the device, if present it shall exist in LOCATION"},
+				gloss: "The presumed location of the device, if present it shall exist in LOCATION"},
 
 			&Field{name: "sequenceno", ty: TY_I,
 				gloss: "The sequence number reported by the device for this observation"},
 
 			&Field{name: "received", ty: TY_ST,
-				gloss: "Timestamp (server time) when the observation was received, seconds since epoch"},
+				gloss: "Timestamp (server time) when the observation was received, UTC seconds since Unix epoch"},
 
 			&Field{name: "sent", ty: TY_DT,
-				gloss: "Timestamp (device time) when the observation was made, seconds since epoch"},
+				gloss: "Timestamp (device time) when the observation was made, UTC seconds since Unix epoch"},
 		},
 		gloss: `Log of incoming observations.  Note, there are additional fields here, one per factor
   observed by the device, each factor name prefixed by 'F#', eg, 'F#temperature'.`},
