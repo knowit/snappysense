@@ -35,8 +35,8 @@ required work is described in several documents:
 Current technical documents about data formats and protocols:
 
 * [DATA-MODEL.md](DATA-MODEL.md) describes the data model of the back-end databases.
-* [MQTT-PROTOCOL.md](MQTT-PROTOCOL.md) describes the details of the communication protocols used to 
-  communicate between the devices and AWS IoT.
+* [../MQTT-PROTOCOL.md](../MQTT-PROTOCOL.md) describes the details of the communication protocols used to 
+  communicate between the devices and AWS IoT (or any other MQTT broker).
 
 Code is mostly in subdirectories:
 

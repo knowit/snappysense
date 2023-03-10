@@ -1,4 +1,4 @@
-version 1.1.0
+version 2.0.0
 
 # See CONFIG.md for full documentation about what it means and how it's used.
 
@@ -18,40 +18,59 @@ set password1 ...FIXME...
 #set ssid3 ...FIXME...
 #set password3 ...FIXME...
 
-# Sensor location ID - this is just a string, but it should be a string that is
-# defined in the backend systems' database.
-set location ...FIXME...
+# Access point name (used for end-user config) is per-device since multiple devices can be active in
+# the same area at the same time.  Something derived from the mqtt-id is sensible, eg, if
+# mqtt-id is snp_1_1_no_48 (v1.1 device s/n 48) then using snp_1_1_no_48_cfg here is OK, note
+# the name is at most 32 characters, and it's helpful to keep it <= 20, for display purposes.  Using
+# "snp_" and "_cfg" makes it easy to recognize the network but is not required.
 
-# Access point name (used for end-user config) is per-device since multiple devices
-# can be active in the same area at the same time.  Something derived from the aws-iot-id
-# is sensible, eg, if aws-iot-id is snp_1_1_no_48 (v1.1 device s/n 48) then using
-# snp_1_1_no_48_config here is OK, note the name is at most 32 characters, and it's
-# helpful to keep it <= 20, for display purposes.  Using "snp_" and "_config" makes it
-# easy to recognize the network but is not required.
 set web-config-access-point ...FIXME...
 
-# All of the following except the class comes from AWS IoT.
-# The class is "snappysense" for the SnappySense devices; TBD for other
-# versions or other devices.
+# MQTT overall configuration.
+#
+# The ID is the AWS IoT Thing ID, if you're using AWS.
+#
+# The class is "snappysense" for the SnappySense devices; TBD for other versions or other devices.
 
-set aws-iot-endpoint-host ...FIXME...
-set aws-iot-id ...FIXME...
-set aws-iot-class "snappysense"
+set mqtt-id ...FIXME...
+set mqtt-class "snappysense"
+
+# A setup meaningful for local testing and some non-AWS brokers.  lth uses this with rabbitmq
+# running on his own laptop.  The host name is usually `whatever.local`, and the username and
+# password is something the broker can do, for rabbitmq this might be `guest` and `guest`.  Note for
+# mqtt-use-tls=1 there must be a root cert and the port will be 8883.
+
+set mqtt-auth pass
+set mqtt-endpoint-host ...FIXME...
+set mqtt-use-tls 0
+set mqtt-endpoint-port 1883
+set mqtt-username ...FIXME...
+set mqtt-password ...FIXME...
+
+# AWS IoT MQTT.  For mqtt-use-tls=1 there must be an mqtt-root-cert, and for
+# mqtt-auth=x509 there must be device cert and private key.  The host will
+# be somethingsomething.region.amazonaws.com
+
+#set mqtt-use-tls 1
+#set mqtt-auth x509
+#set mqtt-endpoint-host ...FIXME...
+#set mqtt-endpoint-port 8883
 
 # Amazon Root CA 1 (AmazonRootCA1.pem)
-cert aws-iot-root-ca
+cert mqtt-root-cert
 -----BEGIN CERTIFICATE-----
 ...FIXME...
 -----END CERTIFICATE-----
 
+
 # Device Certificate (XXXXXXXXXX-certificate.pem.crt)
-cert aws-iot-device-cert
+cert mqtt-device-cert
 -----BEGIN CERTIFICATE-----
 ...FIXME...
 -----END CERTIFICATE-----
 
 # Device Private Key (XXXXXXXXXX-private.pem.key)
-cert aws-iot-private-key
+cert mqtt-private-key
 -----BEGIN RSA PRIVATE KEY-----
 ...FIXME...
 -----END RSA PRIVATE KEY-----

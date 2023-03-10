@@ -71,7 +71,7 @@ String fmt(const char* format, ...) {
 }
 
 String format_timestamp(time_t time) {
-  // Timestamp format defined in aws-iot-backend/MQTT-PROTOCOL.md.
+  // Timestamp format defined in MQTT-PROTOCOL.md.
   char buf[256];
   snprintf(buf, sizeof(buf), "%llu", (unsigned long long) time);
   return String(buf);

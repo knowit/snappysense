@@ -2,7 +2,7 @@
 
 # SnappySense MQTT protocol
 
-If configured with a network the device will connect to AWS IoT via MQTT every so often to upload
+If configured with a network the device will connect to an MQTT message broker every so often to upload
 sensor data and receive commands.  The communication window remains open for a little while; data
 and commands generated while the window is closed will be queued (modulo device limits) until the
 window is open.  The device fleet is small and messages are fairly infrequent, so messages should be
@@ -50,9 +50,10 @@ clashes.  See the FACTOR table of DATA-MODEL.md for the `<factor-name>` values.
 
 ## Control message
 
-AWS IoT can send a control message to the device via the topics `snappy/control/<device-id>`,
-`snappy/control-class/<device-class>` and `snappy/control-all`, to which the device can subscribe.  The
-message has a JSON payload with at least these fields:
+The message broker (or really, code behind it that it routes messages to) can send a control message
+to the device via the topics `snappy/control/<device-id>`, `snappy/control-class/<device-class>` and
+`snappy/control-all`, to which the device can subscribe.  The message has a JSON payload with at
+least these fields:
 
 ```
   enable: <integer, 0 or 1, whether to enable or disable device, OPTIONAL>,
@@ -64,6 +65,6 @@ controls how often the measurements are taken.
 
 ## Command message
 
-AWS IoT can send a command message to the device via the topic `snappy/command/<device-id>` (and
-unlike control message, not to the class or to all devices) with a JSON payload.  There are not currently
-anny command messages.
+The message broker (or really, code behind it that it routes messages to) can send a command message
+to the device via the topic `snappy/command/<device-id>` (and unlike control message, not to the
+class or to all devices) with a JSON payload.  There are not currently anny command messages.

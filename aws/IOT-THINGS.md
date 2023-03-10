@@ -121,7 +121,7 @@ format of this file is described in detail in [../CONFIG.md](../CONFIG.md).
 
 _This file will contain secrets and must not be checked into github._
 
-Add the necessary information to the new file as described in the comments.  The `aws-iot-id` shall
+Add the necessary information to the new file as described in the comments.  The `mqtt-id` shall
 be the name of the device, `snp_x_y_no_z`, as chosen above.  The device certificate, private key,
 and root cert must be the ones downloaded.
 
