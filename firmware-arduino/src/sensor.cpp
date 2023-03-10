@@ -265,7 +265,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = nullptr}
 };
 
-// The JSON data format is defined by aws-iot-backend/MQTT-PROTOCOL.md
+// The JSON data format is defined by MQTT-PROTOCOL.md
 String format_readings_as_json(const SnappySenseData& data) {
   String buf;
   buf += '{';
