@@ -1,0 +1,26 @@
+# This is a dockerfile for the mqtt broker (rabbitmq with mqtt plugin).  The broker runs in a
+# container, the container exposes the normal non-TLS port 1883 to other software running on the
+# host.
+#
+# This is a work in progress.  Presumably docker-compose can do a lot of this for us.
+#
+# Roughly do this:
+#
+# To build an image that enables mqtt by default:
+#   docker build -t snappysense:latest .
+#
+# To run
+#   docker run -d --hostname snappy --name snappy -p 1883:1883 snappysense:latest
+#
+# On first run (see README.md for info about username / password)
+#   docker exec snappy rabbitmqctl await_startup
+#   docker exec snappy rabbitmqctl add_user lth qumquat
+#   docker exec snappy rabbitmqctl set_permissions lth '.*' '.*' '.*'
+
+# syntax=docker/dockerfile:1
+FROM rabbitmq:3.11
+
+RUN rabbitmq-plugins enable --offline rabbitmq_mqtt
+
+EXPOSE 1883
+CMD ["rabbitmq-server"]
