@@ -267,6 +267,7 @@ SnappyMetaDatum snappy_metadata[] = {
 
 // The JSON data format is defined by MQTT-PROTOCOL.md
 String format_readings_as_json(const SnappySenseData& data) {
+  bool first = true;
   String buf;
   buf += '{';
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
@@ -275,11 +276,14 @@ String format_readings_as_json(const SnappySenseData& data) {
         !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + r->flag_offset)) {
       continue;
     }
-    buf += ',';
+    if (!first) {
+      buf += ',';
+    }
+    first = false;
     buf += '"';
     // This is a hack.  Factor names are prefixed by F# to avoid name clashes, while fields like
-    // sent and sequenceno should not be prefixed.  The flag_offset doubles of an indicator for
-    // whether the prefix is needed.
+    // sent and sequenceno should not be prefixed.  The hack is that flag_offset doubles as an
+    // indicator for whether the prefix is needed.
     if (r->flag_offset > 0) {
       buf += "F#";
     }
