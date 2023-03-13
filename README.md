@@ -74,4 +74,10 @@ than Arduino but better engineered) is in `firmware-idf/`.
 
 ## AWS IoT backend and frontend
 
-Work in progress.  See documents in `aws/` for more.
+Work in progress, though fully functional.  See documents in `aws/` for more.
+
+## Non-AWS backend
+
+Work in progress.  The system is able to connect to non-AWS brokers such as RabbitMQ using a
+username/password system.  There is a simple server in util/mqtt-server that will also connect to
+the broker and receive the data and save them in a simple database.
