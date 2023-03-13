@@ -10,7 +10,7 @@ util/config-compiler/confcomp
 util/config-compiler/.vscode
 util/music-compiler/musiccomp
 util/music-compiler/.vscode
-util/test-server/httpsrv
+util/http-server/httpsrv
 aws/dbop/dbop
 aws/lambda/snappy.zip
 *~
