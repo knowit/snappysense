@@ -4,9 +4,11 @@
 
 ## Overview
 
-This is a work in progress.  It ports the SnappySense firmware from the Arduino framework to
-almost-pure FreeRTOS, with the ESP32-IDF framework only at the device interface level for now.
-FreeRTOS+IDF is at a lower lower level than Arduino but higher quality (as well as C-based).
+**This is a work in progress.**
+
+It ports the SnappySense firmware from the Arduino framework to almost-pure FreeRTOS, with the
+ESP32-IDF framework only at the device interface level for now.  FreeRTOS+IDF is at a lower lower
+level than Arduino but higher quality (as well as C-based).
 
 I'm not using VS Code for this, just emacs; YMMV.
 
@@ -19,7 +21,7 @@ in your shell, then
   idf.py help
   idf.py build
   idf.py flash monitor
-``
+```
 etc.
 
 ## Thoughts
