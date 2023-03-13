@@ -11,6 +11,8 @@ util/config-compiler/.vscode
 util/music-compiler/musiccomp
 util/music-compiler/.vscode
 util/http-server/httpsrv
+util/mqtt-server/mqttsrv
+util/mqtt-server/*.log
 aws/dbop/dbop
 aws/lambda/snappy.zip
 *~
