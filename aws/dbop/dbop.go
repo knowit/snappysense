@@ -67,11 +67,17 @@ The 'verb' and 'argument' combinations are as follows.
   delete value
     ; Deletes the record with the given value for the primary key.
 
+  relocate-if device-id old-location-id new-location-id
+    ; The 'table' must be 'observation'.  Observations for the given device that know
+    ; their location as the 'old-location-id' are moved to the 'new-location-id'.
+    ; This is a pretty crude clean-up mechanism for devices that were misregistered.
+
 For example
 
   dbop location add class=toppen 'description=Takterrassen i U1'
   dbop device list
   dbop device get snp_1_1_no_2
+  dbop observation relocate-if snp_1_1_no_3 old=ambulatory new=u1_5_hotdesk
 `
 
 // Names in Field are short to make some of the tables below legible
@@ -220,6 +226,7 @@ const (
 	INFO
 	SCAN
 	GET
+  RELOCATE_IF
 )
 
 func main() {
@@ -264,6 +271,9 @@ func main() {
 
 	case DELETE:
 		delete_table_element(svc, the_table, key_value)
+
+	case RELOCATE_IF:
+		relocate_devices(svc, the_table, key_value, params)
 
 	default:
 		panic("Should not happen")
@@ -404,23 +414,23 @@ func has_value(m map[string]string, v string) bool {
 }
 
 func add_table_element(svc *dynamodb.Client, the_table *Table, params map[string]string) {
-	items := make(map[string]types.AttributeValue, 10)
+	row := make(map[string]types.AttributeValue, 10)
 	for _, f := range the_table.fields {
 		if required_but_not_expressible(f) {
-			add_defdef_attribute(items, f)
+			add_defdef_attribute(row, f)
 		} else if !f.opt || has_value(params, f.name) {
-			add_attribute(items, f, params[f.name])
+			add_attribute(row, f, params[f.name])
 		} else {
 			if f.def != "" {
-				add_attribute(items, f, f.def)
+				add_attribute(row, f, f.def)
 			} else {
-				add_defdef_attribute(items, f)
+				add_defdef_attribute(row, f)
 			}
 		}
 	}
 	_, err := svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
 		TableName: &the_table.real_name,
-		Item:      items,
+		Item:      row,
 	})
 	if err != nil {
 		log.Fatalf("failed to add to table %s\n%v", the_table.short_name, err)
@@ -456,6 +466,38 @@ func delete_table_element(svc *dynamodb.Client, the_table *Table, key_value stri
 	log.Println("Item deleted")
 }
 
+func relocate_devices(svc *dynamodb.Client, the_table *Table, key_value string, params map[string]string) {
+	// Build the request with its input parameters
+	resp, err := svc.Scan(context.TODO(), &dynamodb.ScanInput{
+		TableName: &the_table.real_name,
+	})
+	if err != nil {
+		log.Fatalf("failed to scan table %s\n%v", the_table.short_name, err)
+	}
+	old := params["old"]
+	new := params["new"]
+	devices_found := 0
+	locations_found := 0
+	for _, row := range resp.Items {
+		dev := row["device"].(*types.AttributeValueMemberS).Value
+		if dev == key_value {
+			devices_found++
+			if row["location"].(*types.AttributeValueMemberS).Value == old {
+				locations_found++
+				row["location"] = &types.AttributeValueMemberS{Value:new}
+				_, err := svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
+					TableName: &the_table.real_name,
+					Item:      row,
+				})
+				if err != nil {
+					log.Fatalf("failed to update to table %s\n%v", the_table.short_name, err)
+				}
+			}
+		}
+	}
+	log.Printf("%d devices match, %d locations updated\n", devices_found, locations_found)
+}
+
 func parse_command_line() (the_table *Table, op int, params map[string]string, key_value string) {
 	idx := 1
 	args := os.Args
@@ -483,8 +525,8 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 	idx++
 
 	op = NONE
-	params = map[string]string{} // For ADD
-	key_value = ""               // For DELETE, GET
+	params = map[string]string{} // For ADD, RELOCATE_IF
+	key_value = ""               // For DELETE, GET, RELOCATE_IF
 	switch verb {
 	case "create-table":
 		op = CREATE_TABLE
@@ -560,6 +602,26 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 		idx++
 		// TODO: Check that the value matches the type
 
+	case "relocate-if":
+		op = RELOCATE_IF
+
+		if table_name != "observation" {
+			usage("relocate-if requires the table to be 'observation'")
+		}
+		if idx >= nargs {
+			usage("Require key value for 'relocate-if'")
+		}
+		key_value = args[idx]
+		idx++
+		// TODO: Check that the value matches the type
+
+		if idx+2 != nargs {
+			usage("Require old and new location IDs for 'relocate-if'")
+		}
+		params["old"] = args[idx]
+		params["new"] = args[idx+1]
+		idx += 2
+	
 	default:
 		usage("Unknown verb " + verb)
 	}
