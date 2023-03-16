@@ -22,7 +22,7 @@ function setup() {
 	then((devices) => {
 	    let devs = the_devices()
 	    for (let d of devices) {
-		devs.add(new_option(d.device))
+		devs.add(new_option(d.device, d.location))
 	    }
 	    devs.disabled = false
 	})
@@ -33,7 +33,7 @@ function setup() {
 	then((factors) => {
 	    let facts = the_factor()
 	    for (let f of factors) {
-		facts.add(new_option(f.factor))
+		facts.add(new_option(f.factor, ""))
 	    }
 	    facts.disabled = false
 	})
@@ -44,7 +44,7 @@ function setup() {
 	then((locations) => {
 	    let locs = the_locations()
 	    for (let f of locations) {
-		locs.add(new_option(f.location))
+		locs.add(new_option(f.location, ""))
 	    }
 	    locs.disabled = false
 	})
@@ -246,9 +246,18 @@ function plot_data(factor, datas) {
 
     // Y axis has observations.  We have room for about eight values.
     let delta = (max_obs - min_obs) / 7
+    cx.strokeStyle = "silver"
+    cx.setLineDash([5]);
     for ( let i=0 ; i < 8; i++ ) {
-	cx.fillText(onedec(min_obs + delta*i), 0, cv.height - BORDER - ((cv.height - 2*BORDER) / 7 * i))
+	let yval = cv.height - BORDER - ((cv.height - 2*BORDER) / 7 * i);
+	let width = cv.width - 2*BORDER
+	cx.fillText(onedec(min_obs + delta*i), 0, yval)
+	let p = cx.beginPath()
+	cx.moveTo(BORDER, yval)
+	cx.lineTo(width, yval)
+	cx.stroke()
     }
+    cx.setLineDash([]);
 
     // X axis has time.  We have room for about 16-32 values depending on how we label.
     // Time labeling is sort of tricky.  For now, just mark midnight every day, in addition
@@ -277,6 +286,18 @@ function plot_data(factor, datas) {
 	    cx.lineTo(x, cv.height - Math.floor(BORDER*1.5))
 	    cx.stroke()
 	}
+	// Vertical lines
+	cx.strokeStyle = "silver"
+	cx.setLineDash([5]);
+	cx.lineWidth = 1
+	for ( let m = first_mark; m <= last_mark; m += 24 * 60 * 60) {
+	    let p = cx.beginPath()
+	    let x = time_to_x(m, min_time, max_time, width)
+	    cx.moveTo(x, cv.height - BORDER)
+	    cx.lineTo(x, BORDER)
+	    cx.stroke()
+	}
+	cx.setLineDash([]);
 	break;
     }
     }
@@ -352,9 +373,13 @@ function the_canvas() {
     return document.getElementById("plot")
 }
 
-function new_option(val) {
+function new_option(val, extra) {
     let opt = document.createElement('option')
     opt.value = val
-    opt.label = val
+    if (extra != "") {
+	opt.label = val + " (" + extra + ")"
+    } else {
+	opt.label = val
+    }
     return opt
 }
