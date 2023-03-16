@@ -2,7 +2,7 @@
 
 // Application logic for the snappysense front-end
 
-// Border around the canvas, px
+// Border around the canvas, px, must be even
 const BORDER = 20
 
 // Colors we pick from to plot multiple things together
@@ -251,41 +251,49 @@ function plot_data(factor, datas) {
     }
 
     // X axis has time.  We have room for about 16-32 values depending on how we label.
-    // Time labeling is sort of tricky.
-    //
-    // To simplify, use time_range gotten above:
-    // - for last-day, label every hour with hh only (24 labels)
-    // - for last-two-days, label the even hours with hh (24 labels)
-    // - for last-week, label 00 08 16 for all days (21 labels)
-    // - for last-month, label midnight of every day (31 labels)
-    // - for last-year, label 01 and 15 of every month (24 labels)
-    // - for forever, label only left and right
+    // Time labeling is sort of tricky.  For now, just mark midnight every day, in addition
+    // to the endpoints.
 
-    // Label each end point first with mmm-dd
     let numlabels = 0
     let labeler = null
-    /*
     switch (time_range) {
-    case "last-day": {
-    // Note the labeling is not uniform, and it's tricky: if we only have data
-    // for a few hours, they will fill the plot horizontally, and in that case,
-    // there will not be 24 points.  This is true also if eg last-two-days were
-    // selected.  Maybe what we have here is hour(max_time) - hour(min_time) points,
-    // on the hour.
-	let h_now = Date.now().getUTCHours()
-	numlabels = 24
-	labeler = function (l) {
-	    // I need to know what the first hour is: it is the one following h_now
-	    ...
+    case "last-day":
+    case "last-two-days":
+    case "last-week":
+    case "last-month": {
+	// label every midnight that appears in the time range
+	// primitively assume that we round up the min_time and round down the max_time
+	let width = cv.width - 2*BORDER
+	let min_date = new Date(min_time * 1000)
+	let max_date = new Date(max_time * 1000)
+	let first_mark = Math.floor(new Date(min_date.getUTCFullYear(), min_date.getUTCMonth(), min_date.getUTCDate() + 1) / 1000)
+	let last_mark = Math.floor(new Date(max_date.getUTCFullYear(), max_date.getUTCMonth(), max_date.getUTCDate()) / 1000)
+	cx.strokeStyle = "black"
+	cx.lineWidth = 2
+	for ( let m = first_mark; m <= last_mark; m += 24 * 60 * 60) {
+	    let p = cx.beginPath()
+	    let x = time_to_x(m, min_time, max_time, width)
+	    cx.moveTo(x, cv.height - Math.floor(BORDER/2))
+	    cx.lineTo(x, cv.height - Math.floor(BORDER*1.5))
+	    cx.stroke()
 	}
-	break
+	break;
     }
     }
-    */
+
+    // Label each end point with mmm-dd
     if (numlabels == 0) {
-	cx.fillText(mmm_dd(min_time), BORDER, cv.height)
-	cx.fillText(mmm_dd(max_time), cv.width - 2*BORDER, cv.height)
+	cx.fillText(mmm_dd(min_time), BORDER, cv.height - BORDER/2)
+	cx.fillText(mmm_dd(max_time), cv.width - 3*BORDER, cv.height - BORDER/2)
     }
+}
+
+function time_to_x(t, min_time, max_time, width) {
+    return BORDER + Math.round((t - min_time) / (max_time - min_time) * width)
+}
+
+function obs_to_y(o, min_obs, max_obs, height) {
+    return BORDER + Math.round((o - min_obs) / (max_obs - min_obs) * height)
 }
 
 function plot_one_device(cv, observations, min_time, max_time, min_obs, max_obs, color) {
@@ -298,8 +306,8 @@ function plot_one_device(cv, observations, min_time, max_time, min_obs, max_obs,
     let p = cx.beginPath()
     let first = true
     for ( let [t,o] of observations ) {
-	let x = BORDER + Math.round((t - min_time) / (max_time - min_time) * width)
-	let y = BORDER + Math.round((o - min_obs) / (max_obs - min_obs) * height)
+	let x = time_to_x(t, min_time, max_time, width)
+	let y = obs_to_y(o, min_obs, max_obs, height)
 	if (first) {
 	    cx.moveTo(x, cv.height - y)
 	} else {
