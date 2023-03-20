@@ -206,4 +206,4 @@ the tables using dbop as described above, this should produce a list of devices:
 ```
 
 If you paste `https://xxx.on.aws` into a browser address bar, you should see a web application for
-querying the databased.
+querying the database.
