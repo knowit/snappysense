@@ -56,37 +56,38 @@ Variable names start with `[a-zA-Z]` followed by zero or more of `[a-zA-Z0-9_-]`
 
 Version 1.0.0 integer variables and their units and ranges:
 
-* `enabled`, boolean, 0 or 1, if 0 then no observations are uploaded
-* `mqtt-use-tls`, boolean, 0 or 1, if 1 then a root certificate must be defined
-* `observation-interval`, seconds, 60 (one minute) to 28800 (eight hours), how often observations
+* `enabled`, key=0, boolean, 0 or 1, if 0 then no observations are uploaded
+* `observation-interval`, key=1, seconds, 60 (one minute) to 28800 (eight hours), how often observations
    are recorded for upload.
-* `upload-interval`, seconds, 60 (one minute) to 172800 (48 hours), how long to wait before trying
+* `upload-interval`, key=2, seconds, 60 (one minute) to 172800 (48 hours), how long to wait before trying
    to upload pending observations.  Note that there's a fixed-length observation queue on the device;
    if the observation frequency is high and the upload frequency is low then some observations will
    be discarded
-* `mqtt-endpoint-port`, port number, 1000 to 65535 (TBD), the port number of the mqtt server
+* `mqtt-endpoint-port`, key=3, port number, 1000 to 65535 (TBD), the port number of the mqtt server
+* `mqtt-use-tls`, key=4, boolean, 0 or 1, if 1 then a root certificate must be defined
 
 Version 1.0.0 string variables and their formats:
 
-* `device-id`, string, the device ID, used by the back-end databases
-* `device-class`, string, the class ID for the device, used by the back-end databases
-* `ssid1`, `ssid2`, `ssid3`, string, the SSIDs for up to three WiFi networks
-* `password`, `password2`, `password3`, string, the passwords for up to three WiFi networks
-* `mqtt-endpoint-host`, string, the host name or IP address of the mqtt server
-* `mqtt-id`, string, the ID the device used to identify itself to the mqtt server, defaults to the `device-id`
-* `mqtt-root-cert`, string, the root certificate for TLS connections
-* `mqtt-auth`, string, the authentication mechanism, either "pass" (for user+password) or "x509"
-* `mqtt-device-cert`, string, the device certificate for x509 authentication
-* `mqtt-private-key`, string, the device private key for x509 authentication
-* `mqtt-username`, string, the username for user+password authentication
-* `mqtt-password`, string, the password for user+password authentication
+* `device-id`, key=0, string, the device ID, used by the back-end databases
+* `device-class`, key=1, string, the class ID for the device, used by the back-end databases
+* `ssid1`, `ssid2`, `ssid3`, keys=2-4, string, the SSIDs for up to three WiFi networks
+* `password`, `password2`, `password3`, keys=5-7, string, the passwords for up to three WiFi networks
+* `mqtt-endpoint-host`, key=8, string, the host name or IP address of the mqtt server
+* `mqtt-id`, key=9, string, the ID the device used to identify itself to the mqtt server, defaults to the `device-id`
+* `mqtt-root-cert`, key=10, string, the root certificate for TLS connections
+* `mqtt-auth`, key=11, string, the authentication mechanism, either "pass" (for user+password) or "x509"
+* `mqtt-device-cert`, key=12, string, the device certificate for x509 authentication
+* `mqtt-private-key`, key=13, string, the device private key for x509 authentication
+* `mqtt-username`, key=14, string, the username for user+password authentication
+* `mqtt-password`, key=15, string, the password for user+password authentication
 
 ### Statement `set <variable> @<value>`
 
 From version 1.0.0.
 
 Where `<variable>` is a known identifier and `<value>` is the name of a file containing the actual
-value.  The `<value>` in the statement *not* including the `@` can be quoted or not, as for `set`.
+value.  The `<value>` in the statement *not* including the `@` can be quoted or not, as for `set`,
+e.g. `@"my file"`.
 
 if the `<value>` after unquoting has the initial sequence `~/` then the `~` is expanded to the
 user's home directory taken from `$HOME`.

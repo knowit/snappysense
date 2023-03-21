@@ -40,22 +40,22 @@ const (
 
 // String variables - these indices are fixed by the spec
 const (
-	svar_device_name        = 0
-	svar_ssid1              = 1
-	svar_ssid2              = 2
-	svar_ssid3              = 3
-	svar_password1          = 4
-	svar_password2          = 5
-	svar_password3          = 6
-	svar_mqtt_endpoint_host = 7
-	svar_mqtt_id            = 8
-	svar_mqtt_class         = 9
+	svar_device_id          = 0
+	svar_device_class       = 1
+	svar_ssid1              = 2
+	svar_ssid2              = 3
+	svar_ssid3              = 4
+	svar_password1          = 5
+	svar_password2          = 6
+	svar_password3          = 7
+	svar_mqtt_endpoint_host = 8
+	svar_mqtt_id            = 9
 	svar_mqtt_root_cert     = 10
-	svar_mqtt_device_cert   = 11
-	svar_mqtt_private_key   = 12
-	svar_mqtt_username      = 13
-	svar_mqtt_password      = 14
-	svar_mqtt_auth          = 15
+	svar_mqtt_auth          = 11
+	svar_mqtt_device_cert   = 12
+	svar_mqtt_private_key   = 13
+	svar_mqtt_username      = 14
+	svar_mqtt_password      = 15
 )
 
 // Limits - these values are fixed by the spec, more or less
@@ -67,7 +67,7 @@ const (
 	max_string_length        = 65535
 	min_observation_interval = 60
 	max_observation_interval = 8 * 60 * 60
-	max_upload_interval      = 24 * 60 * 60
+	max_upload_interval      = 48 * 60 * 60
 	min_inet_port            = 1000  // Investigate
 	max_inet_port            = 65535 // Investigate
 )
@@ -105,7 +105,8 @@ var variables = map[string]*varinfo{
 	"mqtt-use-tls":         &varinfo{ty: int_ty, index: ivar_mqtt_use_tls},
 
 	// Strings
-	"device-name":        &varinfo{ty: str_ty, index: svar_device_name}, // TODO: Validate form
+	"device-id":          &varinfo{ty: str_ty, index: svar_device_id}, // TODO: Validate form
+	"device-class":       &varinfo{ty: str_ty, index: svar_device_class},         // TODO: Validate form
 	"ssid1":              &varinfo{ty: str_ty, index: svar_ssid1},
 	"ssid2":              &varinfo{ty: str_ty, index: svar_ssid2},
 	"ssid3":              &varinfo{ty: str_ty, index: svar_ssid3},
@@ -114,7 +115,6 @@ var variables = map[string]*varinfo{
 	"password3":          &varinfo{ty: str_ty, index: svar_password3},
 	"mqtt-endpoint-host": &varinfo{ty: str_ty, index: svar_mqtt_endpoint_host}, // TODO: Validate form
 	"mqtt-id":            &varinfo{ty: str_ty, index: svar_mqtt_id},            // TODO: Validate form
-	"mqtt-class":         &varinfo{ty: str_ty, index: svar_mqtt_class},         // TODO: Validate form
 	"mqtt-root-cert":     &varinfo{ty: str_ty, index: svar_mqtt_root_cert},     // TODO: Validate form
 	"mqtt-device-cert":   &varinfo{ty: str_ty, index: svar_mqtt_device_cert},   // TODO: Validate form
 	"mqtt-private-key":   &varinfo{ty: str_ty, index: svar_mqtt_private_key},   // TODO: Validate form
