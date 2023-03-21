@@ -49,8 +49,8 @@ If this appears it must be second, following the `snappysense-compiled-config`.
 
 From version 1.0.0.
 
-Where `<variable>` is a known identifier and `<value>` is a number, a sequence of non-blank
-chars, or a `"`-quoted string (allowing `\"` in the string to represent the quotation mark).
+Where `<variable>` is a known identifier and `<value>` is a number, a sequence of non-blank chars,
+or a `"`-quoted string (allowing `\"` in the string to represent the quotation mark).
 
 Variable names start with `[a-zA-Z]` followed by zero or more of `[a-zA-Z0-9_-]`.
 
