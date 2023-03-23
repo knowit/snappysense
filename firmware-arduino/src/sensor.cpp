@@ -7,6 +7,24 @@
 #include "log.h"
 #include "time_server.h"
 
+// This version string identifies the snappy/observation/ JSON package and is sent as
+// the "version" property of the package.
+//
+// The bugfix number is incremented if there's a compatible bugfix; for example, say we
+// change how a floating point number is rounded.  This will very rarely be the case.
+//
+// The minor version is incremented if the package format is changed in a compatible
+// manner, typically this will happen if we add or remove an optional field, or add
+// a new non-optional field.
+//
+// The major version is incremented if the package format is changed in an incompatible
+// way: the meaning of a field is changed in a nontrivial way, or a nonoptional field
+// is removed, or the package format itself changes.
+//
+// Every field below needs to be annotated with its version number.
+
+#define OBSERVATION_VERSION "1.0.0"
+
 // The "formatters" format the various members of SnappySenseData into a buffer.  In all
 // cases, `buflim` points to the address beyond the buffer.  No error is returned
 // if the buffer is too small, but the operation is guaranteed not to write beyond
@@ -121,6 +139,7 @@ static void display_altitude(const SnappySenseData& data, char* buf, char* bufli
 #endif
 
 SnappyMetaDatum snappy_metadata[] = {
+  // Optional, unsigned sequence number, from version 1.0.0
   {.json_key         = "sequenceno",
    .explanatory_text = "Sequence number",
    .display_unit     = "",
@@ -129,6 +148,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .flag_offset      = 0,
    .display         = nullptr,
    .format           = format_sequenceno },
+  // Mandatory, unsigned seconds since Posix epoch, from version 1.0.0
   {.json_key         = "sent",
    .explanatory_text = "Local time of observation",
    .display_unit     = "",
@@ -138,6 +158,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .display         = nullptr,
    .format           = format_timestamp},
 #ifdef SENSE_TEMPERATURE
+  // Optional, float temperature degrees C, from version 1.0.0
   {.json_key         = "temperature",
    .explanatory_text = "Temperature",
    .display_unit     = "C",
@@ -148,6 +169,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_temp},
 #endif
 #ifdef SENSE_HUMIDITY
+  // Optional, float relative humidity, from version 1.0.0
   {.json_key         = "humidity",
    .explanatory_text = "Humidity",
    .display_unit     = "%",
@@ -158,6 +180,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_humidity},
 #endif
 #ifdef SENSE_UV
+  // Optional, version 1.0.0
   {.json_key         = "uv",
    .explanatory_text = "Ultraviolet intensity",
    .display_unit     = "",
@@ -168,6 +191,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_uv},
 #endif
 #ifdef SENSE_LIGHT
+  // Optional, version 1.0.0
   {.json_key         = "light",
    .explanatory_text = "Luminous intensity",
    .display_unit     = "lx",
@@ -178,6 +202,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_light},
 #endif
 #ifdef SENSE_PRESSURE
+  // Optional, version 1.0.0
   {.json_key         = "pressure",
    .explanatory_text = "Atmospheric pressure",
    .display_unit     = "hpa",
@@ -188,6 +213,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_pressure},
 #endif
 #ifdef SENSE_ALTITUDE
+  // Optional, version 1.0.0
   {.json_key         = "altitude",
    .explanatory_text = "Altitude",
    .display_unit     = "m",
@@ -197,6 +223,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .display          = display_altitude,
    .format           = format_altitude},
 #endif
+  // Optional, version 1.0.0
   {.json_key         = "airsensor",
    .explanatory_text = "Air sensor status",
    .display_unit     = "",
@@ -206,6 +233,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .display          = nullptr,
    .format           = format_air_sensor_status},
 #ifdef SENSE_AIR_QUALITY_INDEX
+  // Optional, version 1.0.0
   {.json_key         = "airquality",
    .explanatory_text = "Air quality index",
    .display_unit     = "",
@@ -216,6 +244,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_air_quality},
 #endif
 #ifdef SENSE_TVOC
+  // Optional, version 1.0.0
   {.json_key         = "tvoc",
    .explanatory_text = "Concentration of total volatile organic compounds",
    .display_unit     = "ppb",
@@ -226,6 +255,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_tvoc},
 #endif
 #ifdef SENSE_CO2
+  // Optional, version 1.0.0
   {.json_key         = "co2",
    .explanatory_text = "Carbon dioxide equivalent concentration",
    .display_unit     = "ppm",
@@ -236,6 +266,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_co2},
 #endif
 #ifdef SENSE_MOTION
+  // Optional, version 1.0.0
   {.json_key         = "motion",
    .explanatory_text = "Motion detected",
    .display_unit     = "",
@@ -246,6 +277,7 @@ SnappyMetaDatum snappy_metadata[] = {
    .format           = format_motion},
 #endif
 #ifdef SENSE_NOISE
+  // Optional, version 1.0.0
   {.json_key         = "noise",
    .explanatory_text = "Noise value",
    .display_unit     = "",
@@ -267,19 +299,19 @@ SnappyMetaDatum snappy_metadata[] = {
 
 // The JSON data format is defined by MQTT-PROTOCOL.md
 String format_readings_as_json(const SnappySenseData& data) {
-  bool first = true;
   String buf;
   buf += '{';
+  // Version field: mandatory, semver string, from version 1.0.0
+  buf += "\"version\":\"";
+  buf += OBSERVATION_VERSION;
+  buf += '"';
   for ( SnappyMetaDatum* r = snappy_metadata; r->json_key != nullptr; r++ ) {
     // Skip data that are not valid
     if (r->flag_offset > 0 &&
         !*reinterpret_cast<const bool*>(reinterpret_cast<const char*>(&data) + r->flag_offset)) {
       continue;
     }
-    if (!first) {
-      buf += ',';
-    }
-    first = false;
+    buf += ',';
     buf += '"';
     // This is a hack.  Factor names are prefixed by F# to avoid name clashes, while fields like
     // sent and sequenceno should not be prefixed.  The hack is that flag_offset doubles as an

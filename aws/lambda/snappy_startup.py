@@ -53,5 +53,8 @@ def handle_startup_event(db, event, context):
     # command may be delivered first followed by a new command.
 
     if payload:
+        # Version 1.0.0 has "enabled" and "interval".  For rules about the semver of this
+        # JSON package, see firmware-arduino/src/mqtt.cpp, in mqtt_handle_message()
+        payload["version"] = "1.0.0"
         return [[f"snappy/control/{device}", payload, 1]]
     return []

@@ -12,19 +12,25 @@ Since the device class ID and device ID are in the message topics, it is best to
 simple.  Obviously avoid `/` in either ID, but for RabbitMQ it is also necessary to avoid `.`.
 Probably both `_` and `-` are safe in addition to ASCII alphanumeric characters.
 
+Note that the `version` fields all relate to the package they are part of, they are not necessarily
+the same version.
+
 ## Startup message
 
 At startup the device sends a message with topic `snappy/startup/<device-class>/<device-id>` and a
 JSON payload:
 
 ```
-  { sent: <integer, seconds since epoch UTC or seconds since boot>,
+  { version: <string, semver for this JSON package, currently 1.0.0>,
+    sent: <integer, seconds since Posix epoch UTC>,
     interval: <integer, seconds between observations> }
 ```
 
-where `interval` is only sent if the device is a sensor (as opposed to only an actuator).
-At startup, the device is usually enabled, that is, it will report observations if it is not told
+where `interval` is only sent if the device is a sensor (as opposed to only an actuator).  At
+startup, the device is usually enabled, that is, it will report observations if it is not told
 otherwise.
+
+See `firmware-arduino/src/mqtt.cpp` : `generate_startup_message()` for a definition of `version`.
 
 ## Observation message
 
@@ -33,20 +39,25 @@ until a communication window is open) has the topic `snappy/observation/<device-
 a JSON payload:
 
 ```
-  { sent: <integer, seconds since epoch UTC or seconds since boot>,
+  { version: <string, semver for this JSON package, currently 1.0.0>,
+    sent: <integer, seconds since Posix epoch UTC>,
     sequenceno: <nonnegative integer, observation sequence number since startup>
     ... }
 ```
 
-The sequence number allows the server to organize the incoming data in case the time stamp is
-missing.  It is reset to 0 every time the device is rebooted.  Messages are uploaded (and received)
-in increasing sequence number order, though not all observations are necessarily uploaded.  A drop
-in the sequence number hence indicates a reboot (but since not every observation is uploaded it is
-not possible to detect all reboots using this fact).
+The sequence number is reset to 0 every time the device is rebooted.  Messages are uploaded (and
+received) in increasing sequence number order, though not all observations are necessarily uploaded.
+A drop in the sequence number hence indicates a reboot, but since not every observation is uploaded
+it is not possible to detect all reboots using this fact.  (The sequence number is probably
+redundant and can be removed.  It allows the server to organize the incoming data in case the time
+stamp is missing, but in recent firmware that will never be the case.  Hence version 1.0.0 defines
+the sequence number field as optional.)
 
 The payload contains fields that represent the last valid observations of the sensors that are on the
 device.  Each factor is reported by the device under the field name `F#<factor-name>` to avoid name
 clashes.  See the FACTOR table of DATA-MODEL.md for the `<factor-name>` values.
+
+See `firmware-arduino/src/sensor.cpp` for a definition of `version`.
 
 ## Control message
 
@@ -56,12 +67,15 @@ to the device via the topics `snappy/control/<device-id>`, `snappy/control-class
 least these fields:
 
 ```
+  version: <string, semver for this JSON package, currently 1.0.0>
   enable: <integer, 0 or 1, whether to enable or disable device, OPTIONAL>,
   interval: <integer, positive number of seconds between observations, OPTIONAL>,
 ```
 
 where `enable` controls whether the device performs and reports measurements, and `interval`
 controls how often the measurements are taken.
+
+See `firmware-arduino/src/mqtt.cpp` : `mqtt_handle_message()` for a definition of `version`.
 
 ## Command message
 

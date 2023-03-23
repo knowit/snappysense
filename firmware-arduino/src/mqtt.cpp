@@ -40,6 +40,25 @@
 #include "sensor.h"
 #include "time_server.h"
 
+// This version string identifies the snappy/startup/ JSON package and is sent as
+// the "version" property of the package.
+//
+// The bugfix number is incremented if there's a compatible bugfix; for example, say we
+// change how a floating point number is rounded.  This will very rarely be the case.
+//
+// The minor version is incremented if the package format is changed in a compatible
+// manner, typically this will happen if we add or remove an optional field, or add
+// a new non-optional field.
+//
+// The major version is incremented if the package format is changed in an incompatible
+// way: the meaning of a field is changed in a nontrivial way, or a nonoptional field
+// is removed, or the package format itself changes.
+//
+// Every field in the code for generate_startup_message() needs to be annotated with
+// its version number.
+
+#define STARTUP_VERSION "1.0.0"
+
 // The default buffer size is 256 bytes on most devices.  That's too short for the
 // sensor package, sometimes.  1K is OK - though may also be too short for some messages.
 // We set the buffer size when we make the connection, but messages may arrive
@@ -353,11 +372,22 @@ static void generate_startup_message() {
   topic += "/";
   topic += mqtt_device_id();
 
-  body += "{\"interval\":";
-  body += mqtt_capture_interval_s();
-  body += ",\"sent\":\"";
+  body += '{';
+
+  // "version": mandatory, semver string, from version 1.0.0
+  body += "\"version\":\"";
+  body += STARTUP_VERSION;
+  body += '"';
+
+  // "sent": mandatory, unsigned number of seconds since Posix epoch, from version 1.0.0
+  body += ",\"sent\":";
   body += format_timestamp(time(nullptr));
-  body += "\"}";
+
+  // "interval": optional, unsigned number of seconds, from version 1.0.0
+  body += ",\"interval\":";
+  body += mqtt_capture_interval_s();
+
+  body += '}';
 
   mqtt_enqueue(std::move(topic), std::move(body));
 }
@@ -422,13 +452,27 @@ static void mqtt_handle_message(int payload_size) {
   JSONVar json = JSON.parse((const char*)buf);
   if (topic.startsWith("snappy/control/")) {
     int fields = 0;
+    if (json.hasOwnProperty("version")) {
+      // TODO: This should be checking the version, as that may determine the meaning or
+      // presence of the rest of the fields.
+      //
+      // A missing version should be taken to equal 1.0.0, for compatibility reasons.
+      //
+      // Code below should be prepared to handle various versions, within reason.
+      // By and large, the control message format should not change much, as every
+      // new field should be optional, and the server should be able to send an
+      // appropriate message for every device firmware version.  The device version
+      // ought to be inferrable from the snappy/startup message.
+    }
     if (json.hasOwnProperty("enable")) {
+      // Boolean 0 or 1, whether to enable the device or not, from version 1.0.0
       unsigned flag = (unsigned)json["enable"];
       log("Mqtt: enable %u\n", flag);
       put_main_event(flag ? EvCode::ENABLE_DEVICE : EvCode::DISABLE_DEVICE);
       fields++;
     }
     if (json.hasOwnProperty("interval")) {
+      // Unsigned number of seconds, mqtt capture interval, from version 1.0.0
       unsigned interval = (unsigned)json["interval"];
       log("Mqtt: set interval %u\n", interval);
       put_main_event(EvCode::SET_INTERVAL, (uint32_t)interval);
