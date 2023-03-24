@@ -122,7 +122,7 @@ void set_access_point_password(int n, const char* val);
 
 #ifdef SNAPPY_NTP
 // Interval between connection attempts to time server in the communication window.
-unsigned long time_server_retry_s();
+unsigned long ntp_retry_s();
 #endif
 
 #ifdef SNAPPY_MQTT

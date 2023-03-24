@@ -338,7 +338,7 @@ void loop() {
   wifi_init();
 #endif
 #ifdef SNAPPY_NTP
-  timeserver_init();
+  ntp_init();
 #endif
 #ifdef SNAPPY_MQTT
   mqtt_init();
@@ -376,7 +376,7 @@ void loop() {
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
 #ifdef SNAPPY_NTP
-        comm_work = comm_work || timeserver_have_work();
+        comm_work = comm_work || ntp_have_work();
 #endif
 #ifdef SNAPPY_MQTT
         comm_work = comm_work || mqtt_have_work();
@@ -415,8 +415,8 @@ void loop() {
       case EvCode::COMM_WIFI_CLIENT_UP: {
         in_communication_window = true;
 #ifdef SNAPPY_NTP
-        if (timeserver_have_work()) {
-          timeserver_start();
+        if (ntp_have_work()) {
+          ntp_start();
         }
 #endif
 #ifdef SNAPPY_MQTT
@@ -456,7 +456,7 @@ void loop() {
           mqtt_stop();
 #endif
 #ifdef SNAPPY_NTP
-          timeserver_stop();
+          ntp_stop();
 #endif
           in_communication_window = false;
         }
@@ -623,7 +623,7 @@ void loop() {
           mqtt_stop();
 #endif
 #ifdef SNAPPY_NTP
-          timeserver_stop();
+          ntp_stop();
 #endif
           in_communication_window = false;
         }
@@ -662,7 +662,7 @@ void loop() {
 #endif
 #ifdef SNAPPY_NTP
       case EvCode::COMM_NTP_WORK:
-        timeserver_work();
+        ntp_work();
         break;
 #endif
 

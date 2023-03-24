@@ -428,7 +428,7 @@ unsigned long monitoring_window_s() {
 }
 
 #ifdef SNAPPY_NTP
-unsigned long time_server_retry_s() {
+unsigned long ntp_retry_s() {
   return 10;
 }
 #endif
