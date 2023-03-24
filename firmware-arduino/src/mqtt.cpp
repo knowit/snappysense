@@ -104,7 +104,9 @@ static bool early_times = true;
 static int num_times = 0;
 static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
+#ifdef SNAPPY_NTP
 static List<SnappySenseData> delayed_data_queue;
+#endif
 
 static void subscribe();
 static void connect();
@@ -120,12 +122,19 @@ void mqtt_init() {
                             [](TimerHandle_t) { put_main_event(EvCode::COMM_MQTT_WORK); });
 }
 
+static bool should_send_delayed_data() {
+#ifdef SNAPPY_NTP
+  return !delayed_data_queue.is_empty() && time_adjustment() > 0;
+#else
+  return false;
+#endif
+}
+
 bool mqtt_have_work() {
   time_t delta = time(nullptr) - last_connect;
 
   // Hold data for a while, don't connect every time just because there's work to do.
-  if ((!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) ||
-      (!delayed_data_queue.is_empty() && time_adjustment() > 0)) {
+  if ((!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) || should_send_delayed_data()) {
     return true;
   }
 
@@ -238,6 +247,7 @@ void mqtt_add_data(SnappySenseData* data) {
 
   last_capture = time(nullptr);
 
+#ifdef SNAPPY_NTP
   time_t adj = time_adjustment();
   if (adj == 0) {
     // Time has not been configured.  Need to enqueue the data for later.
@@ -256,6 +266,8 @@ void mqtt_add_data(SnappySenseData* data) {
     d.time += adj;
     enqueue_data(d);
   }
+#endif
+
   enqueue_data(*data);
   delete data;
 }
