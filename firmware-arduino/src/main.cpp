@@ -185,7 +185,7 @@
 #include "icons.h"
 #include "log.h"
 #include "mqtt.h"
-#include "network.h"
+#include "network_wifi.h"
 #include "piezo.h"
 #include "sensor.h"
 #include "serial_server.h"

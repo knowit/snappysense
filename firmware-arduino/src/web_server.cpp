@@ -8,7 +8,7 @@
 #include "config.h"
 #include "device.h"
 #include "log.h"
-#include "network.h"
+#include "network_wifi.h"
 #include "util.h"
 
 #include <WiFi.h>
