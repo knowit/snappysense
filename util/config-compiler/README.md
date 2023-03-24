@@ -81,6 +81,10 @@ Version 1.0.0 string variables and their formats:
 * `mqtt-username`, key=14, string, the username for user+password authentication
 * `mqtt-password`, key=15, string, the password for user+password authentication
 
+TODO: `mqtt-auth` could be translated from a string in the surface language to an integer in the
+binary representation, this would be easier for the backend.  It would make it a new kind of thing
+in the compiler though.
+
 ### Statement `set <variable> @<value>`
 
 From version 1.0.0.
