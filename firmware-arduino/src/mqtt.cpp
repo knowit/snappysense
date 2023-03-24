@@ -104,7 +104,7 @@ static bool early_times = true;
 static int num_times = 0;
 static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
 static List<SnappySenseData> delayed_data_queue;
 #endif
 
@@ -123,7 +123,7 @@ void mqtt_init() {
 }
 
 static bool should_send_delayed_data() {
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
   return !delayed_data_queue.is_empty() && time_adjustment() > 0;
 #else
   return false;
@@ -247,7 +247,7 @@ void mqtt_add_data(SnappySenseData* data) {
 
   last_capture = time(nullptr);
 
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
   time_t adj = time_adjustment();
   if (adj == 0) {
     // Time has not been configured.  Need to enqueue the data for later.

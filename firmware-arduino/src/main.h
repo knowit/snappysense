@@ -45,6 +45,11 @@
 // See time_server.h.
 #define SNAPPY_NTP
 
+// With SNAPPY_TIMESTAMPS, every sent message gets a timestamp, and no messages
+// are sent until the time has been configured.  Requires SNAPPY_NTP or SNAPPY_LORA
+// for the time service.
+#define SNAPPY_TIMESTAMPS
+
 // With SNAPPY_MQTT, the device will upload readings to a predefined mqtt broker
 // every so often, and download config messages and commands.  See mqtt.h.
 #define SNAPPY_MQTT
@@ -75,7 +80,7 @@
 
 // Include the log(stream, fmt, ...) functions, see log.h.  If the serial device is
 // connected then log messages will appear there, otherwise they will be discarded.
-//#define LOGGING
+#define LOGGING
 
 // Play a tune when starting the device
 //#define STARTUP_SONG
@@ -87,6 +92,10 @@
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
+
+#if defined(SNAPPY_TIMESTAMPS) && !defined(SNAPPY_NTP)
+# error "SNAPPY_TIMESTAMPS requires a time server"
+#endif
 
 #if defined(SNAPPY_WEBCONFIG) || defined(SNAPPY_MQTT) || defined(SNAPPY_NTP)
 # define SNAPPY_WIFI
