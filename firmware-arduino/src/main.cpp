@@ -185,7 +185,8 @@
 #include "icons.h"
 #include "log.h"
 #include "mqtt.h"
-#include "network.h"
+#include "network_lora.h"
+#include "network_wifi.h"
 #include "piezo.h"
 #include "sensor.h"
 #include "serial_server.h"
@@ -338,7 +339,7 @@ void loop() {
   wifi_init();
 #endif
 #ifdef SNAPPY_NTP
-  timeserver_init();
+  ntp_init();
 #endif
 #ifdef SNAPPY_MQTT
   mqtt_init();
@@ -376,7 +377,7 @@ void loop() {
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
 #ifdef SNAPPY_NTP
-        comm_work = comm_work || timeserver_have_work();
+        comm_work = comm_work || ntp_have_work();
 #endif
 #ifdef SNAPPY_MQTT
         comm_work = comm_work || mqtt_have_work();
@@ -415,8 +416,8 @@ void loop() {
       case EvCode::COMM_WIFI_CLIENT_UP: {
         in_communication_window = true;
 #ifdef SNAPPY_NTP
-        if (timeserver_have_work()) {
-          timeserver_start();
+        if (ntp_have_work()) {
+          ntp_start();
         }
 #endif
 #ifdef SNAPPY_MQTT
@@ -456,7 +457,7 @@ void loop() {
           mqtt_stop();
 #endif
 #ifdef SNAPPY_NTP
-          timeserver_stop();
+          ntp_stop();
 #endif
           in_communication_window = false;
         }
@@ -543,8 +544,8 @@ void loop() {
         // monitor data arrived after closing the monitoring window
         SnappySenseData* new_data = (SnappySenseData*)ev.pointer_data;
         assert(new_data != nullptr);
-#ifdef SNAPPY_MQTT
-        mqtt_add_data(new SnappySenseData(*new_data));
+#ifdef SNAPPY_UPLOAD
+        upload_add_data(new SnappySenseData(*new_data));
 #endif
 #ifdef SNAPPY_COMMAND_PROCESSOR
         command_data = *new_data;
@@ -577,7 +578,7 @@ void loop() {
         break;
 
       case EvCode::SET_INTERVAL:
-        set_mqtt_capture_interval_s(ev.scalar_data);
+        set_capture_interval_s(ev.scalar_data);
         break;
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
@@ -589,13 +590,13 @@ void loop() {
       }
 #endif
 
-#ifdef SNAPPY_WEBCONFIG
       case EvCode::BUTTON_LONG_PRESS:
         // Major mode change.  This is special: it knows a bit too much about the rest of the
         // state machine but that's just how it's going to be.  We're trying to avoid having
         // to process any other messages before switching to a completely different mode.
-        // We never switch back: we restart the device when AP mode ends.
+        // We never switch back: we restart the device when config mode ends.
 
+#if defined(SNAPPY_WEBCONFIG) || defined(SNAPPY_I2CCONFIG)
         // We're in the end times.
         cancel_master_timeout();
         slideshow_stop();
@@ -615,16 +616,17 @@ void loop() {
           in_monitoring_window = false;
         }
 
+# if defined(SNAPPY_WIFI)
         // Shut down communication.  This may leave things unsent and time unconfigured
         // but nobody really cares about a little lost data.
         if (in_communication_window) {
           // This must stop all timers in the communication code
-#ifdef SNAPPY_MQTT
+#  ifdef SNAPPY_MQTT
           mqtt_stop();
-#endif
-#ifdef SNAPPY_NTP
-          timeserver_stop();
-#endif
+#  endif
+#  ifdef SNAPPY_NTP
+          ntp_stop();
+#  endif
           in_communication_window = false;
         }
 
@@ -633,15 +635,26 @@ void loop() {
           wifi_disable();
           in_wifi_window = false;
         }
+# elif defined(SNAPPY_LORA)
+        panic("LoRaWAN shutdown not implemented");
+# endif // SNAPPY_WIFI
 
         // AP mode is not interactive.
-#ifdef SNAPPY_SERIAL_INPUT
+# ifdef SNAPPY_SERIAL_INPUT
         serial_server_stop();
-#endif
+# endif
 
+# ifdef SNAPPY_WEBCONFIG
         // ap_mode_loop() never returns, it restarts the device.
         ap_mode_loop();
-#endif // SNAPPY_WEBCONFIG
+# else
+        panic("I2C configuration not implemented");
+# endif
+#else
+        // No configuration engine enabled
+        // Do nothing, we stay in the state machine where we are, no action required.
+        break;
+#endif
 
       /////////////////////////////////////////////////////////////////////////////////////
       //
@@ -662,7 +675,7 @@ void loop() {
 #endif
 #ifdef SNAPPY_NTP
       case EvCode::COMM_NTP_WORK:
-        timeserver_work();
+        ntp_work();
         break;
 #endif
 

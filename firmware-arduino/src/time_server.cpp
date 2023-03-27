@@ -70,13 +70,13 @@ time_t time_adjustment() {
   return 0;
 }
 
-void timeserver_init() {
+void ntp_init() {
   // We retry every 10s through the comm window if we can't get a connection.
-  timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(time_server_retry_s() * 1000), pdFALSE, nullptr,
+  timeserver_timer = xTimerCreate("time server", pdMS_TO_TICKS(ntp_retry_s() * 1000), pdFALSE, nullptr,
                                   [](TimerHandle_t){ put_main_event(EvCode::COMM_NTP_WORK); });
 }
 
-bool timeserver_have_work() {
+bool ntp_have_work() {
   if (!time_configured) {
     return true;
   }
@@ -86,7 +86,7 @@ bool timeserver_have_work() {
   return false;
 }
 
-void timeserver_start() {
+void ntp_start() {
   if (time_configured) {
     return;
   }
@@ -97,7 +97,7 @@ void timeserver_start() {
 }
 
 // Called from the main loop in response to COMM_NTP_WORK messages.
-void timeserver_work() {
+void ntp_work() {
   if (time_configured) {
     return;
   }
@@ -109,7 +109,7 @@ void timeserver_work() {
 }
 
 // Stop trying to connect to the time server, if that's still going on.
-void timeserver_stop() {
+void ntp_stop() {
   delete timeserver_state;
   timeserver_state = nullptr;
   xTimerStop(timeserver_timer, portMAX_DELAY);

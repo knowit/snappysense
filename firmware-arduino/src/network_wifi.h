@@ -1,7 +1,7 @@
 // Connectivity management
 
-#ifndef network_h_included
-#define network_h_included
+#ifndef network_wifi_h_included
+#define network_wifi_h_included
 
 #include "main.h"
 
@@ -36,4 +36,4 @@ String wifi_local_ip();
 
 #endif // SNAPPY_WIFI
 
-#endif // !network_h_included
+#endif // !network_wifi_h_included

@@ -7,7 +7,7 @@
 
 #include "config.h"
 #include "device.h"
-#include "network.h"
+#include "network_wifi.h"
 #include "web_server.h"
 
 bool webcfg_start_access_point() {

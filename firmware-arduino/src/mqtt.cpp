@@ -104,7 +104,7 @@ static bool early_times = true;
 static int num_times = 0;
 static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
 static List<SnappySenseData> delayed_data_queue;
 #endif
 
@@ -123,7 +123,7 @@ void mqtt_init() {
 }
 
 static bool should_send_delayed_data() {
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
   return !delayed_data_queue.is_empty() && time_adjustment() > 0;
 #else
   return false;
@@ -235,19 +235,19 @@ static void enqueue_data(const SnappySenseData& data) {
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-void mqtt_add_data(SnappySenseData* data) {
+void upload_add_data(SnappySenseData* data) {
   if (!device_enabled()) {
     delete data;
     return;
   }
-  if (last_capture > 0 && time(nullptr) - last_capture < mqtt_capture_interval_s()) {
+  if (last_capture > 0 && time(nullptr) - last_capture < capture_interval_s()) {
     delete data;
     return;
   }
 
   last_capture = time(nullptr);
 
-#ifdef SNAPPY_NTP
+#ifdef SNAPPY_TIMESTAMPS
   time_t adj = time_adjustment();
   if (adj == 0) {
     // Time has not been configured.  Need to enqueue the data for later.
@@ -397,7 +397,7 @@ static void generate_startup_message() {
 
   // "interval": optional, unsigned number of seconds, from version 1.0.0
   body += ",\"interval\":";
-  body += mqtt_capture_interval_s();
+  body += capture_interval_s();
 
   body += '}';
 

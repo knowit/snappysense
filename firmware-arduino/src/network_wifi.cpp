@@ -1,6 +1,6 @@
 // Connectivity management
 
-#include "network.h"
+#include "network_wifi.h"
 
 #ifdef SNAPPY_WIFI
 
