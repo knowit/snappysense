@@ -344,15 +344,19 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
 #define MINUTE(s) ((s)*60)
 #define HOUR(s) ((s)*60*60)
 
+# if defined(SNAPPY_DEVELOPMENT)
+static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
+# else
+static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
+# endif
+
 #ifdef SNAPPY_MQTT
 # if defined(SNAPPY_DEVELOPMENT)
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
 static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(2);
 static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = MINUTE(2);
 # else
-static const unsigned long MQTT_SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MQTT_MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
 static const unsigned long MQTT_SLIDESHOW_UPLOAD_INTERVAL_S = MINUTE(5);
 static const unsigned long MQTT_MONITORING_UPLOAD_INTERVAL_S = HOUR(4);
 # endif
@@ -445,9 +449,7 @@ unsigned long serial_server_poll_interval_ms() {
 
 // Preference accessors
 
-#ifdef SNAPPY_MQTT
-unsigned long mqtt_monitoring_capture_interval_s = MQTT_MONITORING_CAPTURE_INTERVAL_S;
-#endif
+unsigned long monitoring_capture_interval_s = MONITORING_CAPTURE_INTERVAL_S;
 
 bool device_enabled() {
   return get_int_pref("enabled");
@@ -491,19 +493,19 @@ void set_access_point_password(int n, const char* value) {
   }
 }
 
-#ifdef SNAPPY_MQTT
-unsigned long mqtt_capture_interval_s() {
+unsigned long capture_interval_s() {
   if (slideshow_mode) {
-    return MQTT_SLIDESHOW_CAPTURE_INTERVAL_S;
+    return SLIDESHOW_CAPTURE_INTERVAL_S;
   } else {
-    return mqtt_monitoring_capture_interval_s;
+    return monitoring_capture_interval_s;
   }
 }
 
-void set_mqtt_capture_interval_s(unsigned long interval) {
-  mqtt_monitoring_capture_interval_s = interval;
+void set_capture_interval_s(unsigned long interval) {
+  monitoring_capture_interval_s = interval;
 }
 
+#ifdef SNAPPY_MQTT
 MqttAuth mqtt_auth_type() {
   const char* auth = get_string_pref("mqtt-auth");
   if (strcmp(auth, "pass") == 0) {

@@ -89,14 +89,12 @@ unsigned long sensor_warmup_time_s();
 // How long is the monitoring window overall (including warmup)?
 unsigned long monitoring_window_s();
 
-#ifdef SNAPPY_MQTT
-// How often readings are captured and enqueued for mqtt upload.
+// How often readings are captured and enqueued for upload.
 //
-// Note this is independent of sensor reading frequency; fewer readings
-// may be captured for upload than are performed.
-unsigned long mqtt_capture_interval_s();
-void set_mqtt_capture_interval_s(unsigned long interval);
-#endif
+// Note this is independent of sensor reading frequency; fewer readings may be captured for
+// upload than are performed.
+unsigned long capture_interval_s();
+void set_capture_interval_s(unsigned long interval);
 
 /////////////////////////////////////////////////////////////////////////////////
 //
