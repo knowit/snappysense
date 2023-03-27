@@ -118,6 +118,10 @@
 // command "help" will provide a list of possible commands.
 //#define SERIAL_COMMAND_SERVER
 
+// If disabled, ignore the button on the board.  Useful for experimenting with the ESP32
+// and sensors off the board.
+#define SNAPPY_BUTTON
+
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
