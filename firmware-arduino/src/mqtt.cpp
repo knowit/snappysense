@@ -235,12 +235,12 @@ static void enqueue_data(const SnappySenseData& data) {
   mqtt_enqueue(std::move(topic), std::move(body));
 }
 
-void mqtt_add_data(SnappySenseData* data) {
+void upload_add_data(SnappySenseData* data) {
   if (!device_enabled()) {
     delete data;
     return;
   }
-  if (last_capture > 0 && time(nullptr) - last_capture < mqtt_capture_interval_s()) {
+  if (last_capture > 0 && time(nullptr) - last_capture < capture_interval_s()) {
     delete data;
     return;
   }
@@ -397,7 +397,7 @@ static void generate_startup_message() {
 
   // "interval": optional, unsigned number of seconds, from version 1.0.0
   body += ",\"interval\":";
-  body += mqtt_capture_interval_s();
+  body += capture_interval_s();
 
   body += '}';
 

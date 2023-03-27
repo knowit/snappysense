@@ -114,6 +114,9 @@ static void cmd_inet(const String& cmd, const SnappySenseData&, Stream& out) {
 #ifdef SNAPPY_WEBCONFIG
   out.printf("Web configuration is enabled, ap %s\n", web_config_access_point());
 #endif
+#ifdef SNAPPY_I2CCONFIG
+  out.printf("I2C configuration is enabled, address TBD\n");
+#endif
 }
 
 static void cmd_config(const String& cmd, const SnappySenseData&, Stream& out) {

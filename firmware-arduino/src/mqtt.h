@@ -13,7 +13,7 @@
 void mqtt_init();
 
 // Takes ownership of the data
-void mqtt_add_data(SnappySenseData* new_data);
+void upload_add_data(SnappySenseData* new_data);
 
 // The wifi must be up.  Connect to the MQTT server, and ...
 void mqtt_start();
