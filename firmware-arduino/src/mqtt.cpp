@@ -34,7 +34,7 @@
 
 #include <ArduinoMqttClient.h>
 #include <WiFiClientSecure.h>
-#include <Arduino_Json.h>
+#include <Arduino_JSON.h>
 #include "config.h"
 #include "log.h"
 #include "sensor.h"
