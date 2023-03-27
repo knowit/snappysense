@@ -40,9 +40,20 @@ Device schematics and data sheets will appear in this repo eventually (Issue #31
 
 ### Firmware source code and development
 
-For the Arduino firmware we use Visual Studio Code for the development environment.  Before you
-build the first time, you will need to install the PlatformIO extension in VSCode, see
-[platformio.org](https://platformio.org) for pointers.
+For the Arduino firmware we use Visual Studio Code for the development environment.
+
+Before you build the first time, you will need to install the PlatformIO extension in VSCode, see
+[platformio.org](https://platformio.org) for pointers.  Basically if you're using VSCode you need to
+get the platformio.org extension installed from the extension manager within VSCode.  (If you're not
+using VSCode you're on your own.)
+
+**If you are working on Linux, you will run into a bug in the source code for
+DFRobot_EnvironmentalSensor.h.  It includes the file "String.h" but this must be "string.h", because
+that's the name of the file.** This has also been [fixed
+upstream](https://github.com/DFRobot/DFRobot_EnvironmentalSensor/commit/3666c07ffd4126bf8fa8b2f6ac12fe4e96548348)
+but version 1.0.3 does not appear to have made it into the platformio databases, so it must be fixed
+manually.
+
 
 Coding standards are documented at the beginning of `firmware-arduino/src/main.h`.
 
