@@ -56,7 +56,7 @@
 //
 // Profile 1: WiFi
 //
-// Here we have NTP, MQTT, and WEB_CONFIG
+// Here we have NTP, MQTT, and WiFi Access Point configuration.
 
 // With SNAPPY_NTP, synchronize the time with an ntp server at startup (only).
 // See time_server.h.  This requires SNAPPY_WIFI.
