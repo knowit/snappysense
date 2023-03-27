@@ -578,7 +578,7 @@ void loop() {
         break;
 
       case EvCode::SET_INTERVAL:
-        set_capture_interval_s(ev.scalar_data);
+        set_capture_interval_for_upload_s(ev.scalar_data);
         break;
 
 #ifdef SNAPPY_COMMAND_PROCESSOR

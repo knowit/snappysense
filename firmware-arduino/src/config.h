@@ -93,8 +93,8 @@ unsigned long monitoring_window_s();
 //
 // Note this is independent of sensor reading frequency; fewer readings may be captured for
 // upload than are performed.
-unsigned long capture_interval_s();
-void set_capture_interval_s(unsigned long interval);
+unsigned long capture_interval_for_upload_s();
+void set_capture_interval_for_upload_s(unsigned long interval);
 
 /////////////////////////////////////////////////////////////////////////////////
 //

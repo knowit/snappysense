@@ -240,7 +240,7 @@ void upload_add_data(SnappySenseData* data) {
     delete data;
     return;
   }
-  if (last_capture > 0 && time(nullptr) - last_capture < capture_interval_s()) {
+  if (last_capture > 0 && time(nullptr) - last_capture < capture_interval_for_upload_s()) {
     delete data;
     return;
   }
@@ -397,7 +397,7 @@ static void generate_startup_message() {
 
   // "interval": optional, unsigned number of seconds, from version 1.0.0
   body += ",\"interval\":";
-  body += capture_interval_s();
+  body += capture_interval_for_upload_s();
 
   body += '}';
 
@@ -484,9 +484,9 @@ static void mqtt_handle_message(int payload_size) {
       fields++;
     }
     if (json.hasOwnProperty("interval")) {
-      // Unsigned number of seconds, mqtt capture interval, from version 1.0.0
+      // Unsigned number of seconds, sensor capture interval for upload, from version 1.0.0
       unsigned interval = (unsigned)json["interval"];
-      log("Mqtt: set interval %u\n", interval);
+      log("Mqtt: set capture interval for upload %u\n", interval);
       put_main_event(EvCode::SET_INTERVAL, (uint32_t)interval);
       fields++;
     }

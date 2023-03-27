@@ -345,11 +345,11 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
 #define HOUR(s) ((s)*60*60)
 
 # if defined(SNAPPY_DEVELOPMENT)
-static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MONITORING_CAPTURE_INTERVAL_S = MINUTE(1);
+static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
+static const unsigned long MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
 # else
-static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_S = MINUTE(1);
-static const unsigned long MONITORING_CAPTURE_INTERVAL_S = MINUTE(30);
+static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
+static const unsigned long MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(30);
 # endif
 
 #ifdef SNAPPY_MQTT
@@ -449,7 +449,7 @@ unsigned long serial_server_poll_interval_ms() {
 
 // Preference accessors
 
-unsigned long monitoring_capture_interval_s = MONITORING_CAPTURE_INTERVAL_S;
+static unsigned long monitoring_capture_interval_for_upload_s = MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S;
 
 bool device_enabled() {
   return get_int_pref("enabled");
@@ -493,16 +493,16 @@ void set_access_point_password(int n, const char* value) {
   }
 }
 
-unsigned long capture_interval_s() {
+unsigned long capture_interval_for_upload_s() {
   if (slideshow_mode) {
-    return SLIDESHOW_CAPTURE_INTERVAL_S;
+    return SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S;
   } else {
-    return monitoring_capture_interval_s;
+    return monitoring_capture_interval_for_upload_s;
   }
 }
 
-void set_capture_interval_s(unsigned long interval) {
-  monitoring_capture_interval_s = interval;
+void set_capture_interval_for_upload_s(unsigned long interval) {
+  monitoring_capture_interval_for_upload_s = interval;
 }
 
 #ifdef SNAPPY_MQTT
