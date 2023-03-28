@@ -182,6 +182,7 @@
 #include "config.h"
 #include "command.h"
 #include "device.h"
+#include "i2c_server.h"
 #include "icons.h"
 #include "log.h"
 #include "mqtt.h"
@@ -284,6 +285,9 @@ static void cancel_master_timeout() {
 #ifdef SNAPPY_WEBCONFIG
 static void ap_mode_loop() NO_RETURN;
 #endif
+#ifdef SNAPPY_I2CCONFIG
+static void i2cconfig_loop() NO_RETURN;
+#endif
 
 // This never returns.  The Arduino main loop does nothing interesting for us.  Our main loop
 // is based on FreeRTOS and is not busy-waiting.
@@ -354,6 +358,13 @@ void loop() {
 
   // Shut up the compiler
   (void)in_monitoring_window;
+
+#ifdef SIMULATE_LONG_PRESS
+  TimerHandle_t simulated_long_press = xTimerCreate("long", pdMS_TO_TICKS(3000), pdFALSE, nullptr, [](TimerHandle_t) {
+    put_main_event(EvCode::BUTTON_LONG_PRESS);
+  });
+  xTimerStart(simulated_long_press, portMAX_DELAY);
+#endif
 
   // This is used to improve the UX.  It shortens the comm window the first time around and
   // skips the relaxation / sleep before we read the sensors.
@@ -582,7 +593,7 @@ void loop() {
         break;
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
-      case EvCode::PERFORM: {
+      case EvCode::SERIAL_INPUT: {
         String* cmd = (String*)ev.pointer_data;
         command_evaluate(*cmd, command_data, Serial);
         delete cmd;
@@ -644,11 +655,11 @@ void loop() {
         serial_server_stop();
 # endif
 
+        // config loops never return, they restart the device.
 # ifdef SNAPPY_WEBCONFIG
-        // ap_mode_loop() never returns, it restarts the device.
         ap_mode_loop();
 # else
-        panic("I2C configuration not implemented");
+        i2cconfig_loop();
 # endif
 #else
         // No configuration engine enabled
@@ -775,6 +786,68 @@ static void ap_mode_loop() {
         WebRequest* r = (WebRequest*)ev.pointer_data;
         webcfg_failed_request(r->client, r->request);
         web_server_request_completed(r);
+        break;
+      }
+
+      case EvCode::BUTTON_LONG_PRESS:
+        esp_restart();
+
+      /////////////////////////////////////////////////////////////////////////////////////
+      //
+      // Button monitor tasks
+
+      case EvCode::BUTTON_DOWN:
+        button_down();
+        break;
+
+      case EvCode::BUTTON_UP:
+        button_up();
+        break;
+
+      default:
+        log("AP loop: Ignoring event %d\n", (int)ev.code);
+        // Ignore the event
+        break;
+    }
+  }
+}
+
+#endif
+
+#ifdef SNAPPY_I2CCONFIG
+
+// Event processing loop that never returns.  Processes events from the main queue, but
+// ignores most of them.  In particular, the serial line commands are not available in
+// this mode.
+
+static void i2cconfig_loop() {
+  // We could drain the event queue here as everything that's pending is bogus,
+  // but it seems safe for now to discard unknow events in the loop below instead.
+
+  power_i2c_slave_on();
+  render_text("I2C config active @ 0x28");
+  // TODO: Print something on the screen about the port number
+
+  i2c_server_init();
+  i2c_server_start();
+  log("I2C slave up\n");
+
+  // Handle i2c slave traffic + buttons until we reboot
+  for (;;) {
+    SnappyEvent ev;
+    while (xQueueReceive(main_event_queue, &ev, portMAX_DELAY) != pdTRUE) {}
+    //log("AP event %d\n", (int)ev.code);
+    switch (ev.code) {
+
+      case EvCode::I2C_SERVER_POLL:
+        log("I2C slave polling\n");
+        i2c_server_poll();
+        break;
+
+      case EvCode::I2C_INPUT: {
+        String* s = (String*)ev.pointer_data;
+        log("I2C slave received %s\n", s->c_str());
+        render_text(s->c_str());
         break;
       }
 

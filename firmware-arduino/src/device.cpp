@@ -65,13 +65,13 @@
 #include "log.h"
 #include "sensor.h"
 #include "time_server.h"
-#include "Wire.h"
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <DFRobot_ENS160.h>
 #include <DFRobot_EnvironmentalSensor.h>
 #include <esp32-hal-ledc.h>
+#include <Wire.h>
 
 // SnappySense 1.x.y device definition
 
@@ -89,15 +89,25 @@
 #else
 # error "Fix your hardware definitions"
 #endif
-#define I2C_SDA SDA
-#define I2C_SCL SCL
+#define I2C_MASTER_SDA SDA
+#define I2C_MASTER_SCL SCL
 #define PWM_PIN T8  // Tentative: ADC1 CH5, pin IO33 aka pin T8
 #define PWM_CHAN 5
+#ifdef SNAPPY_I2CCONFIG
+// I2C #1 pins.  On the HUZZAH32 module, these two should be directly above the I2C #0 pins,
+// and in the same order vertically: if we think of the the WiFi antenna as pointing "down"
+// then the slave SDA is below the slave SCL.
+# define I2C_SLAVE_SDA 14
+# define I2C_SLAVE_SCL 32
+#endif
 
 // I2C addresses
 #define I2C_OLED_ADDRESS 0x3C
 #define I2C_AIR_ADDRESS  0x53
 #define I2C_DHT_ADDRESS  0x22
+#ifdef SNAPPY_I2CCONFIG
+# define I2C_SLAVE_ADDRESS 0x28
+#endif
 
 // OLED Display Constants
 #define ICON_TEXT_START_X 48
@@ -172,7 +182,7 @@ void power_peripherals_on() {
     // Init i2c
     // Note the (int) cast, some versions of the ESP32 libs need this, ref
     // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
-    Wire.begin((int) I2C_SDA, I2C_SCL);
+    Wire.begin((int) I2C_MASTER_SDA, I2C_MASTER_SCL);
 
     have_environment = environment.begin() == 0;
     have_air = ENS160.begin() == 0;
@@ -184,6 +194,41 @@ void power_peripherals_on() {
   }
 }
 
+#ifdef SNAPPY_I2CCONFIG
+// The I2C slave is special purpose, used only when the device is in config mode and is
+// listening for configurations on I2C.  Before calling this the device must be fully
+// powered up.
+//
+// The slave interface uses Wire1 and we can assume this globally.
+//
+// There is no power-off functionality for this because config mode ends by the device
+// being reset or powered off.
+//
+// RPi                          Huzzah32
+// ---------------------        ---------
+// GPIO 2 / Pin 3 / SDA1  <-->  IO14 / T6 
+// GPIO 3 / Pin 5 / SDCL  <-->  IO32 / T9
+// GND    / Pin 6         <-->  GND
+
+void power_i2c_slave_on() {
+  assert(peripherals_powered_on);
+  log("I2C slave initializing\n");
+
+  // The i2c subsystem performs the necessary configuration of pins as part of begin()
+
+  // These stubs have to be in place, later we probably want to make better use of them!
+  Wire1.onReceive([](int) {});
+  Wire1.onRequest([]() {});
+
+  // Set up the slave
+  if (!Wire1.begin(I2C_SLAVE_ADDRESS, I2C_SLAVE_SDA, I2C_SLAVE_SCL, 100000)) {
+    panic("Could not init wire1");
+  }
+  log("I2C slave initialized\n");
+  delay(1000);
+}
+#endif
+
 void power_peripherals_off() {
   // Do all of this unconditionally so that we can use it as a kind of fail-safe to reset
   // the peripherals.
@@ -192,13 +237,13 @@ void power_peripherals_off() {
   Wire.end();
 
   // Force the I2C signals to 0V.
-  gpio_pullup_dis((gpio_num_t)I2C_SDA);
-  gpio_set_direction((gpio_num_t)I2C_SDA, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)I2C_SDA, 0);
+  gpio_pullup_dis((gpio_num_t)I2C_MASTER_SDA);
+  gpio_set_direction((gpio_num_t)I2C_MASTER_SDA, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)I2C_MASTER_SDA, 0);
 
-  gpio_pullup_dis((gpio_num_t)I2C_SCL);
-  gpio_set_direction((gpio_num_t)I2C_SCL, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)I2C_SCL, 0);
+  gpio_pullup_dis((gpio_num_t)I2C_MASTER_SCL);
+  gpio_set_direction((gpio_num_t)I2C_MASTER_SCL, GPIO_MODE_OUTPUT);
+  gpio_set_level((gpio_num_t)I2C_MASTER_SCL, 0);
 
   // Shut off power.
   digitalWrite(POWER_ENABLE_PIN, LOW);

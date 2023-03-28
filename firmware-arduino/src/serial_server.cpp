@@ -1,4 +1,7 @@
-// An interactive server that reads from the serial port.
+// An server that reads from the serial port.
+//
+// TODO: This is almost indistinguishable from the I2C slave input logic,
+// it might be useful to merge them.
 
 #include "serial_server.h"
 
@@ -39,7 +42,7 @@ void serial_server_poll() {
       if (line.isEmpty()) {
         continue;
       }
-      put_main_event(EvCode::PERFORM, new String(line));
+      put_main_event(EvCode::SERIAL_INPUT, new String(line));
       line.clear();
       continue;
     }

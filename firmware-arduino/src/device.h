@@ -20,6 +20,9 @@ void power_peripherals_on();
 // as the PIR.  Note that the WAKE/BTN1 button and serial lines are not affected.
 void power_peripherals_off();
 
+// Turn on the I2C slave interface.  The device must already be powered on.
+void power_i2c_slave_on();
+
 // The following methods will have limited or no functionality if the peripherals have been
 // powered off.  Some will report this fact on the log or on their output stream.
 // Some will just do nothing.

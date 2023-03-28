@@ -38,7 +38,7 @@
 // Radio configuration.  Pick one (or none).
 //
 // LoRaWAN support is NOT IMPLEMENTED.
-#define SNAPPY_WIFI
+//#define SNAPPY_WIFI
 //#define SNAPPY_LORA
 
 // Set this to make config.cpp include development_config.h with compiled-in values
@@ -50,7 +50,7 @@
 // With SNAPPY_TIMESTAMPS, every sent message gets a timestamp, and no messages
 // are sent until the time has been configured.  Requires SNAPPY_NTP or SNAPPY_LORA
 // for the time service.
-#define SNAPPY_TIMESTAMPS
+//#define SNAPPY_TIMESTAMPS
 
 /////
 //
@@ -60,18 +60,18 @@
 
 // With SNAPPY_NTP, synchronize the time with an ntp server at startup (only).
 // See time_server.h.  This requires SNAPPY_WIFI.
-#define SNAPPY_NTP
+//#define SNAPPY_NTP
 
 // With SNAPPY_MQTT, the device will upload readings to a predefined mqtt broker
 // every so often, and download config messages and commands.  Requires SNAPPY_WIFI.
-#define SNAPPY_MQTT
+//#define SNAPPY_MQTT
 
 // SNAPPY_WEBCONFIG causes a WiFi access point to be created with an SSID
 // printed on the display when the device comes up in config mode, allowing for both
 // factory provisioning of ID, certificates, and so on, as well as user provisioning
 // of network names and other local information.  See CONFIG.md at the root of the
 // repo.  Requires SNAPPY_WIFI.
-#define SNAPPY_WEBCONFIG
+//#define SNAPPY_WEBCONFIG
 
 /////
 //
@@ -88,7 +88,7 @@
 // switches into on a long button press changes.
 //
 // SNAPPY_I2CCONFIG is NOT IMPLEMENTED.
-//#define SNAPPY_I2CCONFIG
+#define SNAPPY_I2CCONFIG
 
 // Control the various sensors
 #define SENSE_TEMPERATURE
@@ -120,7 +120,11 @@
 
 // If disabled, ignore the button on the board.  Useful for experimenting with the ESP32
 // and sensors off the board.
-#define SNAPPY_BUTTON
+//#define SNAPPY_BUTTON
+
+// If enabled, trigger a long-button press 3s after startup.  Useful for experimenting with
+// the ESP32 config system off the board.
+#define SIMULATE_LONG_PRESS
 
 // END FUNCTIONAL CONFIGURATION
 //
@@ -156,6 +160,10 @@
 
 #if defined(SNAPPY_WEBCONFIG)
 # define SNAPPY_WEB_SERVER
+#endif
+
+#if defined(SNAPPY_I2CCONFIG)
+# define SNAPPY_I2C_SERVER
 #endif
 
 #if !defined(SNAPPY_HARDWARE_1_0_0)
@@ -216,9 +224,10 @@ enum class EvCode {
   ENABLE_DEVICE,      // Enable monitoring, from comm task
   DISABLE_DEVICE,     // Disable monitoring, from comm task
   SET_INTERVAL,       // Set monitoring interval, from comm task
-  PERFORM,            // Interactive command, from serial listener; transfers a String object
+  SERIAL_INPUT,       // Serial line input; transfers a String object
   WEB_REQUEST,        // Successful request, transfers a WebRequest object
   WEB_REQUEST_FAILED, // Failed request, transfers a WebRequest object
+  I2C_INPUT,          // I2C slave interface input; transfers a String object
 
   // Monitoring task state machine (timer-driven)
   MONITOR_WORK,       // Payload: integer code
@@ -240,6 +249,9 @@ enum class EvCode {
 
   // Serial listener task state machine (timer-driven)
   SERIAL_SERVER_POLL,
+
+  // I2C listener task state machine (timer-driven)
+  I2C_SERVER_POLL,
 
   // Web listener task state machine (timer-driven)
   WEB_SERVER_POLL,
