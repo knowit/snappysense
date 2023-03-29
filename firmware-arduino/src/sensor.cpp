@@ -343,7 +343,13 @@ enum {
   SAMPLE_MEMS
 };
 
+#if 1
+// Experimentally, just one "warmup iteration", don't disturb the sensors
+// in the warmup window
+static constexpr TickType_t WARMUP_ITERATIONS = 1;
+#else
 static constexpr TickType_t WARMUP_ITERATIONS = 5;
+#endif
 
 // We have three timers.
 //
