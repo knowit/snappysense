@@ -355,6 +355,27 @@ void loop() {
   // Shut up the compiler
   (void)in_monitoring_window;
 
+#ifdef SIMULATE_LONG_PRESS
+  TimerHandle_t simulated_long_press = xTimerCreate("long",
+                                                    pdMS_TO_TICKS(SIMULATE_LONG_PRESS*1000),
+                                                    pdFALSE,
+                                                    nullptr,
+                                                    [](TimerHandle_t) {
+                                                      put_main_event(EvCode::BUTTON_LONG_PRESS);
+                                                    });
+  xTimerStart(simulated_long_press, portMAX_DELAY);
+#endif
+#ifdef SIMULATE_SHORT_PRESS
+  TimerHandle_t simulated_short_press = xTimerCreate("short",
+                                                     pdMS_TO_TICKS(SIMULATE_SHORT_PRESS*1000),
+                                                     pdFALSE,
+                                                     nullptr,
+                                                     [](TimerHandle_t) {
+                                                       put_main_event(EvCode::BUTTON_PRESS);
+                                                     });
+  xTimerStart(simulated_short_press, portMAX_DELAY);
+#endif
+
   // This is used to improve the UX.  It shortens the comm window the first time around and
   // skips the relaxation / sleep before we read the sensors.
   bool first_time = true;

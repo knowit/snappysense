@@ -122,6 +122,18 @@
 // and sensors off the board.
 #define SNAPPY_BUTTON
 
+// If enabled, trigger a long button press this many seconds after startup.  Useful for
+// experimenting with the ESP32 config system off the PCB.
+//#define SIMULATE_LONG_PRESS 3
+
+// If enabled, trigger a short button press this many seconds after startup.  Useful for
+// going into monitoring mode off the PCB.
+//#define SIMULATE_SHORT_PRESS 120
+
+#if defined(SNAPPY_BUTTON) && (defined(SIMULATE_LONG_PRESS) || defined(SIMULATE_SHORT_PRESS))
+# error "Unlikely configuration" // Uncomment this if it's in the way
+#endif
+
 // END FUNCTIONAL CONFIGURATION
 //
 ////////////////////////////////////////////////////////////////////////////////
