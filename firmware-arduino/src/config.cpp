@@ -417,11 +417,17 @@ unsigned long mqtt_max_unconnected_time_s() {
 
 // The monitoring window *must* be longer than the value returned here.
 unsigned long sensor_warmup_time_s() {
+#if defined(SENSE_AIR_QUALITY_INDEX) || defined(SENSE_TVOC) || defined(SENSE_CO2)
+  // The documentation for the AIR sensor says that it needs "less than 3 minutes"
+  // to warm up.  So as an experiment, let's do 3 minutes of warmup always.
+  return 3*60;
+#else
   if (slideshow_mode) {
     return 1;  // We're powered up, but zero is an invalid value
   } else {
     return 15; // Wild guess
   }
+#endif
 }
 
 unsigned long monitoring_window_s() {
