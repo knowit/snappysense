@@ -191,14 +191,12 @@ void power_peripherals_off() {
   // Shut down I2C and remove the driver.
   Wire.end();
 
-  // Force the I2C signals to 0V.
+  // Pull the I2C signals down.  This is different from just disabling pullup and setting the
+  // signals to zero; the AIR sensor will not be properly reset unless we pull them down.
   gpio_pullup_dis((gpio_num_t)I2C_SDA);
-  gpio_set_direction((gpio_num_t)I2C_SDA, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)I2C_SDA, 0);
-
+  gpio_pulldown_en((gpio_num_t)I2C_SDA);
   gpio_pullup_dis((gpio_num_t)I2C_SCL);
-  gpio_set_direction((gpio_num_t)I2C_SCL, GPIO_MODE_OUTPUT);
-  gpio_set_level((gpio_num_t)I2C_SCL, 0);
+  gpio_pulldown_en((gpio_num_t)I2C_SCL);
 
   // Shut off power.
   digitalWrite(POWER_ENABLE_PIN, LOW);
