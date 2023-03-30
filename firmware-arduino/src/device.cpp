@@ -206,7 +206,7 @@ void power_peripherals_on() {
 //
 // RPi                          Huzzah32
 // ---------------------        ---------
-// GPIO 2 / Pin 3 / SDA1  <-->  IO14 / T6 
+// GPIO 2 / Pin 3 / SDA1  <-->  IO14 / T6
 // GPIO 3 / Pin 5 / SDCL  <-->  IO32 / T9
 // GND    / Pin 6         <-->  GND
 
@@ -216,8 +216,65 @@ void power_i2c_slave_on() {
 
   // The i2c subsystem performs the necessary configuration of pins as part of begin()
 
+  // The logic for TwoWire is that input arrives in packets.  Each packet is placed at
+  // the beginning of the buffer, displacing what was already there.  The onReceive
+  // callback is invoked.  Then we can read individual bytes.  Meanwhile, data may keep
+  // arriving.  It is placed in a ring buffer at the IDF level.   There is a real risk
+  // that data will wrap around and overwrite what's at the beginning if we keep
+  // pumping it.
+  //
+  // In practice, we need flow control.  We need to know what a reasonable packet size
+  // is, and how to wait to send more data.  Note that the synchronization may write I2C
+  // data too.
+  //
+  // The simplest low-level protocol is for there to be an address that can be read to
+  // determine whether we're CTS, and if so, we send + delay a little bit, and then check
+  // the flag again and wait/delay.  "Reading an address" is a kind of request, which
+  // is basically a write + read pair from the master.  It is important that we don't
+  // flood the channel with RTS packets.  It may be that the best CTS is to delay the
+  // RTS reply until we are CTS.
+  //
+  // Alternatively, the sender sends a packet blind and then waits for a reply, and the reply
+  // works as CTS for the next packet.  This is a little primitive but OK for what we're
+  // doing.  The reply content could be meaningful, eg, the length of the received data and a
+  // checksum.  Packets need to be of a limited length.  There needs to be a timeout for the
+  // reply.  It is possible to send a zero-length packet to probe for a CTS.  Just sending
+  // blind always risks overwriting existing data though, which means there also needs to be
+  // higher-level flow control / resend, ie, there's a higher-level protocol here too.
+  // That protocol probably requires additional data to be returned.  So then the reply packet
+  // needs to have space for a little payload, which also needs checksumming.  Better would
+  // be to have some kind of handshake that guarantees delivery of a package in the right
+  // sequence.  Ie sender sends a packet to set up a communication and receives an ack that
+  // ensures that we're synchronized.  Then packets are sent in sequence and are ACKed or NAKed.
+  // NAKed packets are resent until they are successful.  When the last packet has been ACKed
+  // we are done.
+  //
+  // Setup: A B C D n n,        reply X Y Z W c c where n n is number of packets
+  // Data:  E F G H n n m d ...   reply J K L M cc  where n is sequence number and m is length of packet
+  //
+  // We get a callback when a packet has been received and get to read the data out of the
+  // packet, but we have to do so quickly, before more data arrives.  This is primitive.
+  // To do better there needs to be a handshake that the data that have been sent have
+  // arrived as they should and have been processed.
+  //
+  // Probably we have to implement a request handling.  The receiver reads a byte from the
+  // device and tries to figure out if it's CTS.  If it is, it writes the data.  It then
+  // reads another byte.  Since the reading implies a write it means the other data must have
+  // arrived and that the correct value can be returned for the CTS.  The CTS is set once
+  // all the data have been consumed.
+  //
+  // Really we want for the callbacks to directly pump data, we don't want for the polling
+  // loop necessarily to poll?
+  //
+  // Transfer size is a thing?
+  //
   // These stubs have to be in place, later we probably want to make better use of them!
-  Wire1.onReceive([](int) {});
+  // The TwoWire protocol is a bit bizarre.  We get callbacks about n bytes being available.
+  // We read n bytes.  If there is no more input then we can flush() the buffer to reset
+  // the pointers to the beginning; if not, new input continues to arrive where we stopped
+  // reading.  Eventually the buffer fills up.
+  Wire1.onReceive([](int nbytes) {
+  });
   Wire1.onRequest([]() {});
 
   // Set up the slave
