@@ -118,10 +118,6 @@
 // command "help" will provide a list of possible commands.
 //#define SERIAL_COMMAND_SERVER
 
-// If disabled, ignore the button on the board.  Useful for experimenting with the ESP32
-// and sensors off the board.
-#define SNAPPY_BUTTON
-
 // If enabled, trigger a long button press this many seconds after startup.  Useful for
 // experimenting with the ESP32 config system off the PCB.
 //#define SIMULATE_LONG_PRESS 3
@@ -130,7 +126,11 @@
 // going into monitoring mode off the PCB.
 //#define SIMULATE_SHORT_PRESS 120
 
-#if defined(SNAPPY_BUTTON) && (defined(SIMULATE_LONG_PRESS) || defined(SIMULATE_SHORT_PRESS))
+// If enabled, ignore the button on the board.  Useful for experimenting with the ESP32
+// and sensors off the board.
+//#define DISABLE_BUTTON
+
+#if (defined(SIMULATE_LONG_PRESS) || defined(SIMULATE_SHORT_PRESS)) && !defined(DISABLE_BUTTON)
 # error "Unlikely configuration" // Uncomment this if it's in the way
 #endif
 

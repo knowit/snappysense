@@ -77,7 +77,7 @@
 
 // Pin definitions
 #define POWER_ENABLE_PIN A0
-#ifdef SNAPPY_BUTTON
+#ifndef DISABLE_BUTTON
 # define BUTTON_PIN A1  // WAKE on 1.0.0, BTN1 on 1.1.0
 #endif
 #if defined(SNAPPY_HARDWARE_1_0_0)
@@ -118,7 +118,7 @@ static unsigned sequence_number;
 static unsigned pir_value;
 static unsigned mems_value;
 
-#ifdef SNAPPY_BUTTON
+#ifndef DISABLE_BUTTON
 static void button_handler() {
   put_main_event_from_isr(digitalRead(BUTTON_PIN) ? EvCode::BUTTON_DOWN : EvCode::BUTTON_UP);
 }
@@ -141,7 +141,7 @@ void device_setup() {
   pinMode(POWER_ENABLE_PIN, OUTPUT);
   pinMode(PIR_SENSOR_PIN, INPUT);
   pinMode(MIC_PIN, INPUT);
-#ifdef SNAPPY_BUTTON
+#ifndef DISABLE_BUTTON
   pinMode(BUTTON_PIN, INPUT);
 #endif
 
@@ -150,7 +150,7 @@ void device_setup() {
 
   log("Device initialized\n");
 
-#ifdef SNAPPY_BUTTON
+#ifndef DISABLE_BUTTON
   attachInterrupt(BUTTON_PIN, button_handler, CHANGE);
 #endif
 }
