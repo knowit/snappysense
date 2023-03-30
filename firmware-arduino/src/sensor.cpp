@@ -343,13 +343,10 @@ enum {
   SAMPLE_MEMS
 };
 
-#if 1
-// Experimentally, just one "warmup iteration", don't disturb the sensors
-// in the warmup window
-static constexpr TickType_t WARMUP_ITERATIONS = 1;
-#else
+// It appears to be important to read the sensors multiple times throughout the
+// warmup window, to activate them.
+
 static constexpr TickType_t WARMUP_ITERATIONS = 5;
-#endif
 
 // We have three timers.
 //
@@ -362,7 +359,7 @@ static constexpr TickType_t WARMUP_ITERATIONS = 5;
 // sensor data, and it will invalidate some current sensor data.
 //
 // The last is driving the warmup work, when we read the sensors a little and wait for things
-// to stabilize.  (The stabilization thing is a little experimental.)
+// to stabilize.  (The stabilization thing is a little experimental but seems to work.)
 
 void monitoring_init() {
   unsigned long warmup_ticks_per_iter = pdMS_TO_TICKS(sensor_warmup_time_s() * 1000) / WARMUP_ITERATIONS;
