@@ -7,7 +7,7 @@
 // Summary:
 //
 // On startup, we publish to topic snappy/startup/<device-class>/<device-id> with
-// fields "time" (timestamp, string) and "interval" (observation interval,
+// fields "sent" (timestamp, string) and "interval" (observation interval,
 // positive integer seconds).
 //
 // Following an observation, we publish to topic snappy/observation/<device-class>/<device-id> with
@@ -83,7 +83,6 @@ struct MqttMessage {
 enum class MqttState {
   STARTING,
   CONNECTING,
-  RETRYING,
   CONNECTED,
   SUBSCRIBED,
   RUNNING,
@@ -115,7 +114,8 @@ static void send();
 static void generate_startup_message();
 static void mqtt_handle_message(int payload_size);
 static void mqtt_enqueue(String&& topic, String&& body);
-static void put_delayed_retry();
+static void put_delayed_work();
+static void enqueue_data(const SnappySenseData& data);
 
 void mqtt_init() {
   mqtt_timer = xTimerCreate("mqtt", pdMS_TO_TICKS(500), pdFALSE, nullptr,
@@ -129,6 +129,19 @@ static bool should_send_delayed_data() {
   return false;
 #endif
 }
+
+#ifdef SNAPPY_TIMESTAMPS
+static void drain_delayed_data() {
+  time_t adj = time_adjustment();
+  if (adj > 0) {
+    while (!delayed_data_queue.is_empty()) {
+      SnappySenseData d = delayed_data_queue.pop_front();
+      d.time += adj;
+      enqueue_data(d);
+    }
+  }
+}
+#endif
 
 bool mqtt_have_work() {
   time_t delta = time(nullptr) - last_connect;
@@ -169,6 +182,9 @@ void mqtt_start() {
       early_times = false;
     }
   }
+  // connect() moves the state machine into CONNECTING or CONNECTED (with a COMM_MQTT_WORK
+  // message to drive the state machine) or FAILED (without a work message), work picks
+  // up in mqtt_work().
   connect();
 }
 
@@ -179,45 +195,58 @@ void mqtt_stop() {
 
 void mqtt_work() {
   if (mqtt_state == MqttState::CONNECTING) {
+    // This takes us back to CONNECTING, CONNECTED, or FAILED, see
+    // comment in mqtt_start()
     connect();
     return;
   }
   if (mqtt_state == MqttState::CONNECTED) {
-    mqtt_state = MqttState::SUBSCRIBED;
-    if (mqtt_client.connected()) {
-      subscribe();
-      put_main_event(EvCode::COMM_ACTIVITY);
+    if (!mqtt_client.connected()) {
+      mqtt_stop();
+      return;
     }
+    subscribe();
+    mqtt_state = MqttState::SUBSCRIBED;
+    put_main_event(EvCode::COMM_ACTIVITY);
     put_main_event(EvCode::COMM_MQTT_WORK);
     return;
   }
   if (mqtt_state == MqttState::SUBSCRIBED) {
+    if (!mqtt_client.connected()) {
+      mqtt_stop();
+      return;
+    }
     mqtt_state = MqttState::RUNNING;
     if (send_startup_message) {
       generate_startup_message();
-      put_main_event(EvCode::COMM_MQTT_WORK);
       send_startup_message = false;
-      return;
     }
+    put_main_event(EvCode::COMM_ACTIVITY);
+    put_main_event(EvCode::COMM_MQTT_WORK);
+    return;
   }
   if (mqtt_state == MqttState::RUNNING) {
-    if (mqtt_client.connected()) {
-      if (!mqtt_queue.is_empty()) {
-        send();
-        put_main_event(EvCode::COMM_ACTIVITY);
-        put_main_event(EvCode::COMM_MQTT_WORK); // to trigger the poll
-        return;
-      }
-      // The normal case is that there's very little incoming traffic.  There will be
+    if (!mqtt_client.connected()) {
+      mqtt_stop();
+      return;
+    }
+#ifdef SNAPPY_TIMESTAMPS
+    drain_delayed_data();
+#endif
+    if (!mqtt_queue.is_empty()) {
+      send();
+      put_main_event(EvCode::COMM_ACTIVITY);
+    } else if (poll()) {
+      // The normal case is that there's very little incoming traffic.  There may be
       // few actuators and the server should definitely limit the update frequency
       // for those.  There will be few instances of wishing to disable/enable devices
       // and changing their report frequencies.
-      if (poll()) {
-        put_main_event(EvCode::COMM_ACTIVITY);
-      }
-      put_delayed_retry();
+      put_main_event(EvCode::COMM_ACTIVITY);
     }
+    put_delayed_work();
+    return;
   }
+  /* STARTING, FAILED, STOPPED - ignore these for now */
 }
 
 static void enqueue_data(const SnappySenseData& data) {
@@ -260,12 +289,8 @@ void upload_add_data(SnappySenseData* data) {
     delete data;
     return;
   }
-
-  while (!delayed_data_queue.is_empty()) {
-    SnappySenseData d = delayed_data_queue.pop_front();
-    d.time += adj;
-    enqueue_data(d);
-  }
+  // We have configured time.  Drain the queue before adding the new datum.
+  drain_delayed_data();
 #endif
 
   enqueue_data(*data);
@@ -279,7 +304,7 @@ static void mqtt_enqueue(String&& topic, String&& body) {
   }
 }
 
-static void put_delayed_retry() {
+static void put_delayed_work() {
   xTimerStart(mqtt_timer, portMAX_DELAY);
 }
 
@@ -332,7 +357,7 @@ again:
         int res = mqtt_client.connectError();
         log("Mqtt: Failed %d\n", res);
         if (++num_retries < 10) {
-          put_delayed_retry();
+          put_delayed_work();
           return;
         }
         log("Mqtt: Rejected\n");
