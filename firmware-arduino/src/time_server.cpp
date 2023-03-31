@@ -51,10 +51,11 @@ static void maybe_configure_time() {
   // FIXME: update() blocks, this is not what we want.
   if (timeserver_state->timeClient.update()) {
     log("Time configured\n");
-    // FIXME: There's a subtle source of bugs here.  I've observed once that the
-    // time returned is the current time.  In that case the time_adjust will become
-    // zero, which will be interpreted by the mqtt code as "hold the message for later",
-    // and it will never get out of that state.  Probably we should have a fail-safe
+    // Issue 89: There's a subtle source of bugs here.  I've observed occasionally that
+    // the time returned is the current time, or 0, or -1.  In that case the time_adjust
+    // will be wrong.  If it becomes zero it will be interpreted by the mqtt code as
+    // "hold the message for later", and it will never get out of that state.  If it is some small
+    // negative number the time stamps will be very wonky.  Probably we should have a fail-safe
     // here where, if the epoch time is is below some known cutoff, we either
     // retry later, or we use the cutoff as the current time.
     configure_clock(timeserver_state->timeClient.getEpochTime());
