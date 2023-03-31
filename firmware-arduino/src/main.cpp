@@ -435,6 +435,7 @@ void loop() {
         break;
 
       case EvCode::COMM_WIFI_CLIENT_UP: {
+        put_main_event(EvCode::MESSAGE, new String("WiFi connected"));
         in_communication_window = true;
 #ifdef SNAPPY_NTP
         if (ntp_have_work()) {
