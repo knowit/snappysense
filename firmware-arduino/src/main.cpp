@@ -313,6 +313,17 @@ void loop() {
   // and is acted upon at a specific point in the state machine
   bool slideshow_next_mode = slideshow_mode;
 
+  // This is used to improve the UX.  It shortens the comm window the first time around and
+  // skips the relaxation / sleep before we read the sensors.
+  bool first_time = true;
+
+  // This is used to improve the UX.  It is set by the button press handler when the button is
+  // used to wake the device, and causes the next comm window to ignore the guard against
+  // uploading too often, in other words, the assumption is that by waking the device the user
+  // wants to see any pending data as soon as possible.  It is reset again when the device
+  // goes to sleep.
+  bool explicitly_awoken = false;
+
 #ifdef SNAPPY_COMMAND_PROCESSOR
   // Data held for the command processor.
   SnappySenseData command_data;
@@ -375,11 +386,6 @@ void loop() {
                                                      });
   xTimerStart(simulated_short_press, portMAX_DELAY);
 #endif
-
-  // This is used to improve the UX.  It shortens the comm window the first time around and
-  // skips the relaxation / sleep before we read the sensors.
-  bool first_time = true;
-  bool explicitly_awoken = false;
 
   for (;;) {
     SnappyEvent ev;
