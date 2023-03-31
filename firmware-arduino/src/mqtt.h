@@ -18,7 +18,9 @@ void upload_add_data(SnappySenseData* new_data);
 // The wifi must be up.  Connect to the MQTT server, and ...
 void mqtt_start();
 
-bool mqtt_have_work();
+// Returns true if there is work to do and enough time has passed since the last time we
+// did any work.  If `always_if_work` is true, then ignores the time limits.
+bool mqtt_have_work(bool always_if_work);
 
 // Can be called without start having been called first.
 void mqtt_stop();

@@ -143,11 +143,14 @@ static void drain_delayed_data() {
 }
 #endif
 
-bool mqtt_have_work() {
+bool mqtt_have_work(bool always_if_work) {
   time_t delta = time(nullptr) - last_connect;
 
   // Hold data for a while, don't connect every time just because there's work to do.
-  if ((!mqtt_queue.is_empty() && delta >= mqtt_upload_interval_s()) || should_send_delayed_data()) {
+  // But allow this to be overridden by the parameter, or by worked queued because we
+  // don't know the time.
+  if ((!mqtt_queue.is_empty() && (delta >= mqtt_upload_interval_s() || always_if_work)) ||
+      should_send_delayed_data()) {
     return true;
   }
 

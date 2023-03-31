@@ -379,6 +379,7 @@ void loop() {
   // This is used to improve the UX.  It shortens the comm window the first time around and
   // skips the relaxation / sleep before we read the sensors.
   bool first_time = true;
+  bool explicitly_awoken = false;
 
   for (;;) {
     SnappyEvent ev;
@@ -397,12 +398,12 @@ void loop() {
         // data to upload.
 #ifdef SNAPPY_WIFI
         bool comm_work = false;
-#ifdef SNAPPY_NTP
+# ifdef SNAPPY_NTP
         comm_work = comm_work || ntp_have_work();
-#endif
-#ifdef SNAPPY_MQTT
-        comm_work = comm_work || mqtt_have_work();
-#endif
+# endif
+# ifdef SNAPPY_MQTT
+        comm_work = comm_work || mqtt_have_work(explicitly_awoken);
+# endif
         if (comm_work) {
           put_main_event(EvCode::COMM_START);
         } else {
@@ -443,7 +444,7 @@ void loop() {
         }
 #endif
 #ifdef SNAPPY_MQTT
-        if (mqtt_have_work()) {
+        if (mqtt_have_work(explicitly_awoken)) {
           mqtt_start();
         }
 #endif
@@ -510,6 +511,7 @@ void loop() {
 #endif
 
       case EvCode::SLEEP_START:
+        explicitly_awoken = false;
         // Figure out what mode we're in.  In monitoring mode, we turn off the screen and go
         // into low-power state.  In slideshow mode, we continue on as we were, for a while.
         if (first_time) {
@@ -580,6 +582,7 @@ void loop() {
       case EvCode::BUTTON_PRESS:
         if (in_sleep_window) {
           // Wake up and move the state machine along.  POST_SLEEP will cancel any pending timeout.
+          explicitly_awoken = true;
           put_main_event(EvCode::POST_SLEEP);
           put_main_event(EvCode::MESSAGE, new String(slideshow_mode ? "Slideshow mode" : "Monitoring mode"));
           break;
