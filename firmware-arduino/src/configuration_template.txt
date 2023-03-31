@@ -1,4 +1,5 @@
 version 2.0.0
+clear
 
 # See CONFIG.md for full documentation about what it means and how it's used.
 
