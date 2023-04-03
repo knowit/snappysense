@@ -18,9 +18,10 @@ DEFAULT_DEV_ENABLED = True
 DEFAULT_LOC_TIMEZONE = ""
 
 # Connect to the database and return the object representing it
+# NOTE! The database must be in the same AWS region as this lambda.
 
 def connect():
-    return boto3.client('dynamodb', region_name='eu-central-1')
+    return boto3.client('dynamodb')
 
 ################################################################################
 #

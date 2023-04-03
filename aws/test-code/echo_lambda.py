@@ -8,8 +8,10 @@
 import json
 import boto3
 
+# NOTE this must be in the same AWS region as the IoT account.
+
 def snappysense_event(event, context):
-    iot_client = boto3.client('iot-data', region_name='eu-central-1')
+    iot_client = boto3.client('iot-data')
     iot_client.publish(
         topic="snappy/echo",
         qos=1,

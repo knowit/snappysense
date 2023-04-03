@@ -10,7 +10,11 @@ The back-end comprises:
 * DynamoDB tables to hold data about devices, device classes, locations, measurement factors, and 
   observations
 
-This file explains how to set all of that up
+This file explains how to set all of that up.
+
+NOTE that the lambda, the database, and the IoT logic all have to be in the same AWS region, as all
+explicit region names have been removed from that code.
+
 
 ## Routing messages from the Things to Lambdas
 
@@ -35,8 +39,9 @@ publishing.  The JSON for the role is in `snappy_lambda_role.json` in the presen
 You only need to create the role once (per sandbox or production environment).  But it's a multi-step
 process, first you create the policies, then the role.
 
-First, make a local copy of `snappy_lambda_role.json` in which you replace my user ID (`92..76`) with
-your own.  Call this file `my_snappy_lambda_role.json`.
+First, make a local copy of `snappy_lambda_role.json` in which you replace my user ID (`92..76`)
+with your own and the region ID (`eu-central-1`) with your own, if it differs.  Call this file
+`my_snappy_lambda_role.json`.
 
 Next, in AWS > Management console > Identity and Access Management (IAM) > Access Management > Policies:
 

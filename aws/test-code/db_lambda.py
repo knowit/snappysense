@@ -8,12 +8,14 @@
 import json
 import boto3
 
+# NOTE this must be in the same region as the dynamodb and iot accounts.
+
 # Event fields
 #  "query": string, device-id
 
 def snappysense_event(event, context):
-    db = boto3.client('dynamodb', region_name='eu-central-1')
-    iot_client = boto3.client('iot-data', region_name='eu-central-1')
+    db = boto3.client('dynamodb')
+    iot_client = boto3.client('iot-data')
 
     device_name = event["query"]
     probe = db.get_item(TableName='snappy_device', Key={"device":{"S": device_name}})
