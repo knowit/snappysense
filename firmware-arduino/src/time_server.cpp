@@ -42,7 +42,7 @@ static void configure_clock(time_t t) {
   log("Time adjustment %u\n", (unsigned)time_adjust);
 }
 
-static void maybe_configure_time() {
+static bool maybe_configure_time() {
   if (!timeserver_state->first_time) {
     // FIXME: this function just discards the error code, no way to check
     timeserver_state->timeClient.begin();
@@ -50,18 +50,19 @@ static void maybe_configure_time() {
   put_main_event(EvCode::COMM_ACTIVITY);
   // FIXME: update() blocks, this is not what we want.
   if (timeserver_state->timeClient.update()) {
+    time_t t = timeserver_state->timeClient.getEpochTime();
+    // Bad if it is not between 28 March 2023 and 1 January 2038.
+    // Usually this is a spurious error so we will retry later.
+    if (t < 1680000000 || t > 2145916800) {
+      log("Time configuration error, will retry later\n");
+      return false;
+    }
     log("Time configured\n");
-    // Issue 89: There's a subtle source of bugs here.  I've observed occasionally that
-    // the time returned is the current time, or 0, or -1.  In that case the time_adjust
-    // will be wrong.  If it becomes zero it will be interpreted by the mqtt code as
-    // "hold the message for later", and it will never get out of that state.  If it is some small
-    // negative number the time stamps will be very wonky.  Probably we should have a fail-safe
-    // here where, if the epoch time is is below some known cutoff, we either
-    // retry later, or we use the cutoff as the current time.
-    configure_clock(timeserver_state->timeClient.getEpochTime());
+    configure_clock(t);
   } else {
     put_delayed_retry();
   }
+  return true;
 }
 
 time_t time_adjustment() {
@@ -94,7 +95,10 @@ void ntp_start() {
   log("Attempting to configure time\n");
   assert(timeserver_state == nullptr);
   timeserver_state = new TimeServerState;
-  maybe_configure_time();
+  if (!maybe_configure_time()) {
+    // We will retry during the next comm window
+    ntp_stop();
+  }
 }
 
 // Called from the main loop in response to COMM_NTP_WORK messages.
@@ -106,7 +110,10 @@ void ntp_work() {
     // Comm window was closed already, this is just a spurious callback
     return;
   }
-  maybe_configure_time();
+  if (!maybe_configure_time()) {
+    // We will retry during the next comm window
+    ntp_stop();
+  }
 }
 
 // Stop trying to connect to the time server, if that's still going on.
