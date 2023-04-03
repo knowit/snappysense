@@ -181,8 +181,8 @@ other ways.
 To build, go to `aws/dbop` and run `go build`.  The executable should appear in that directory.  It
 is run as explained in earlier sections.
 
-To run it, you must have set up your AWS credentials in the normal way for the AWS CLI, either as
-environment variables or in a `~/.aws/credentials` file.
+To run it, you must have set up your AWS config and credentials in the normal way for the AWS CLI,
+either as environment variables or in the `~/.aws/config` and `~/.aws/credentials` files.
 
 For some general help, run `dbop help`.
 
