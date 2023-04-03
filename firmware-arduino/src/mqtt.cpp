@@ -84,7 +84,6 @@ enum class MqttState {
   STARTING,
   CONNECTING,
   CONNECTED,
-  SUBSCRIBED,
   RUNNING,
   FAILED,
   STOPPED,
@@ -101,8 +100,10 @@ static time_t last_connect;
 static time_t last_capture;
 static bool early_times = true;
 static int num_times = 0;
-static bool send_startup_message = true;
 static List<MqttMessage> mqtt_queue;
+// The startup message is also part of the "delayed" data: it is sent before the
+// first datum, and always after time has been configured, if we have timestamps.
+static bool send_startup_message = true;
 #ifdef SNAPPY_TIMESTAMPS
 static List<SnappySenseData> delayed_data_queue;
 #endif
@@ -124,21 +125,41 @@ void mqtt_init() {
 
 static bool should_send_delayed_data() {
 #ifdef SNAPPY_TIMESTAMPS
-  return !delayed_data_queue.is_empty() && time_adjustment() > 0;
+  return time_adjustment() > 0 && (!delayed_data_queue.is_empty() || send_startup_message);
 #else
-  return false;
+  return send_startup_message;
 #endif
 }
 
 #ifdef SNAPPY_TIMESTAMPS
-static void drain_delayed_data() {
+static void add_delayed_data(SnappySenseData* data) {
+  SnappySenseData d = *data;
+  delayed_data_queue.add_back(std::move(d));
+  if (delayed_data_queue.length() > MAX_QUEUED) {
+    delayed_data_queue.pop_front();
+  }
+  delete data;
+}
+
+static void maybe_drain_delayed_data() {
   time_t adj = time_adjustment();
   if (adj > 0) {
+    if (send_startup_message) {
+      generate_startup_message();
+      send_startup_message = false;
+    }
     while (!delayed_data_queue.is_empty()) {
       SnappySenseData d = delayed_data_queue.pop_front();
       d.time += adj;
       enqueue_data(d);
     }
+  }
+}
+#else
+static void maybe_drain_delayed_data() {
+  if (send_startup_message) {
+    generate_startup_message();
+    send_startup_message = false;
   }
 }
 #endif
@@ -209,21 +230,7 @@ void mqtt_work() {
       return;
     }
     subscribe();
-    mqtt_state = MqttState::SUBSCRIBED;
-    put_main_event(EvCode::COMM_ACTIVITY);
-    put_main_event(EvCode::COMM_MQTT_WORK);
-    return;
-  }
-  if (mqtt_state == MqttState::SUBSCRIBED) {
-    if (!mqtt_client.connected()) {
-      mqtt_stop();
-      return;
-    }
     mqtt_state = MqttState::RUNNING;
-    if (send_startup_message) {
-      generate_startup_message();
-      send_startup_message = false;
-    }
     put_main_event(EvCode::COMM_ACTIVITY);
     put_main_event(EvCode::COMM_MQTT_WORK);
     return;
@@ -233,9 +240,7 @@ void mqtt_work() {
       mqtt_stop();
       return;
     }
-#ifdef SNAPPY_TIMESTAMPS
-    drain_delayed_data();
-#endif
+    maybe_drain_delayed_data();
     if (!mqtt_queue.is_empty()) {
       send();
       put_main_event(EvCode::COMM_ACTIVITY);
@@ -284,17 +289,13 @@ void upload_add_data(SnappySenseData* data) {
   if (adj == 0) {
     // Time has not been configured.  Need to enqueue the data for later.
     log("mqtt: holding message for later\n");
-    SnappySenseData d = *data;
-    delayed_data_queue.add_back(std::move(d));
-    if (delayed_data_queue.length() > MAX_QUEUED) {
-      delayed_data_queue.pop_front();
-    }
-    delete data;
+    add_delayed_data(data);
     return;
   }
-  // We have configured time.  Drain the queue before adding the new datum.
-  drain_delayed_data();
 #endif
+
+  // Drain the queue before adding the new datum.
+  maybe_drain_delayed_data();
 
   enqueue_data(*data);
   delete data;
