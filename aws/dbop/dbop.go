@@ -5,6 +5,10 @@
 // This also serves as the (executable) definition of the SnappySense data model.
 //
 // See `helptext` below for all information about how to run this program.
+//
+// NOTE!  This gets the aws config and credentials through default mechanisms in the SDK: it reads
+// environment variables if they are set and otherwise gets the config from ~/.aws/config and the
+// aws identity from ~/.aws/credentials.
 
 // Useful links:
 //
@@ -28,10 +32,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
-
-// The identity is currently taken from ~/.aws/credentials, but the dynamodb region
-// is configurable.
-const aws_region = "eu-central-1"
 
 const helptext string = `
 Usage:
@@ -265,7 +265,7 @@ func main() {
 		return
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(aws_region))
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Fatalf("unable to load SDK config\n%v", err)
 	}
