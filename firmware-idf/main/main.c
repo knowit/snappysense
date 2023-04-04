@@ -166,9 +166,9 @@ static void snappy_main() {
   for(;;) {
     uint32_t ev;
     if(xQueueReceive(snappy_event_queue, &ev, portMAX_DELAY)) {
-      switch (ev & 15) {
+      switch (ev & EV_MASK) {
       case EV_BTN1:
-        handle_button(ev >> 4);
+        handle_button(ev >> EV_SHIFT);
 	break;
 
       case EV_SENSOR_CLOCK:
@@ -193,7 +193,7 @@ static void snappy_main() {
 
 #ifdef SNAPPY_READ_NOISE
       case EV_SOUND_SAMPLE:
-        record_noise(ev >> 4);
+        record_noise(ev >> EV_SHIFT);
         break;
 #endif
 

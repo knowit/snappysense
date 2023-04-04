@@ -173,9 +173,8 @@
  * Miscellaneous definitions.
  */
 
-/* Events are values sent from ISRs and monitoring tasks to the main task, on a global queue.  Event
-   numbers should stay below 16: Events have an event number in the low 4 bits and payload in the
-   upper 28. */
+/* Events are values sent from ISRs and monitoring tasks to the main task, on a global queue.
+   Events have an event number in the low EV_SHIFT bits and payload in the upper 32-EV_SHIFT. */
 enum {
   EV_NONE,
   EV_MOTION,	                /* Payload: nothing, this means "motion detected" */
@@ -185,7 +184,11 @@ enum {
   EV_MONITORING_CLOCK,          /* Payload: nothing, this means "clock tick" */
   EV_SOUND_SAMPLE,              /* Payload: sound level, 1..5 */
 };
-typedef uint32_t snappy_event_t; /* EV_ code in low 4 bits, payload in high bits */
+
+#define EV_SHIFT 5
+#define EV_MASK ((1 << EV_SHIFT) - 1)
+
+typedef uint32_t snappy_event_t; /* EV_ code in low EV_SHIFT bits, payload in high bits */
 
 /* Queue of events from buttons, clocks, samplers, and other peripherals to the main task. */
 extern QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue;
