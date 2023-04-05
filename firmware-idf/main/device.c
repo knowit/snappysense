@@ -57,32 +57,38 @@ bool have_sen0500;
 dfrobot_sen0500_t sen0500; /* Only if have_sen0500 is true */
 #endif
 
-void power_up_peripherals() {
-  /* Enable peripheral power */
-  gpio_config_t power_conf = {
-    .pin_bit_mask = (1ULL << POWER_PIN),
-    .mode = GPIO_MODE_OUTPUT,
-  };
-  gpio_config(&power_conf);
-  gpio_set_level(POWER_PIN, 1);
+static bool regulator_on;
 
-  /* Give peripheral power the time to stabilize.  */
-  vTaskDelay(pdMS_TO_TICKS(PERIPHERAL_POWERUP_MS));
+void enable_regulator() {
+  if (!regulator_on) {
+    /* Enable peripheral power */
+    gpio_config_t power_conf = {
+      .pin_bit_mask = (1ULL << POWER_PIN),
+      .mode = GPIO_MODE_OUTPUT,
+    };
+    gpio_config(&power_conf);
+    gpio_set_level(POWER_PIN, 1);
+
+    /* Give peripheral power the time to stabilize.  */
+    vTaskDelay(pdMS_TO_TICKS(PERIPHERAL_POWERUP_MS));
+  }
+}
+
+void disable_regulator() {
+  /* This is unconditional as a failsafe */
+  gpio_set_level(POWER_PIN, 0);
+  regulator_on = false;
 }
 
 static void IRAM_ATTR gpio_isr_handler(void* arg) {
   uint32_t gpio_num = (uint32_t) arg;
-  snappy_event_t ev = EV_NONE;
   switch (gpio_num) {
   case BTN1_PIN:
-    ev = EV_BTN1 | (gpio_get_level(BTN1_PIN) << 4);
+    put_main_event_from_isr(gpio_get_level(BTN1_PIN) ? EV_BUTTON_DOWN : EV_BUTTON_UP);
     break;
   case PIR_PIN:
-    ev = EV_MOTION;
+    put_main_event_from_isr(EV_MOTION_DETECTED);
     break;
-  }
-  if (ev != EV_NONE) {
-    xQueueSendFromISR(snappy_event_queue, &ev, NULL);
   }
 }
 
@@ -108,7 +114,7 @@ bool btn1_is_pressed() {
 }
 
 #ifdef SNAPPY_I2C
-bool initialize_i2c() {
+bool enable_i2c() {
 #if defined(I2C2_BUS) || defined(I2C3_BUS)
 # error "More code needed"
 #endif
@@ -136,6 +142,21 @@ bool initialize_i2c() {
 
   /* Some of the i2c devices are slow to come up. */
   vTaskDelay(pdMS_TO_TICKS(I2C_STABILIZE_MS));
+  return true;
+}
+
+bool disable_i2c() {
+  /* Remove the driver. */
+  i2c_driver_delete(I2C1_BUS);
+
+  /* Pull the I2C signals down.  This is different from just disabling pullup and setting the
+     signals to zero; the AIR sensor will not be properly reset unless we pull them down. */
+  gpio_pullup_dis((gpio_num_t)I2C_SDA_PIN);
+  gpio_pulldown_en((gpio_num_t)I2C_SDA_PIN);
+  gpio_pullup_dis((gpio_num_t)I2C_SCL_PIN);
+  gpio_pulldown_en((gpio_num_t)I2C_SCL_PIN);
+
+  /* FIXME? */
   return true;
 }
 #endif
@@ -178,8 +199,7 @@ void enable_gpio_sen0171() {
 
   /* If the device has already detected motion we won't get an interrupt; handle this. */
   if (gpio_get_level(PIR_PIN)) {
-    snappy_event_t ev = EV_MOTION;
-    xQueueSend(snappy_event_queue, &ev, portMAX_DELAY);
+    put_main_event(EV_MOTION_DETECTED);
   }
 }
 

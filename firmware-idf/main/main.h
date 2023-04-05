@@ -49,7 +49,7 @@
 
 #define SNAPPY_LOGGING          /* Debug logging to the USB */
 #define SNAPPY_SLIDESHOW        /* Rotating display of data values, if enabled */
-#define SNAPPY_SOUND_EFFECTS    /* Output sound to a speaker */
+/*#define SNAPPY_SOUND_EFFECTS    / * Output sound to a speaker */
 #define SNAPPY_OLED             /* Output on a screen */
 #define SNAPPY_READ_TEMPERATURE
 #define SNAPPY_READ_HUMIDITY
@@ -60,14 +60,14 @@
 #define SNAPPY_READ_VOLATILE_ORGANICS
 #define SNAPPY_READ_AIR_QUALITY_INDEX
 #define SNAPPY_READ_MOTION
-#define SNAPPY_READ_NOISE
+/*#define SNAPPY_READ_NOISE */
 
 /********************************************************************************
  *
  * Hardware and devices.
  */
 
-//#define SNAPPY_HARDWARE_1_0_0
+/*#define SNAPPY_HARDWARE_1_0_0*/
 #define SNAPPY_HARDWARE_1_1_0
 
 /* Environment sensor: DFRobot SEN0500
@@ -80,7 +80,9 @@
 
 /* Sound sensor: DFRobot SEN0487 MEMS microphone
    https://wiki.dfrobot.com/Fermion_MEMS_Microphone_Sensor_SKU_SEN0487 */
+/*
 #define SNAPPY_ADC_SEN0487
+*/
 
 /* Movement sensor: DFRobot SEN0171 passive IR sensor, digital directly from GPIO
    https://wiki.dfrobot.com/PIR_Motion_Sensor_V1.0_SKU_SEN0171 */
@@ -99,7 +101,9 @@
 #endif
 
 /* Piezo speaker: based on the ESP32-IDF "ledc" library */
+/*
 #define SNAPPY_ESP32_LEDC_PIEZO
+*/
 
 #if defined(SNAPPY_I2C_SEN0500) || defined(SNAPPY_I2C_SEN0514) || defined(SNAPPY_I2C_SSD1306)
 # define SNAPPY_I2C
@@ -173,26 +177,6 @@
  * Miscellaneous definitions.
  */
 
-/* Events are values sent from ISRs and monitoring tasks to the main task, on a global queue.
-   Events have an event number in the low EV_SHIFT bits and payload in the upper 32-EV_SHIFT. */
-enum {
-  EV_NONE,
-  EV_MOTION,	                /* Payload: nothing, this means "motion detected" */
-  EV_BTN1,	                /* Payload: button level, 0 (up) or 1 (down) */
-  EV_SENSOR_CLOCK,              /* Payload: nothing, this means "clock tick" */
-  EV_SLIDESHOW_CLOCK,           /* Payload: nothing, this means "clock tick" */
-  EV_MONITORING_CLOCK,          /* Payload: nothing, this means "clock tick" */
-  EV_SOUND_SAMPLE,              /* Payload: sound level, 1..5 */
-};
-
-#define EV_SHIFT 5
-#define EV_MASK ((1 << EV_SHIFT) - 1)
-
-typedef uint32_t snappy_event_t; /* EV_ code in low EV_SHIFT bits, payload in high bits */
-
-/* Queue of events from buttons, clocks, samplers, and other peripherals to the main task. */
-extern QueueHandle_t/*<snappy_event_t>*/ snappy_event_queue;
-
 #define WARN_UNUSED __attribute__((warn_unused_result))
 #define NO_RETURN __attribute__ ((noreturn))
 
@@ -204,7 +188,53 @@ extern void snappy_log(const char* fmt, ...) __attribute__ ((format (printf, 1, 
 #endif
 
 /* Task priorities for helper tasks. */
-#define SAMPLER_PRIORITY 3
 #define PLAYER_PRIORITY 3
+
+/* Event codes.  The events are all sent on the main event queue, sometimes with payloads, see
+   put_main_event() functions below and the implementation in main.c. */
+typedef enum {
+  // Main task
+  EV_START_CYCLE,
+  EV_SLEEP_START,
+  EV_POST_SLEEP,
+  EV_MONITOR_START,
+  EV_MONITOR_STOP,
+  EV_MONITOR_DATA,
+  EV_BUTTON_PRESS,
+
+  // Monitor task
+  EV_MONITOR_WARMUP,
+
+  // Display+slideshow task
+  EV_MESSAGE,
+  EV_SLIDESHOW_RESET,
+  EV_SLIDESHOW_START,
+  EV_SLIDESHOW_STOP,
+  EV_SLIDESHOW_WORK,
+
+  // Button task
+  EV_BUTTON_DOWN,               /* Payload: nothing.  Button was pressed. */
+  EV_BUTTON_UP,                 /* Payload: nothing.  Button was released. */
+
+  // Sensor task
+  EV_MEMS_WORK,                 /* Payload: nothing.  Perform sound sampling. */
+  EV_MEMS_SAMPLE,               /* Payload: sound level, 1..5. */
+  EV_MOTION_DETECTED,           /* Payload: nothing.  From ISR. */
+} snappy_event_t;
+
+/* Put events into the event queue. */
+void put_main_event(snappy_event_t ev);
+void put_main_event_from_isr(snappy_event_t ev);
+
+void put_main_event_with_ival(snappy_event_t ev, int val);
+
+/* s points to statically allocated storage.  A heap copy will be made if necessary */
+void put_main_event_with_string(snappy_event_t ev, const char* s);
+
+/* data points to heap-allocated data, ownership is transfered */
+typedef struct sensor_state sensor_state_t;
+void put_main_event_with_data(snappy_event_t ev, sensor_state_t* data);
+
+void panic(const char* msg) NO_RETURN;
 
 #endif /* !main_h_included */

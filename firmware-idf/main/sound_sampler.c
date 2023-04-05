@@ -10,85 +10,53 @@
 
 #include "device.h"
 
-typedef enum {
-  SAMP_EV_START,
-  SAMP_EV_STOP,
-  SAMP_EV_TICK
-} sampler_event_t;
-
 #define SAMPLER_INTERVAL_MS 10
 
-static TimerHandle_t sampler_clock = NULL;
-static QueueHandle_t/*<snappy_event_t>*/ evt_queue;
-static QueueHandle_t/*<sampler_event_t>*/ sampler_queue;
-static bool sampler_running = false;
-static unsigned sampler_accum = 0;
-static bool have_sampled_value = false;
-
-static void sampler_task(void* arg) {
-  for (;;) {
-    sampler_event_t ev;
-    if (xQueueReceive(sampler_queue, &ev, portMAX_DELAY)) {
-      switch (ev) {
-      case SAMP_EV_START:
-	if (!sampler_running) {
-	  /* set up a timer posting clock ticks to the queue */
-	  sampler_accum = 0;
-	  have_sampled_value = false;
-	  sampler_running = true;
-	}
-	break;
-      case SAMP_EV_STOP:
-	if (sampler_running) {
-	  /* stop the timer */
-	  sampler_running = 0;
-	  if (have_sampled_value) {
-	    snappy_event_t ev = EV_SOUND_SAMPLE | (sampler_accum << 4);
-	    xQueueSend(evt_queue, &ev, portMAX_DELAY);
-	  }
-	}
-	break;
-      case SAMP_EV_TICK:
-	if (sampler_running) {
-#ifdef SNAPPY_ADC_SEN0487
-	  unsigned r = sen0487_sound_level();
-#endif
-	  have_sampled_value = true;
-	  sampler_accum = r > sampler_accum ? r : sampler_accum;
-	  /* Maybe report the value on evt_queue and clear the sampler */
-	  /* Maybe report once per second, we can read the clock here or we can have
-	     another clock to drive the reporting */
-	  /* Restart clock */
-	}
-	break;
-      }
-    } else {
-      /* Timeout; just repeat the process */
-    }
-  }
-}
+static TimerHandle_t sampler_clock;
+static bool sampler_running;
+static unsigned sampler_accum;
+static bool have_sampled_value;
 
 static void clock_callback(TimerHandle_t t) {
-  sampler_event_t ev = SAMP_EV_TICK;
-  xQueueSend(sampler_queue, &ev, 0);
+  put_main_event(EV_MEMS_WORK);
 }
 
-bool sound_sampler_begin(QueueHandle_t/*<snappy_event_t>*/ evt_queue) {
-  sampler_queue = xQueueCreate(1, sizeof(sampler_event_t));
-  sampler_clock = xTimerCreate("sampler", pdMS_TO_TICKS(SAMPLER_INTERVAL_MS),
-                              /* restart= */ pdFALSE,
-                              NULL, clock_callback);
-  return xTaskCreate(sampler_task, "sampler", 1024, NULL, SAMPLER_PRIORITY, NULL) == pdPASS;
+bool sound_sampler_begin() {
+  sampler_clock = xTimerCreate("sampler",
+                               pdMS_TO_TICKS(SAMPLER_INTERVAL_MS),
+                               pdTRUE,
+                               NULL,
+                               clock_callback);
+  return sampler_clock != NULL;
 }
 
 void sound_sampler_start() {
-  uint32_t ev = SAMP_EV_START;
-  xQueueSend(sampler_queue, &ev, portMAX_DELAY);
+  if (!sampler_running) {
+    xTimerStart(sampler_clock, portMAX_DELAY);
+    sampler_accum = 0;
+    have_sampled_value = false;
+    sampler_running = true;
+  }
+}
+
+void sample_noise() {
+  if (sampler_running) {
+#ifdef SNAPPY_ADC_SEN0487
+    unsigned r = sen0487_sound_level();
+#endif
+    have_sampled_value = true;
+    sampler_accum = r > sampler_accum ? r : sampler_accum;
+  }
 }
 
 void sound_sampler_stop() {
-  uint32_t ev = SAMP_EV_STOP;
-  xQueueSend(sampler_queue, &ev, portMAX_DELAY);
+  if (sampler_running) {
+    sampler_running = 0;
+    xTimerStop(sampler_clock, portMAX_DELAY);
+    if (have_sampled_value) {
+      put_main_event_with_ival(EV_MEMS_SAMPLE, sampler_accum);
+    }
+  }
 }
 
 #endif /* SNAPPY_READ_NOISE */

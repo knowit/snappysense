@@ -7,12 +7,15 @@
 
 #ifdef SNAPPY_READ_NOISE
 
-/* Initialize the sampler subsystem: create a background task, timers, and so on. */
+/* Initialize the sampler subsystem. */
 bool sound_sampler_begin() WARN_UNUSED;
 
-/* Start the sound sensor on a background task, compute the sound level continually, send
-   EV_SOUND_SAMPLE events on the main event queue about readings every so often.  */
+/* Start the sound sensor timer, this will place tick events on the main queue causing the
+   main thread to call sound_sampler_work().  */
 void sound_sampler_start();
+
+/* Perform some sampling. */
+void sample_noise();
 
 /* Stop the sound sensor, report the current reading on the main event queue if pertinent.  */
 void sound_sampler_stop();

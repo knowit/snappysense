@@ -6,7 +6,7 @@
 #include "main.h"
 
 /* Sensor readings. Zero-initializing this brings it to a known good state. */
-typedef struct {
+typedef struct sensor_state {
   /* Degrees C */
   bool have_temperature;
   float temperature;
@@ -48,14 +48,16 @@ typedef struct {
   unsigned sound_level;
 } sensor_state_t;
 
-bool sensor_begin() WARN_UNUSED;   /* True on success, false on failure */
-void open_monitoring_window();     /* In response to EV_SENSOR_CLOCK */
-void close_monitoring_window();    /* In response to EV_MONITORING_CLOCK */
+bool sensor_init() WARN_UNUSED;   /* True on success, false on failure */
+
+void monitoring_start();           /* In response to EV_MONITOR_START */
+void monitoring_stop();            /* In response to EV_MONITOR_STOP */
+void monitoring_warmup();
+
+void sample_noise();
+
 void record_motion();              /* In response to EV_MOTION */
 void record_noise(uint32_t level); /* In response to EV_SOUND_SAMPLE */
-
-/* Global object for current readings */
-extern sensor_state_t sensor;
 
 /* Abstraction leak: information about whether this specific sensor has been calibrated, used for
    some logging.

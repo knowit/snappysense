@@ -4,6 +4,8 @@
 
 #ifdef SNAPPY_SOUND_EFFECTS
 
+# error "Not integrated with the new main loop"
+
 #include "esp32_ledc_piezo.h"
 
 typedef enum {
@@ -20,7 +22,7 @@ typedef struct {
 static QueueHandle_t command_queue;
 
 /* VARIABLES OWNED BY THE PLAYER TASK */
-static bool is_playing = false;
+static bool is_playing;
 static const struct tone *next_tone;
 static const struct tone *tone_limit;
 

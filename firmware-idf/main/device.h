@@ -8,9 +8,12 @@
 #include "dfrobot_sen0514.h"
 #include "ssd1306.h"
 
-void power_up_peripherals();
-void install_interrupts();
+/* Manage the external regulator.  Disabling it is unconditional, so a disable/enable pair will
+   always cycle power, regardless of the current state of the system.  */
+void enable_regulator();
+void disable_regulator();
 
+void install_interrupts();
 void initialize_onboard_buttons();
 void enable_onboard_buttons();
 bool btn1_is_pressed();
@@ -27,7 +30,8 @@ unsigned sen0487_sound_level();
 #endif
 
 #ifdef SNAPPY_I2C
-bool initialize_i2c() WARN_UNUSED;
+bool enable_i2c() WARN_UNUSED;
+bool disable_i2c() WARN_UNUSED;
 #endif
 
 #ifdef SNAPPY_I2C_SEN0500

@@ -7,6 +7,8 @@
 
 #ifdef SNAPPY_SOUND_EFFECTS
 
+# error "Not integrated with the new main loop"
+
 struct tone {
   uint16_t frequency;
   uint16_t duration_ms;
@@ -21,9 +23,8 @@ struct music {
    create a music player task. */
 bool sound_effects_begin() WARN_UNUSED;
 
-/* Start the song.  This can be called from any task.  It will stop whatever song was playing, if
-   any. */
-void sound_effects_play(const struct music* song);
+/* Do some work. */
+void sound_effects_work();
 
 /* Stop the song playing, if any.  This can be called from any task. */
 void sound_effects_stop();
