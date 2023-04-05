@@ -1,5 +1,14 @@
 // Interface to SnappySense hardware device (see the hardware/ subdirectory)
 
+// DEVICES
+//
+// (True for Hardware 1.1.0 at least)  There is an onboard regulator / power supply controlled by
+// the MCU.  The power from this regulator goes to the I2C devices (OLED, SEN0500, SEN0514), the SEN071,
+// the SEN0487, and the Piezo element.  To the extent these need initialization/deinit they must
+// be deinitialized and then re-initialized if peripheral power is cut and then re-established,
+// see `power_peripherals_{up,down}()` below.  In contrast, the onboard BTN1 is powered by the
+// MCU's 3.3V supply.
+//
 // Hardware v1.0.0 and v1.1.0:
 //
 // Adafruit feather esp32 "HUZZAH32" (https://www.adafruit.com/product/3406)
@@ -169,6 +178,11 @@ void power_peripherals_on() {
     // really seem to be a hardship, so why not.
     delay(1000);
 
+    // There are no init actions for the PIR, the MEMS, or the Piezo, presumably they initialize
+    // themselves when they get power.  The on-MCU ADC for the MEMS is controlled
+    // by Arduino and the DAC for the Piezo is controlled by the LEDC subsystem, neither is tied
+    // to the regulator and don't need to be initialized here.
+
     // Init i2c
     // Note the (int) cast, some versions of the ESP32 libs need this, ref
     // https://github.com/espressif/arduino-esp32/issues/6616#issuecomment-1184167285
@@ -187,6 +201,11 @@ void power_peripherals_on() {
 void power_peripherals_off() {
   // Do all of this unconditionally so that we can use it as a kind of fail-safe to reset
   // the peripherals.
+
+  // There is no end() for `environment`.
+  // There is no end() for `ENS160`.
+  // There is no end() for `display`.
+  // There is no work to be done for the PIR, ADC or DAC, see comments above.
 
   // Shut down I2C and remove the driver.
   Wire.end();
