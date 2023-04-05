@@ -17,8 +17,13 @@ typedef struct {
   unsigned timeout_ms;
 } dfrobot_sen0500_t;
 
-/* Initialize the device, filling in the fields of `self`. */
-bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr) WARN_UNUSED;
+/* Initialize the device, filling in the fields of `self`.  The I2C bus must already have been
+   turned on.  Returns false if the device could not be found or initialized.
+
+   This will work regardless of the previous contents of `self` and the current state of the
+   device. */
+bool dfrobot_sen0500_begin(dfrobot_sen0500_t* self, unsigned i2c_bus, unsigned i2c_addr)
+  WARN_UNUSED;
 
 /* Temperature representation */
 typedef enum {
