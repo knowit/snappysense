@@ -48,8 +48,10 @@
  */
 
 #define SNAPPY_LOGGING          /* Debug logging to the USB */
+#define SNAPPY_LOW_POWER        /* See code block in app_main() */
+/*#define SNAPPY_LIGHT_SLEEP*/      /* Same */
 #define SNAPPY_SLIDESHOW        /* Rotating display of data values, if enabled */
-/*#define SNAPPY_SOUND_EFFECTS    / * Output sound to a speaker */
+/*#define SNAPPY_SOUND_EFFECTS*/    /* Output sound to a speaker */
 #define SNAPPY_OLED             /* Output on a screen */
 #define SNAPPY_READ_TEMPERATURE
 #define SNAPPY_READ_HUMIDITY
@@ -170,6 +172,10 @@
 
 #if defined(SNAPPY_I2C_SEN0514) && !(defined(SNAPPY_READ_TEMPERATURE) && defined(SNAPPY_READ_HUMIDITY))
 # error "DFROBOT_SEN0514 device needs temperature and humidity for calibration"
+#endif
+
+#if defined(SNAPPY_LIGHT_SLEEP) && !defined(SNAPPY_LOW_POWER)
+# error "Bad power management definitions"
 #endif
 
 /********************************************************************************
