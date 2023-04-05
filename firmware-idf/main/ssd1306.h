@@ -53,13 +53,18 @@ enum {
   SSD1306_FLAG_INVERSE_COLOR = 4, /* Use inverse colors */
 };
 
-/* This will initialize the device struct.  The only valid heights are 32, 64, and 128.  The effects
-   of other values are unspecified.  Flags is bitwise OR of SSD1306_FLAG_ values above. */
-bool ssd1306_Create(SSD1306_Device_t* mem, unsigned bus, unsigned i2c_addr,
+/* This will initialize the device struct, then initialize the hardware device.  The I2C bus must
+   already have been turned on.  The only valid heights are 32, 64, and 128.  The effects of other
+   values are unspecified.  Flags is bitwise OR of SSD1306_FLAG_ values above.  Returns false if
+   device initialization failed.
+
+   This will work regardless of the previous contents of `dev` and the current state of the
+   display.  */
+bool ssd1306_Create(SSD1306_Device_t* dev, unsigned bus, unsigned i2c_addr,
                     unsigned width, unsigned height, unsigned flags) WARN_UNUSED;
 
-/* Procedure definitions.  Where noted these set device->i2c_failure if there's a write failure to
-   the device, and will frequently be no-ops if that flag is already set.  Writes outside the buffer
+/* Device operations.  Where noted these set device->i2c_failure if there's a write failure to the
+   device, and will frequently be no-ops if that flag is already set.  Writes outside the buffer
    bounds will silently be ignored.  */
 
 /* Flush the buffer to the OLED device.  If your screen horizontal axis does not start in column 0
