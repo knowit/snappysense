@@ -67,6 +67,7 @@ void enable_regulator() {
       .pin_bit_mask = (1ULL << POWER_PIN),
       .mode = GPIO_MODE_OUTPUT,
     };
+    /* TODO: Error codes? */
     gpio_config(&power_conf);
     gpio_set_level(POWER_PIN, 1);
 
@@ -94,6 +95,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg) {
 }
 
 void install_interrupts() {
+  /* TODO: Error code? */
   gpio_install_isr_service(0);
 }
 
@@ -103,10 +105,12 @@ void initialize_onboard_buttons() {
     .pin_bit_mask = (1ULL << BTN1_PIN),
     .mode = GPIO_MODE_INPUT,
   };
+  /* TODO: Error code? */
   gpio_config(&btn_conf);
 }
   
 void enable_onboard_buttons() {
+  /* TODO: Error code? */
   gpio_isr_handler_add(BTN1_PIN, gpio_isr_handler, (void*) BTN1_PIN);
 }
 
@@ -116,33 +120,42 @@ bool btn1_is_pressed() {
 
 #ifdef SNAPPY_LIGHT_SLEEP
 
-static int delivered = 0;
+static int sleep_button_press_delivered = 0;
 
 static void IRAM_ATTR gpio_sleep_isr_handler(void* arg) {
-  if (!delivered) {
+  if (!sleep_button_press_delivered) {
     put_main_event_from_isr(EV_BUTTON_PRESS);
-    delivered = 1;
+    sleep_button_press_delivered = 1;
   }
 }
 
 bool reconfigure_btn1_as_wakeup_source() {
-  delivered = 0;
-  gpio_isr_handler_remove(BTN1_PIN);
-  gpio_isr_handler_add(BTN1_PIN, gpio_sleep_isr_handler, (void*) BTN1_PIN);
-  if (gpio_wakeup_enable(BTN1_PIN, GPIO_INTR_HIGH_LEVEL) == ESP_OK) {
-    esp_sleep_enable_gpio_wakeup();
-    return true;
+  sleep_button_press_delivered = 0;
+  if (gpio_isr_handler_remove(BTN1_PIN) != ESP_OK) {
+    return false;
   }
-  return false;
+  if (gpio_isr_handler_add(BTN1_PIN, gpio_sleep_isr_handler, (void*) BTN1_PIN) != ESP_OK) {
+    return false;
+  }
+  if (gpio_wakeup_enable(BTN1_PIN, GPIO_INTR_HIGH_LEVEL) != ESP_OK) {
+    return false;
+  }
+  return esp_sleep_enable_gpio_wakeup();
 }
 
 bool deconfigure_btn1_as_wakeup_source() {
-  gpio_isr_handler_remove(BTN1_PIN);
-  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
-  gpio_wakeup_disable(BTN1_PIN);
+  if (gpio_isr_handler_remove(BTN1_PIN) != ESP_OK) {
+    return false;
+  }
+  if (esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO) != ESP_OK) {
+    return false;
+  }
+  if (gpio_wakeup_disable(BTN1_PIN) != ESP_OK) {
+    return false;
+  }
   initialize_onboard_buttons();
   enable_onboard_buttons();
-  return true;                  /* FIXME */
+  return true;
 }
 
 #endif
