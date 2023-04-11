@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include "driver/gpio.h"
 #include "driver/i2c.h"
+#include "esp_sleep.h"
 
 #include "dfrobot_sen0487.h"
 #include "dfrobot_sen0500.h"
@@ -112,6 +113,39 @@ void enable_onboard_buttons() {
 bool btn1_is_pressed() {
   return gpio_get_level(BTN1_PIN);
 }
+
+#ifdef SNAPPY_LIGHT_SLEEP
+
+static int delivered = 0;
+
+static void IRAM_ATTR gpio_sleep_isr_handler(void* arg) {
+  if (!delivered) {
+    put_main_event_from_isr(EV_BUTTON_PRESS);
+    delivered = 1;
+  }
+}
+
+bool reconfigure_btn1_as_wakeup_source() {
+  delivered = 0;
+  gpio_isr_handler_remove(BTN1_PIN);
+  gpio_isr_handler_add(BTN1_PIN, gpio_sleep_isr_handler, (void*) BTN1_PIN);
+  if (gpio_wakeup_enable(BTN1_PIN, GPIO_INTR_HIGH_LEVEL) == ESP_OK) {
+    esp_sleep_enable_gpio_wakeup();
+    return true;
+  }
+  return false;
+}
+
+bool deconfigure_btn1_as_wakeup_source() {
+  gpio_isr_handler_remove(BTN1_PIN);
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
+  gpio_wakeup_disable(BTN1_PIN);
+  initialize_onboard_buttons();
+  enable_onboard_buttons();
+  return true;                  /* FIXME */
+}
+
+#endif
 
 #ifdef SNAPPY_I2C
 bool enable_i2c() {

@@ -16,7 +16,11 @@ void disable_regulator();
 void install_interrupts();
 void initialize_onboard_buttons();
 void enable_onboard_buttons();
-bool btn1_is_pressed();
+bool btn1_is_pressed() WARN_UNUSED;
+#ifdef SNAPPY_LIGHT_SLEEP
+bool reconfigure_btn1_as_wakeup_source() WARN_UNUSED;
+bool deconfigure_btn1_as_wakeup_source() WARN_UNUSED;
+#endif
 
 #ifdef SNAPPY_GPIO_SEN0171
 bool initialize_gpio_sen0171() WARN_UNUSED;
