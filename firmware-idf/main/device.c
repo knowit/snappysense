@@ -140,7 +140,7 @@ bool reconfigure_btn1_as_wakeup_source() {
   if (gpio_wakeup_enable(BTN1_PIN, GPIO_INTR_HIGH_LEVEL) != ESP_OK) {
     return false;
   }
-  return esp_sleep_enable_gpio_wakeup();
+  return esp_sleep_enable_gpio_wakeup() == ESP_OK;
 }
 
 bool deconfigure_btn1_as_wakeup_source() {
