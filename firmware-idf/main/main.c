@@ -9,6 +9,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <string.h>
+#include "esp_pm.h"
 
 #include "device.h"
 #include "sound_player.h"
@@ -109,6 +110,14 @@ static void snappy_main() NO_RETURN;
 static void bring_up_peripherals();
 static void shut_down_peripherals();
 
+#ifdef SNAPPY_LOW_POWER
+static esp_pm_config_t pmconf;
+# ifdef SNAPPY_LIGHT_SLEEP
+static void configure_light_sleep();
+static void unconfigure_light_sleep();
+# endif
+#endif
+
 void app_main(void) {
 
   /* Create resources (mostly timers) for various things but do not start anything running yet. */
@@ -146,6 +155,29 @@ void app_main(void) {
   /* Set up buttons but do not make them send events yet. */
   initialize_onboard_buttons();
 
+#ifdef SNAPPY_LOW_POWER
+  /* For low-power use you need to configure with:
+     - CONFIG_PM_ENABLE and CONFIG_PM_DFS_INIT_AUTO to enable dynamic frequency scaling
+     - CONFIG_FREERTOS_USE_TICKLESS_IDLE to allow light-sleep mode when the system is idle
+     Actually enabling tickless idle without turning on light sleep is a savings in itself.
+  */
+  esp_pm_get_configuration(&pmconf);
+  LOG("Conf: %d %d %d", pmconf.max_freq_mhz, pmconf.min_freq_mhz, pmconf.light_sleep_enable);
+
+  /* We can't (yet) configure light sleep here because the event loop becomes really sluggish (we
+     keep going to sleep and waking up all the time, and button events are lost, and everything runs
+     really slowly).  Instead, we need to configure light sleep when the system is about to enter
+     the sleep window.  This will result in higher power use when not in the sleep window but that
+     is the best tradeoff so far.  See EV_SLEEP_START and EV_POST_SLEEP in the event loop.
+
+     In principle I think we could probably enable light sleep here if we had different logic around
+     the button.  To be a wakeup source when sleeping the button has to deliver an interrupt when
+     high (system requirement, nothing to be done about it).  But when the system is awake, the
+     button needs to distinguish long-press and short-press, which means we want interrupts on the
+     edges.  To be able to have light-sleep on always, we need to find a solution whereby we don't
+     need the edge interrupts, minimally.  (Also see logic in device.c.) */
+#endif
+
   /* Turn on the regulator and initialize devices that get power from it. */
   bring_up_peripherals();
 
@@ -164,10 +196,12 @@ void app_main(void) {
 static bool slideshow_mode = true;
 
 static void button_down() {
+  LOG("Button down");
 }
 
 static void button_up() {
   /* FIXME - primitive */
+  LOG("Button up");
   put_main_event(EV_BUTTON_PRESS);
 }
 
@@ -259,14 +293,17 @@ static void snappy_main() {
           put_main_event(EV_POST_SLEEP);
         } else {
           slideshow_mode = slideshow_next_mode;
-          LOG("New mode: %s\n", slideshow_mode ? "slideshow" : "monitoring");
+          LOG("New mode: %s", slideshow_mode ? "slideshow" : "monitoring");
           if (slideshow_mode) {
             set_master_timer(slideshow_mode_sleep_s() * 1000, EV_POST_SLEEP);
           } else {
             put_main_event(EV_SLIDESHOW_STOP);
             set_master_timer(monitoring_mode_sleep_s() * 1000, EV_POST_SLEEP);
-            LOG("Nap time.  Sleep mode activated.\n");
+            LOG("Nap time.  Sleep mode activated.");
             shut_down_peripherals();
+#ifdef SNAPPY_LIGHT_SLEEP
+            configure_light_sleep();
+#endif
             in_sleep_window = true;
           }
         }
@@ -276,8 +313,11 @@ static void snappy_main() {
         if (in_sleep_window) {
           /* We can come to POST_SLEEP from either the timeout or from a button press. */
           cancel_master_timer();
+#ifdef SNAPPY_LIGHT_SLEEP
+          unconfigure_light_sleep();
+#endif
           bring_up_peripherals();
-          LOG("Is anyone there?\n");
+          LOG("Is anyone there?");
           in_sleep_window = false;
           put_main_event(EV_SLIDESHOW_RESET);
           put_main_event(EV_SLIDESHOW_START);
@@ -287,7 +327,7 @@ static void snappy_main() {
         break;
 
       case EV_MONITOR_START:
-        LOG("Monitoring window opens\n");
+        LOG("Monitoring window opens");
         in_monitoring_window = true;
         monitoring_start();
         set_master_timer(monitoring_window_s() * 1000, EV_MONITOR_STOP);
@@ -296,14 +336,14 @@ static void snappy_main() {
       case EV_MONITOR_STOP:
         monitoring_stop();
         put_main_event(EV_START_CYCLE);
-        LOG("Monitoring window closes\n");
+        LOG("Monitoring window closes");
         in_monitoring_window = false;
         break;
 
       /* Events delivered to the main task */
 
       case EV_MONITOR_DATA: {
-        LOG("Monitor data received\n");
+        LOG("Monitor data received");
         // monitor data arrived after closing the monitoring window
         // slideshow_new_data takes over the ownership of the new_data.
         assert(ev.data != NULL);
@@ -320,6 +360,7 @@ static void snappy_main() {
           put_main_event(EV_POST_SLEEP);
           put_main_event_with_string(EV_MESSAGE,
                                      slideshow_mode ? "Slideshow mode" : "Monitoring mode");
+          LOG("Button waking us up");
           break;
         }
 
@@ -328,6 +369,7 @@ static void snappy_main() {
         put_main_event_with_string(EV_MESSAGE,
                                    slideshow_next_mode ? "Slideshow mode" : "Monitoring mode");
         put_main_event(EV_SLIDESHOW_START);
+        LOG("Button switching to mode %s", slideshow_next_mode ? "Slideshow mode" : "Monitoring mode");
         break;
 
       /*********************************************************************************/
@@ -421,16 +463,55 @@ void panic(const char* msg) {
   for(;;) {}
 }
 
-#ifdef SNAPPY_LOGGING
-void snappy_log(const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vprintf(fmt, args);
-  va_end(args);
-  if (fmt[strlen(fmt)-1] != '\n') {
-    putchar('\n');
+#ifdef SNAPPY_LIGHT_SLEEP
+
+/* We set this to false when something goes wrong, and try to avoid doing it again. */
+
+static bool use_light_sleep = true;
+
+/* Set up light sleep and reconfigure the button as a wakeup source.  After a few ms the
+   system will enter light sleep. */
+
+static void configure_light_sleep() {
+  if (!use_light_sleep) {
+    return;
+  }
+  if (!reconfigure_btn1_as_wakeup_source()) {
+    LOG("Failing to reconfigure button for sleep");
+    use_light_sleep = false;
+    return;
+  }
+  pmconf.light_sleep_enable = 1;
+  esp_err_t err;
+  if ((err = esp_pm_configure(&pmconf)) != ESP_OK) {
+    LOG("Failed to set light sleep mode: %d", (int)err);
+    use_light_sleep = false;
+    /* Try to undo the damage */
+    if (!deconfigure_btn1_as_wakeup_source()) {
+      LOG("Failed to restore buttons");
+    }
   }
 }
+
+/* After light sleep, restore the system to its normal state. */
+
+static void unconfigure_light_sleep() {
+  if (!use_light_sleep) {
+    return;
+  }
+  if (!deconfigure_btn1_as_wakeup_source()) {
+    LOG("Failed to restore buttons");
+    use_light_sleep = false;
+    /* FALLTHROUGH to try to contain the damage */
+  }
+  pmconf.light_sleep_enable = 0;
+  esp_err_t err;
+  if ((err = esp_pm_configure(&pmconf)) != ESP_OK) {
+    LOG("Failed to reset light sleep mode: %d", (int)err);
+    use_light_sleep = false;
+  }
+}
+
 #endif
 
 static void bring_up_peripherals() {

@@ -41,6 +41,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
+#include "esp_log.h"
 
 /********************************************************************************
  *
@@ -48,8 +49,10 @@
  */
 
 #define SNAPPY_LOGGING          /* Debug logging to the USB */
+#define SNAPPY_LOW_POWER        /* See code block in app_main() */
+#define SNAPPY_LIGHT_SLEEP      /* Same */
 #define SNAPPY_SLIDESHOW        /* Rotating display of data values, if enabled */
-/*#define SNAPPY_SOUND_EFFECTS    / * Output sound to a speaker */
+/*#define SNAPPY_SOUND_EFFECTS*/    /* Output sound to a speaker */
 #define SNAPPY_OLED             /* Output on a screen */
 #define SNAPPY_READ_TEMPERATURE
 #define SNAPPY_READ_HUMIDITY
@@ -59,7 +62,7 @@
 #define SNAPPY_READ_CO2
 #define SNAPPY_READ_VOLATILE_ORGANICS
 #define SNAPPY_READ_AIR_QUALITY_INDEX
-#define SNAPPY_READ_MOTION
+/*#define SNAPPY_READ_MOTION*/
 /*#define SNAPPY_READ_NOISE */
 
 /********************************************************************************
@@ -172,6 +175,10 @@
 # error "DFROBOT_SEN0514 device needs temperature and humidity for calibration"
 #endif
 
+#if defined(SNAPPY_LIGHT_SLEEP) && !defined(SNAPPY_LOW_POWER)
+# error "Bad power management definitions"
+#endif
+
 /********************************************************************************
  *
  * Miscellaneous definitions.
@@ -181,8 +188,7 @@
 #define NO_RETURN __attribute__ ((noreturn))
 
 #ifdef SNAPPY_LOGGING
-extern void snappy_log(const char* fmt, ...) __attribute__ ((format (printf, 1, 2)));
-# define LOG(...) snappy_log(__VA_ARGS__)
+# define LOG(...) ESP_LOGI("snappy", __VA_ARGS__)
 #else
 # define LOG(...)
 #endif
