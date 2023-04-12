@@ -164,11 +164,18 @@ void app_main(void) {
   esp_pm_get_configuration(&pmconf);
   LOG("Conf: %d %d %d", pmconf.max_freq_mhz, pmconf.min_freq_mhz, pmconf.light_sleep_enable);
 
-  /* We can't configure light sleep here because the event loop becomes really sluggish (we keep
-     going to sleep and waking up all the time, and button events are lost, and everything runs
-     really slowly).  Instead, we need to configure it when the system is about to enter the sleep
-     window.  This will result in higher power use when not in the sleep window but that is the best
-     tradeoff.  See EV_SLEEP_START and EV_POST_SLEEP in the event loop. */
+  /* We can't (yet) configure light sleep here because the event loop becomes really sluggish (we
+     keep going to sleep and waking up all the time, and button events are lost, and everything runs
+     really slowly).  Instead, we need to configure light sleep when the system is about to enter
+     the sleep window.  This will result in higher power use when not in the sleep window but that
+     is the best tradeoff so far.  See EV_SLEEP_START and EV_POST_SLEEP in the event loop.
+
+     In principle I think we could probably enable light sleep here if we had different logic around
+     the button.  To be a wakeup source when sleeping the button has to deliver an interrupt when
+     high (system requirement, nothing to be done about it).  But when the system is awake, the
+     button needs to distinguish long-press and short-press, which means we want interrupts on the
+     edges.  To be able to have light-sleep on always, we need to find a solution whereby we don't
+     need the edge interrupts, minimally.  (Also see logic in device.c.) */
 #endif
 
   /* Turn on the regulator and initialize devices that get power from it. */
