@@ -195,6 +195,10 @@
 #include "web_config.h"
 #include "web_server.h"
 
+#ifdef SNAPPY_LOW_POWER
+# include "esp_pm.h"
+#endif
+
 // The default is to start the slideshow on startup.  It can be toggled to monitoring
 // mode by a press on the wake button.  Slideshow mode really only affects what we do
 // after communication and before monitoring, and for how long.
@@ -214,12 +218,33 @@ static QueueHandle_t/*<SnappyEvent>*/ main_event_queue;
 # error "Hardware name"
 #endif
 
+extern "C" {
+void app_main() {
+  setup();
+  loop();
+}
+}
+
 void setup() {
   main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));
 
   // Power up the device.
   device_setup();
   // Serial port and display are up now and can be used for output.
+
+#ifdef SNAPPY_LOW_POWER
+  /* For low-power use you need to configure with:
+     - CONFIG_PM_ENABLE and CONFIG_PM_DFS_INIT_AUTO to enable dynamic frequency scaling
+     - CONFIG_FREERTOS_USE_TICKLESS_IDLE to allow light-sleep mode when the system is idle
+     Actually enabling tickless idle without turning on light sleep is a savings in itself.
+  */
+  esp_pm_config_esp32_t pmconf = { 0, 0, 0 };
+  if (esp_pm_get_configuration(&pmconf) == ESP_OK) {
+    log("Conf: %d %d %d\n", pmconf.max_freq_mhz, pmconf.min_freq_mhz, pmconf.light_sleep_enable);
+  } else {
+    log("Unable to read pm configuration\n");
+  }
+#endif
 
   render_text("SnappySense " HARDWARE_NAME "\nKnowIt ObjectNet\n\n" __DATE__ " / Arduino");
 

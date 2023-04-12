@@ -87,13 +87,13 @@
 // Pin definitions
 #define POWER_ENABLE_PIN A0
 #ifndef DISABLE_BUTTON
-# define BUTTON_PIN A1  // WAKE on 1.0.0, BTN1 on 1.1.0
+# define BUTTON_PIN 25 // Aka A1. WAKE on 1.0.0, BTN1 on 1.1.0
 #endif
 #if defined(SNAPPY_HARDWARE_1_0_0)
 # define PIR_SENSOR_PIN A4
 # define MIC_PIN A5
 #elif defined(SNAPPY_HARDWARE_1_1_0)
-# define PIR_SENSOR_PIN A2
+# define PIR_SENSOR_PIN 34 // Aka A2
 # define MIC_PIN A3
 #else
 # error "Fix your hardware definitions"

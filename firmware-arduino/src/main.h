@@ -73,6 +73,8 @@
 // repo.  Requires SNAPPY_WIFI.
 #define SNAPPY_WEBCONFIG
 
+#define SNAPPY_LOW_POWER
+
 /////
 //
 // Profile 2: LoRaWAN
