@@ -222,8 +222,9 @@ For some general help, run `dbop help`.
 
 ## Uploading the real Lambda code
 
-Go to `lambda/`, then run `make` or duplicate the actions of the `Makefile` in that directory.
+Finally, we are confident that the lambda, the routing, the databases, and the policies are all playing together, so it's time to upload the real lambda.
 
+Go to the `lambda/` subdirectory, then run `make` or duplicate the actions of the `Makefile` in that directory.  It will zip up the python files for the lambda and upload to AWS.  Again, as for `dbop`, make sure your credentials are set up correctly.
 
 ## Creating a Function URL for the Lambda
 
