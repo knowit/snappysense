@@ -143,7 +143,9 @@ The `dbop` program (see later section) is used to initialize the five tables if 
 Similarly `delete-table` can be used to delete tables that need to be cleaned out before creating
 them afresh.
 
-There is a test script, `test-code/snappysense-demo-data.sh`, that may be useful.
+In the AWS dashboard, you should be able to visit *DynamoDB* and then click on Tables to see that there are five empty tables at this point, `snappy_device` and so on.
+
+There is also a test script, `test-code/snappysense-demo-data.sh`, that may be useful reading.
 
 ### Adding data to the database without any UI
 
