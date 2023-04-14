@@ -13,7 +13,7 @@
                 "logs:PutLogEvents"
             ],
             "Resource": [
-                "arn:aws:logs:eu-central-1:927459574576:log-group:/aws/lambda/snappySense:*",
+                "arn:aws:logs:eu-central-1:927459574576:log-group:/aws/lambda/snappySense:*"
             ]
         },
         {
