@@ -90,7 +90,7 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 
 Finally we tie it together by routing MQTT traffic to the Lambda.
 
-In AWS > Management console > IoT Core > Message Routing > Rules, create a new rule:
+In AWS > Management console > IoT Core > Message Routing > Rules, click "Create rule":
 
 * The rule name should be `snappySenseStartup`
 * The description should be something like "Route SnappySense startup messages to Lambda"
