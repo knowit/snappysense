@@ -104,6 +104,8 @@ TODO: How to do this with the AWS CLI or something like `dbop`.
 Before you can do this you must have set up the backend, as described in [SETUP.md](SETUP.md), and you
 must have compiled the `dbop` program as described there.
 
+Make sure your credentials are set up right, as described in [SETUP.md](SETUP.md).
+
 For a normal SnappySense 1.1 device with serial number XX and location YY, run:
 ```
 dbop device add device=snp_1_1_no_XX class=SnappySense location=YY factors=temperature,humidity,uv,light,pressure,airsensor,airquality,tvoc,co2,motion,noise
