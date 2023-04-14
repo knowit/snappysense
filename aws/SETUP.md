@@ -47,7 +47,7 @@ Next, in AWS > Management console > Identity and Access Management (IAM) > Acces
 
 * Click "Create policy"
 * Click on the "JSON" tab
-* Paste in the contents of the file `my_snappy_lambda_role.json`
+* Paste in the contents of the file `snappy_lambda_role.json`
 * Click "Next: Tags" and then "Next: Review"
 * For `Name`, enter `snappy-lambda-policy`, and if you like, "Policy for SnappySense lambda functions" 
   in the description field
@@ -58,7 +58,7 @@ Finally, in AWS > Management console > Identity and Access Management (IAM) > Ac
 
 * Click "Create role"
 * Select "AWS service" under Trusted entity type and "Lambda" under use case, press "Next"
-* Select `snappy-lambda-role`
+* Select `snappy-lambda-policy`
 * Click "Next"
 * Enter the name `snappy-lambda-role` and the description might be "Allows SnappySense Lambda
   functions to call AWS services on your behalf."
@@ -90,16 +90,18 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 
 Finally we tie it together by routing MQTT traffic to the Lambda.
 
-In AWS > Management console > IoT Core > Message Routing > Rules, create a new rule:
+In AWS > Management console > IoT Core > Message Routing > Rules, click "Create rule":
 
 * The rule name should be `snappySenseStartup`
 * The description should be something like "Route SnappySense startup messages to Lambda"
+* Click "Next"
 * The SQL (with version 2016-03-23) should be 
   ```
     SELECT *, topic(2) as message_type, topic(3) as class, topic(4) as device FROM 'snappy/startup/+/+'
   ```
-* For the action, choose "Lambda" and then choose `snappySense` as the lambda function
-* Click "Next" until you're done.
+* Click "Next"
+* For the Action, choose "Lambda" and then choose `snappySense` as the lambda function
+* Click "Next" and "Create" and you're done.
 
 Now **repeat those steps** with the difference that the rule name is `snappySenseObservation`, the topic
 filter is `snappy/observation/+/+`, and that "observation" replaces "startup" in the description.
