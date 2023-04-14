@@ -226,7 +226,11 @@ Finally, we are confident that the lambda, the routing, the databases, and the p
 
 Go to the `lambda/` subdirectory, then run `make` or duplicate the actions of the `Makefile` in that directory.  It will zip up the python files for the lambda and upload to AWS.  Again, as for `dbop`, make sure your credentials are set up correctly.
 
+If you then go to the AWS Lambda console and inspect the function, you will see that the code has changed and that there are quite a number of files in the program now.
+
 ## Creating a Function URL for the Lambda
+
+For the prototype front end, we need a URL for the lambda.
 
 In AWS Lambda, click on the Configuration tab and the Function URL pane, it will allow you to create
 a function URL.  Choose "None" as the security - security by obscurity rules!
