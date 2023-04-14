@@ -47,7 +47,7 @@ Next, in AWS > Management console > Identity and Access Management (IAM) > Acces
 
 * Click "Create policy"
 * Click on the "JSON" tab
-* Paste in the contents of the file `my_snappy_lambda_role.json`
+* Paste in the contents of the file `snappy_lambda_role.json`
 * Click "Next: Tags" and then "Next: Review"
 * For `Name`, enter `snappy-lambda-policy`, and if you like, "Policy for SnappySense lambda functions" 
   in the description field
