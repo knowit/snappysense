@@ -127,14 +127,16 @@ format of this file is described in detail in [../CONFIG.md](../CONFIG.md).
 
 _This file will contain secrets and must not be checked into github._
 
-Add the necessary information to the new file as described in the comments.  The `mqtt-id` shall
-be the name of the device, `snp_x_y_no_z`, as chosen above.  The device certificate, private key,
-and root cert must be the ones downloaded.
+Add the necessary information to the new file as described in the comments:
+* The `mqtt-id` shall be the name of the device, `snp_x_y_no_z`, as chosen above.
+* The `mqtt-class` shall typically be the class name you gave the device in AWS IoT
+* Usually `mqtt-use-tls` is `1` and `mqtt-auth` is `x509`
+* The `mqtt-endpoint-host` is obtained by going to AWS IoT, clicking on Settings on the left, and copying out the "Endpoint" URL
+* The `mqtt-endpoint-port` can be blank or 8883
+* The device certificate, private key, and root cert must be the ones downloaded.
 
-The WiFi information in the config file is optional (all three networks) and can be configured by
+The WiFi information in the config file is optional (all three networks) and can be configured later by
 the end-user.  However it may be useful to configure one network here to allow for factory testing.
-
-The location information is also optional and can be configured by the end-user.
 
 Once the file is complete, save it.
 
