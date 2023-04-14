@@ -58,7 +58,7 @@ Finally, in AWS > Management console > Identity and Access Management (IAM) > Ac
 
 * Click "Create role"
 * Select "AWS service" under Trusted entity type and "Lambda" under use case, press "Next"
-* Select `snappy-lambda-role`
+* Select `snappy-lambda-policy`
 * Click "Next"
 * Enter the name `snappy-lambda-role` and the description might be "Allows SnappySense Lambda
   functions to call AWS services on your behalf."
