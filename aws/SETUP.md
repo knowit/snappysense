@@ -243,5 +243,5 @@ the tables using dbop as described above, this should produce a list of devices:
   curl https://xxx.on.aws/devices
 ```
 
-If you paste `https://xxx.on.aws` into a browser address bar, you should see a web application for
-querying the database.
+If you paste the `https://xxx.on.aws` URL into a browser address bar, you should see a web application for
+querying the database.  To test, multiselect all the devices (ignore the locations), select "Temperature" for the factor and "Everything" for the period, and press "Query".  You should see a plot of a couple of devices at least with data for March 2023 (if you used the saved test data to populate the databases, above).
