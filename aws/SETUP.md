@@ -101,7 +101,7 @@ In AWS > Management console > IoT Core > Message Routing > Rules, click "Create 
   ```
 * Click "Next"
 * For the Action, choose "Lambda" and then choose `snappySense` as the lambda function
-* Click "Next" until you're done.
+* Click "Next" and "Create" and you're done.
 
 Now **repeat those steps** with the difference that the rule name is `snappySenseObservation`, the topic
 filter is `snappy/observation/+/+`, and that "observation" replaces "startup" in the description.
