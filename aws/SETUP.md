@@ -94,6 +94,7 @@ In AWS > Management console > IoT Core > Message Routing > Rules, click "Create 
 
 * The rule name should be `snappySenseStartup`
 * The description should be something like "Route SnappySense startup messages to Lambda"
+* Click "Next"
 * The SQL (with version 2016-03-23) should be 
   ```
     SELECT *, topic(2) as message_type, topic(3) as class, topic(4) as device FROM 'snappy/startup/+/+'
