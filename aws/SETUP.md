@@ -39,7 +39,7 @@ publishing.  The JSON for the role is in `snappy_lambda_role.json` in the presen
 You only need to create the role once (per sandbox or production environment).  But it's a multi-step
 process, first you create the policies, then the role.
 
-First, make a local copy of `snappy_lambda_role.json` in which you replace my user ID (`92..76`)
+First, **MAKE A LOCAL COPY** of `snappy_lambda_role.json` in which you replace my user ID (`92..76`)
 with your own and the region ID (`eu-central-1`) with your own, if it differs.  Call this file
 `my_snappy_lambda_role.json`.
 
@@ -47,7 +47,7 @@ Next, in AWS > Management console > Identity and Access Management (IAM) > Acces
 
 * Click "Create policy"
 * Click on the "JSON" tab
-* Paste in the contents of the file `snappy_lambda_role.json`
+* Paste in the contents of the file you created above, `my_snappy_lambda_role.json`
 * Click "Next: Tags" and then "Next: Review"
 * For `Name`, enter `snappy-lambda-policy`, and if you like, "Policy for SnappySense lambda functions" 
   in the description field
