@@ -114,10 +114,15 @@ TODO: How to do this with AWS CLI or something like `dbop`.
 
 #### Testing it all
 
-Go to AWS > Management console > IoT Core.  Select "MQTT Test client".  Subscribe to '#'.  Go to the
-Publish pane and publish any valid JSON you like to `snappy/startup/1/1`.  In the message log you
-should see two messages, the one you sent and the echoed message.  The latter has three fields added
-(message_type, class, and device).  Repeat the experiment for `snappy/observation/1/1`.
+Do this:
+
+* Go to AWS > Management console > IoT Core.
+* Select "MQTT Test client".
+* Subscribe to '#'.
+* Go to the Publish pane and publish any valid JSON you like to `snappy/startup/1/1`.
+* In the message log you should see two messages, the one you sent and the echoed message.  The latter has three fields added
+(message_type, class, and device).
+* Repeat the experiment for `snappy/observation/1/1`.
 
 Once this test passes, you know that message routing works within AWS.
 
@@ -192,18 +197,13 @@ To examine just one item in a table:
 
 ### Testing that database access works from the lambda
 
-Open the lambda console and paste in the code from `test-code/db_lambda.py` to replace the earlier
-test code.  Deploy it.
-
-In the MQTT console, subscribe to `#` if you haven't, then publish a message with the topic
-`snappy/startup/1/1` and a body like this:
-
-```
-{ "query": "snp_1_1_no_1" }
-```
-
-If that device had earlier been entered into the database using the CLI, the contents of the record
-will be echoed back at you in the console now.
+* Open the lambda console and paste in the code from `test-code/db_lambda.py` to replace the earlier test code.
+* Deploy it.
+* Open the MQTT test client
+* Subscribe to `#` if you haven't already
+* Publish a message with the topic `snappy/startup/1/1` and a body: `{ "query": "snp_1_1_no_1" }`
+* If that device had earlier been entered into the database using the CLI (it is part of the saved test data, so you'll be fine if you used those), then the contents of the record will be echoed back at you in the console now.
+* If that doesn't work, probably the lambda or the policies are wrong; use the Test functionality of the lambda to explore further by testing with an event JSON as shown directly above
 
 ## The `dbop` program
 
