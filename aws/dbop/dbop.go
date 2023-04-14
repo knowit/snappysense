@@ -107,7 +107,7 @@ type Table struct {
 	real_name  string // `snappy_table`, etc
 	key_name   string // primary key field name
 	fields     []*Field
-	gloss      string	// What the table is for
+	gloss      string // What the table is for
 }
 
 // For timestamps the epoch is *always* the Unix epoch, 1/1/1970 00:00:00 UTC.  This means in
@@ -118,13 +118,13 @@ type Table struct {
 // mis-configured or un-configured devices.
 
 const (
-	TY_S  = "string"							// "S"
-	TY_I  = "int"									// "N"
-	TY_B  = "bool"								// "BOOL"
-	TY_N  = "number"							// "N"
-	TY_SL = "string list"					// "L" holding "S" nodes, because AWS disallows empty "SS"
-	TY_ST = "server_timestamp"		// "N", UTC seconds since Unix epoch server-side
-	TY_DT = "device_timestamp"		// "N", UTC seconds since Unix epoch client-side
+	TY_S  = "string"           // "S"
+	TY_I  = "int"              // "N"
+	TY_B  = "bool"             // "BOOL"
+	TY_N  = "number"           // "N"
+	TY_SL = "string list"      // "L" holding "S" nodes, because AWS disallows empty "SS"
+	TY_ST = "server_timestamp" // "N", UTC seconds since Unix epoch server-side
+	TY_DT = "device_timestamp" // "N", UTC seconds since Unix epoch client-side
 )
 
 // The command line parser allows `dev_table` in addition to `table`, if if so,
@@ -199,7 +199,7 @@ var tables = []*Table{
 			&Field{name: "timezone", ty: TY_S, opt: true, def: "",
 				gloss: "A time zone area name (eg Europe/Berlin), as from iana.org/time-zones or timezonedb.com"},
 		},
-		gloss: "Defines the locations where devices can be" },
+		gloss: "Defines the locations where devices can be"},
 
 	&Table{
 		short_name: "observation", real_name: "snappy_observation", key_name: "key",
@@ -242,7 +242,7 @@ const (
 	INFO
 	SCAN
 	GET
-  RELOCATE_IF
+	RELOCATE_IF
 	DUMP
 	UNDUMP
 )
@@ -306,7 +306,7 @@ func main() {
 
 func show_table_info(the_table *Table) {
 	fmt.Printf("Table %s\n", the_table.short_name)
-  if the_table.gloss != "" {
+	if the_table.gloss != "" {
 		fmt.Printf("  %s\n", the_table.gloss)
 	}
 	for _, f := range the_table.fields {
@@ -315,14 +315,14 @@ func show_table_info(the_table *Table) {
 			req = "Optional field"
 		}
 		fmt.Printf("  %s '%s', %s\n", req, f.name, f.ty)
-    if f.name == the_table.key_name {
-			fmt.Printf("    Primary key\n");
+		if f.name == the_table.key_name {
+			fmt.Printf("    Primary key\n")
 		}
 		if f.opt && f.def != "" {
 			fmt.Printf("    Default '%s'\n", f.def)
 		}
 		if f.gloss != "" {
-			fmt.Printf("    %s\n", f.gloss);
+			fmt.Printf("    %s\n", f.gloss)
 		}
 	}
 }
@@ -422,7 +422,7 @@ func display_row(the_table *Table, row map[string]types.AttributeValue) {
 	}
 	for k, v := range row {
 		if handled[k] {
-			continue;
+			continue
 		}
 		fmt.Printf("  %s: %v\n", k, format_value(v))
 		handled[k] = true
@@ -563,7 +563,7 @@ func relocate_devices(svc *dynamodb.Client, the_table *Table, key_value string, 
 			devices_found++
 			if row["location"].(*types.AttributeValueMemberS).Value == old {
 				locations_found++
-				row["location"] = &types.AttributeValueMemberS{Value:new}
+				row["location"] = &types.AttributeValueMemberS{Value: new}
 				_, err := svc.PutItem(context.TODO(), &dynamodb.PutItemInput{
 					TableName: &the_table.real_name,
 					Item:      row,
@@ -670,10 +670,14 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 
 	case "get", "dump", "undump", "delete":
 		switch verb {
-		case "get": op = GET
-		case "dump": op = DUMP
-		case "undump": op = UNDUMP
-		case "delete": op = DELETE
+		case "get":
+			op = GET
+		case "dump":
+			op = DUMP
+		case "undump":
+			op = UNDUMP
+		case "delete":
+			op = DELETE
 		}
 
 		if idx >= nargs {
@@ -702,7 +706,7 @@ func parse_command_line() (the_table *Table, op int, params map[string]string, k
 		params["old"] = args[idx]
 		params["new"] = args[idx+1]
 		idx += 2
-	
+
 	default:
 		usage("Unknown verb " + verb)
 	}
