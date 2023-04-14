@@ -90,8 +90,8 @@ Then go to AWS > Management console > IoT Core > All devices > Things.  Then:
 * Now you have to select a policy.  Choose `SnappySensePolicy`, created above.  If you did not
   create it already, create it now.
 * Click "Create thing".
-* You'll be presented with a download screen.  In the directory for the device, created above, store
-  all five files.
+* You'll be presented with a download screen.  Download all five files and store them in the
+  new directory that you created for the device.
 
 Congratulations, you have a new Thing.  For information about how to install the documents on the
 device and how to keep the secrets safe, see "Factory provisioning" and "Saving the secrets for
