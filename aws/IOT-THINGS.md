@@ -162,6 +162,9 @@ In the parent directory of `snp_x_y_no_z`, create a zip file containing the conf
 Now **upload that zip file to 1Password** as a new "Document" type with the title `AWS IoT snp_x_y_no_z`.
 If there's anything to note, add it to the Notes field in 1Password.
 
-If the cert was created under the Dataplattform **production** account then use the Dataplattform
-1Password account; if you used your AWS sandbox account, then upload the file to your own 1Password
-account.
+If the cert was created under `knowit-snappysense-prod` then use the "311 Dataplattform"
+1Password vault; if you used your own AWS sandbox, then upload the file to your private 1Password
+vault.  (It is possible to select the account in the full-window view of 1Password, there's a dropdown
+in the middle top of the screen; normally it says "Private".  If you don't have access, ask Tor about
+access to "311 Dataplattform".)
+
