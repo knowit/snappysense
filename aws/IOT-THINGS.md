@@ -143,6 +143,10 @@ Once the file is complete, save it.
 Upload the configuration file to the device as described in [../CONFIG.md](../CONFIG.md), then view
 the installed config to check it, also described in that document.
 
+If you configured a reachable WiFi network, you can verify that things work by going to the AWS IoT console,
+selecting the MQTT Test client, subscribing to `#`, and resetting the device.  You should see the startup
+MQTT message from the device and the server's response in the Test client console.  If logging is enabled
+in the firmware then this traffic is also visible in the VS Code serial console.
 
 ## Saving the secrets for later (IMPORTANT!)
 
