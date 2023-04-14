@@ -42,7 +42,7 @@ process, first you create the policies, then the role.
 First, create the correct policy:
 
 * **MAKE A LOCAL COPY** of `snappy_lambda_role.json`, call this file `my_snappy_lambda_role.json`.
-* In this file, replace my user ID (`92..76`) with your own and the region ID (`eu-central-1`) with your own, if it differs.  
+* In this file, **replace the user ID** (`92..76`) with your own and **replace the region ID** (`eu-central-1`) with your own.  
 
 Next, in AWS > Management console > Identity and Access Management (IAM) > Access Management > Policies:
 
