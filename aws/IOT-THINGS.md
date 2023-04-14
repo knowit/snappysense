@@ -5,10 +5,50 @@
 This document pertains to how "things" are set up one by one; for a fleet of devices, the
 instructions will be different.
 
-There are four major steps.  First, a new Thing is registered with AWS and its identity documents
-are obtained.  Second, the Thing is registered with the SnappySense backend.  Third, the device
-itself is provisioned with the identity documents.  Finally, the identity documents and device
-configuration are stored safely for later reuse.
+First there is a preparatory step:
+
+1. Creating a new security policy, this is done just once per account
+
+There are four steps per thing:
+
+1. A new Thing is registered with AWS and its identity documents are obtained.
+2. The Thing is registered with the SnappySense backend.
+3. The device itself is provisioned with the identity documents and other settings.
+4. The identity documents and device configuration are stored safely for later reuse.
+
+## Creating a security policy
+
+You need to create a security policy for SnappySense devices if it does not already exist; you need
+to do this only once.  It should be called `SnappySensePolicy`.  The JSON for the policy is in the
+file `thing_policy.json` in the current directory.
+
+Go to AWS > Management console > IoT Core > Security > Policies.
+
+To create the policy, click `Create Policy`, then select the JSON option and paste in the JSON from
+`thing_policy.json`, then click to confirm creation.
+
+All things in the SnappySense network, whether SnappySense things or not, can use the same policy.
+
+TODO: How to do this with the AWS CLI or something like `dbop`, including checking whether it needs
+to be done.
+
+### Some notes about the security policy (for the specially interested only)
+
+The current (February 2023) security policy in `thing_policy.json` very lax.  It would be better to
+restrict it to these actions only:
+
+* `iot:Connect`
+* `iot:Subscribe` for `snappy/control/+`
+* `iot:Subscribe` for `snappy/command/+`
+* `iot:Publish` for `snappy/startup/+/+`
+* `iot:Publish` for `snappy/observation/+/+`.
+
+The restrictions would be more secure, as it would make it impossible for Things to subscribe to
+non-SnappySense messages flowing through the AWS MQTT broker.
+
+Even better would be if a Thing would only be allowed to subscribe to those messages that are sent
+to itself: this would require a separate policy per Thing however, and might not be practical in a
+large fleet of devices.
 
 ## Creating a Thing and obtaining its identity documents
 
@@ -34,29 +74,11 @@ provisioning" and "Saving the secrets for later".
 To create a new Thing in AWS IoT, follow the steps outlined below.  These steps will be the same
 whether you are using the **Dataplattform production console** or your own **Sandbox console**.  If
 the Thing's identity will be long-lived then you should _not_ create it in your sandbox.
-
-### Creating a security policy
-
-You need to create a security policy for SnappySense devices if it does not already exist; you need
-to do this only once.  It should be called `SnappySensePolicy`.  The JSON for the policy is in the
-file `thing_policy.json` in the current directory.
-
-Go to AWS > Management console > IoT Core > Security > Policies.
-
-To create the policy, click `Create Policy`, then select the JSON option and paste in the JSON from
-`thing_policy.json`, then click to confirm creation.
-
-All things in the SnappySense network, whether SnappySense things or not, can use the same policy.
-
-TODO: How to do this with the AWS CLI or something like `dbop`, including checking whether it needs
-to be done.
-
-### Creating the Thing and obtaining its documents
   
-Create a new directory somewhere on your PC that will hold the secrets for the new Thing.  This
+First create a new directory somewhere on your PC that will hold the secrets for the new Thing.  This
 directory should have the same name as the Thing you are creating.
 
-Go to AWS > Management console > IoT Core > All devices > Things.  Then:
+Then go to AWS > Management console > IoT Core > All devices > Things.  Then:
 
 * Click on "Create things", select "Create single thing", click "Next"
 * The Thing Name has the format `snp_x_y_no_z` as explained in more detail above
@@ -77,7 +99,7 @@ later", below.
 
 TODO: How to do this with the AWS CLI or something like `dbop`.
 
-### Registering a new Thing with the SnappySense backend
+## Registering a new Thing with the SnappySense backend
 
 Before you can do this you must have set up the backend, as described in [SETUP.md](SETUP.md), and you
 must have compiled the `dbop` program as described there.
@@ -93,24 +115,6 @@ dbop device list
 ```
 
 If you know how, you can also manipulate the databases through the AWS DynamoDB dashboard.
-
-### Some notes about the security policy (for the specially interested only)
-
-The current (February 2023) security policy in `thing_policy.json` very lax.  It would be better to
-restrict it to these actions only:
-
-* `iot:Connect`
-* `iot:Subscribe` for `snappy/control/+`
-* `iot:Subscribe` for `snappy/command/+`
-* `iot:Publish` for `snappy/startup/+/+`
-* `iot:Publish` for `snappy/observation/+/+`.
-
-The restrictions would be more secure, as it would make it impossible for Things to subscribe to
-non-SnappySense messages flowing through the AWS MQTT broker.
-
-Even better would be if a Thing would only be allowed to subscribe to those messages that are sent
-to itself: this would require a separate policy per Thing however, and might not be practical in a
-large fleet of devices.
 
 ## Factory provisioning a SnappySense device
 
