@@ -123,14 +123,14 @@ Once this test passes, you know that message routing works within AWS.
 
 ## Setting up the database tables
 
-In the following, note that your AWS credentials must be for the correct account, see description in the later section about `dbop` for more.
+In the following, note that your AWS credentials must be for the correct account.  See description in the later section about the `dbop` program for more about that.
 
 ### The data model and the tables
 
 There are five database tables.  Their fields and keys are defined in
 [DATA-MODEL.md](DATA-MODEL.md), though being NoSQL the fields don't matter for database creation.
 
-The `dbop` program (see later section) is used to initialize the five tables if they don't exist:
+The `dbop` program is used to initialize the five tables if they don't exist:
 
 ```
    dbop device create-table
@@ -145,22 +145,43 @@ them afresh.
 
 In the AWS dashboard, you should be able to visit *DynamoDB* and then click on Tables to see that there are five empty tables at this point, `snappy_device` and so on.
 
-There is also a test script, `test-code/snappysense-demo-data.sh`, that may be useful reading.
+(There is also a test script, `test-code/snappysense-demo-data.sh`, that may be useful reading.)
+
+### Adding test data sets
+
+There are existing data sets in the `test-data` directory.  These can be imported into the new tables using `dbop` with the `undump` command:
+```
+   dbop class undump ../test-data/class.dump 
+   dbop device undump ../test-data/device.dump 
+   dbop factor undump ../test-data/factor.dump 
+   dbop location undump ../test-data/location.dump 
+   dbop observation undump ../test-data/observation.dump 
+```
+One can now verify that there are data in the tables:
+```
+   dbop class list
+```
+should produce an output like this:
+```
+class key=class
+  class: SnappySense
+  description: SnappySense v1.x 3rd gen prototypes
+class key=class
+  class: RaspberryPi
+  description: Raspberry Pi, all generations
+```
+
+Furthermore, in the AWS *DynamoDB* console, it is possible to click on a table and *Explore table items* to see what's in the table.
 
 ### Adding data to the database without any UI
 
-The `dbop` program (see later section) is used to add data to the database and query it:
+The `dbop` program can also be used to add data to the database manually:
 ```
    dbop class add class=SnappySense 'description=SnappySense 3rd gen prototype device'
    dbop location add location=takterrassen 'description=Takterrassen i Universitetsgt 1'
    dbop location add location=akebakken 'description=Hjemmekontoret til Lars T'
    dbop device add device=snp_1_1_no_1 class=SnappySense location=takterrassen
    dbop device add device=snp_1_1_no_2 class=SnappySense location=akebakken
-```
-
-To list the contents of a table:
-```
-   dbop device list
 ```
 
 To examine just one item in a table:
