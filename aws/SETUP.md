@@ -123,6 +123,8 @@ Once this test passes, you know that message routing works within AWS.
 
 ## Setting up the database tables
 
+In the following, note that your AWS credentials must be for the correct account, see description in the later section about `dbop` for more.
+
 ### The data model and the tables
 
 There are five database tables.  Their fields and keys are defined in
