@@ -101,10 +101,9 @@ static time_t last_capture;
 static bool early_times = true;
 static int num_times = 0;
 static List<MqttMessage> mqtt_queue;
+#ifdef SNAPPY_TIMESTAMPS
 // The startup message is also part of the "delayed" data: it is sent before the
 // first datum, and always after time has been configured, if we have timestamps.
-static bool send_startup_message = true;
-#ifdef SNAPPY_TIMESTAMPS
 static List<SnappySenseData> delayed_data_queue;
 #endif
 
@@ -125,7 +124,7 @@ void mqtt_init() {
 
 static bool should_send_delayed_data() {
 #ifdef SNAPPY_TIMESTAMPS
-  return time_adjustment() > 0 && (!delayed_data_queue.is_empty() || send_startup_message);
+  return time_adjustment() > 0 && (!delayed_data_queue.is_empty() || !persistent_data.mqtt.startup_message_sent);
 #else
   return send_startup_message;
 #endif
@@ -144,9 +143,9 @@ static void add_delayed_data(SnappySenseData* data) {
 static void maybe_drain_delayed_data() {
   time_t adj = time_adjustment();
   if (adj > 0) {
-    if (send_startup_message) {
+    if (!persistent_data.mqtt.startup_message_sent) {
       generate_startup_message();
-      send_startup_message = false;
+      persistent_data.mqtt.startup_message_sent = true;
     }
     while (!delayed_data_queue.is_empty()) {
       SnappySenseData d = delayed_data_queue.pop_front();

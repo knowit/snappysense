@@ -7,6 +7,8 @@
 
 #ifdef SNAPPY_WIFI
 
+static constexpr int NETWORK_WIFI_INIT_LAST_SUCCESSFUL_ACCESS_POINT = 0;
+
 // Call this before anything else.
 void wifi_init();
 

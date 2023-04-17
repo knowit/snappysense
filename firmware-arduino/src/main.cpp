@@ -200,11 +200,43 @@
 // after communication and before monitoring, and for how long.
 bool slideshow_mode = true;
 
+// This is used to improve the UX.
+//
+// When running without deep sleep support, it is set by the button press handler when the button is
+// used to wake the device, and causes the next comm window to ignore the guard against
+// uploading too often, in other words, the assumption is that by waking the device the user
+// wants to see any pending data as soon as possible.  It is reset again when the device
+// goes to sleep.
+//
+// When running with deep sleep support, it is set in the initialization code when we discover that
+// the wakeup source was a button press.  After that it has the same effect as described above.
+static bool explicitly_awoken = false;
+
 // The timer used for timing out the major sections of the main loop.
 static TimerHandle_t master_timeout_timer;
 
 // The event queue that drives all activity except within the music player task
 static QueueHandle_t/*<SnappyEvent>*/ main_event_queue;
+
+#ifdef SNAPPY_DEEP_SLEEP
+RTC_DATA_ATTR
+#endif
+PersistentData persistent_data = {
+  .network_wifi = {
+    .last_successful_access_point = NETWORK_WIFI_INIT_LAST_SUCCESSFUL_ACCESS_POINT
+  },
+  .mqtt = {
+    .startup_message_sent = MQTT_INIT_STARTUP_MESSAGE_SENT,
+  },
+  .config = {
+    .enabled = CONFIG_INIT_ENABLED,
+    .monitoring_capture_interval_for_upload_s = CONFIG_INIT_MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S
+  },
+  .main = {
+    .waking_from_deep_sleep = false,
+    .first_time = true,
+  }
+};
 
 #if defined(SNAPPY_HARDWARE_1_1_0)
 # define HARDWARE_NAME "1.1"
@@ -217,6 +249,20 @@ static QueueHandle_t/*<SnappyEvent>*/ main_event_queue;
 void setup() {
   main_event_queue = xQueueCreate(100, sizeof(SnappyEvent));
 
+#ifdef SNAPPY_DEEP_SLEEP
+  if (persistent_data.main.waking_from_deep_sleep) {
+    // Check for button press.
+    explicitly_awoken = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
+
+    // FIXME: Cause time to be reinitialized - ie, the state of time should become reset - if we
+    // did not do this before shutting down.  For this we really can't reset the clock because
+    // we don't want to move it backward, but we can reset the time_server module's notion of
+    // the clock.
+    //
+    // But wait, that is already reset... so things should Just Work?
+  }
+#endif
+
   // Power up the device.
   device_setup();
   // Serial port and display are up now and can be used for output.
@@ -227,6 +273,7 @@ void setup() {
   read_configuration();
 
   // We sometimes need random numbers, try to seed the stream.
+  // TODO: Should this somehow be saved in the ULP data?
   randomSeed(entropy());
 
   log("SnappySense running!\n");
@@ -236,7 +283,9 @@ void setup() {
 # else
   static const char melody[] = "Beep:d=4,o=5,b=38:16p,16c";
 # endif
-  play_song(melody);
+  if (!persistent_data.main.waking_from_deep_sleep) {
+    play_song(melody);
+  }
 #endif
 }
 
@@ -306,23 +355,18 @@ void loop() {
   bool in_monitoring_window = false;
 
   // True when the peripherals have been powered down and we are between SLEEP_START and
-  // POST_SLEEP.
-  bool in_sleep_window = false;
+  // POST_SLEEP and not in deep sleep.  In this mode, we must power up the peripherals when
+  // waking up.
+  bool in_light_sleep_window = false;
 
+#ifdef SNAPPY_DEEP_SLEEP
+  // When waking up from deep sleep, the mode is always Monitoring.
+  bool slideshow_next_mode = slideshow_mode && !persistent_data.main.waking_from_deep_sleep;
+#else
   // This starts out the same as slideshow_mode but can be changed by a button press,
   // and is acted upon at a specific point in the state machine
   bool slideshow_next_mode = slideshow_mode;
-
-  // This is used to improve the UX.  It shortens the comm window the first time around and
-  // skips the relaxation / sleep before we read the sensors.
-  bool first_time = true;
-
-  // This is used to improve the UX.  It is set by the button press handler when the button is
-  // used to wake the device, and causes the next comm window to ignore the guard against
-  // uploading too often, in other words, the assumption is that by waking the device the user
-  // wants to see any pending data as soon as possible.  It is reset again when the device
-  // goes to sleep.
-  bool explicitly_awoken = false;
+#endif
 
 #ifdef SNAPPY_COMMAND_PROCESSOR
   // Data held for the command processor.
@@ -343,7 +387,16 @@ void loop() {
   put_main_event(EvCode::SLIDESHOW_START);
 
   // Start the main task.
-  put_main_event(EvCode::START_CYCLE);
+  // TODO: The thing with the comm window preceding monitoring on the first iteration is an
+  // artifact of a time when generating startup and observation messages were blocked on
+  // the time server.  It may be that we could always start in POST_SLEEP now, because observations
+  // are held until the time is available and the startup message is not generated until
+  // observations are to be sent. But I'm not sure how that interacts with DEEP_SLEEP yet.
+  if (persistent_data.main.waking_from_deep_sleep && persistent_data.mqtt.startup_message_sent) {
+    put_main_event(EvCode::POST_SLEEP);
+  } else {
+    put_main_event(EvCode::START_CYCLE);
+  }
 
   // Start concurrent tasks.
 #ifdef SNAPPY_WIFI
@@ -455,7 +508,7 @@ void loop() {
         }
 #endif
         unsigned long timeout_ms = comm_activity_timeout_s() * 1000;
-        if (first_time) {
+        if (persistent_data.main.first_time) {
           timeout_ms /= 2;
         }
         set_master_timeout(timeout_ms, EvCode::COMM_ACTIVITY_EXPIRED);
@@ -467,7 +520,7 @@ void loop() {
         // message arrives late.
         if (in_communication_window) {
           unsigned long timeout_ms = comm_activity_timeout_s() * 1000;
-          if (first_time) {
+          if (persistent_data.main.first_time) {
             timeout_ms /= 2;
           }
           set_master_timeout(timeout_ms, EvCode::COMM_ACTIVITY_EXPIRED);
@@ -508,7 +561,7 @@ void loop() {
         // a message from the slideshow at the end of the cycle see that flag and actually
         // enter sleep mode.  But this adds more complexity.
         assert(!in_communication_window && !in_wifi_window);
-        if (first_time) {
+        if (persistent_data.main.first_time) {
           put_main_event(EvCode::SLEEP_START);
         } else {
           set_master_timeout(comm_relaxation_timeout_s() * 1000, EvCode::SLEEP_START);
@@ -520,7 +573,7 @@ void loop() {
         explicitly_awoken = false;
         // Figure out what mode we're in.  In monitoring mode, we turn off the screen and go
         // into low-power state.  In slideshow mode, we continue on as we were, for a while.
-        if (first_time) {
+        if (persistent_data.main.first_time) {
           put_main_event(EvCode::POST_SLEEP);
         } else {
           slideshow_mode = slideshow_next_mode;
@@ -528,27 +581,46 @@ void loop() {
           if (slideshow_mode) {
             set_master_timeout(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
           } else {
+#ifdef SNAPPY_DEEP_SLEEP
+            // TODO: drain the queue?  basically we should worry about pending activities from the user such
+            // as button presses, and logic activity.  It's not clear precisely how we want to handle this,
+            // but possibly if there are messages in the queue we want to re-send SLEEP_START and
+            // go back to processing what's in the queue.  Given the event logic and sensible timer periods,
+            // the queue should eventually become quiescent.
+
+            log("Nap time.  Sleep mode activated.\n");
+            persistent_data.main.waking_from_deep_sleep = true;
+
+            gpio_wakeup_enable((gpio_num_t)25, GPIO_INTR_HIGH_LEVEL);
+            esp_sleep_enable_gpio_wakeup();
+            esp_sleep_enable_timer_wakeup(uint64_t(monitoring_mode_sleep_s()) * 1000000);
+            esp_deep_sleep_start();
+            // WILL NOT RETURN
+#else
             put_main_event(EvCode::SLIDESHOW_STOP);
             set_master_timeout(monitoring_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
             log("Nap time.  Sleep mode activated.\n");
             power_peripherals_off();
-            in_sleep_window = true;
+            in_light_sleep_window = true;
+#endif
           }
         }
         break;
 
       case EvCode::POST_SLEEP:
-        if (in_sleep_window) {
-          // We can come to POST_SLEEP from either the timeout or from a button press.
+        // We can come to POST_SLEEP from either the sleep window timeout, from a button press
+        // during the sleep window, or when waking up (rebooting) from deep sleep.  When in deep
+        // sleep we are not in the "sleep window" per se and so the flag is not set.
+        if (in_light_sleep_window) {
           cancel_master_timeout();
           power_peripherals_on();
           log("Is anyone there?\n");
-          in_sleep_window = false;
+          in_light_sleep_window = false;
           put_main_event(EvCode::SLIDESHOW_RESET);
           put_main_event(EvCode::SLIDESHOW_START);
         }
         put_main_event(EvCode::MONITOR_START);
-        first_time = false;
+        persistent_data.main.first_time = false;
         break;
 
       case EvCode::MONITOR_START:
@@ -586,7 +658,7 @@ void loop() {
       }
 
       case EvCode::BUTTON_PRESS:
-        if (in_sleep_window) {
+        if (in_light_sleep_window) {
           // Wake up and move the state machine along.  POST_SLEEP will cancel any pending timeout.
           explicitly_awoken = true;
           put_main_event(EvCode::POST_SLEEP);
@@ -633,10 +705,10 @@ void loop() {
         slideshow_stop();
 
         // We need the screen, so power up i2c if we're powered down.
-        if (in_sleep_window) {
+        if (in_light_sleep_window) {
           log("Powered up for AP mode\n");
           power_peripherals_on();
-          in_sleep_window = false;
+          in_light_sleep_window = false;
         }
 
         // Stop monitoring if we're doing that.  We may get a callback about new data

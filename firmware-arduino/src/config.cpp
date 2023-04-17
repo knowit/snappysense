@@ -36,7 +36,6 @@
 // have them in NVRAM.
 
 static Pref factory_prefs[] = {
-  {"enabled",                 "en",    Pref::Int,              1, "",                               "Device recording is enabled"},
   {"ssid1",                   "s1",    Pref::Str,              0, IF_DEVEL(WIFI_SSID, ""),          "SSID name for the first WiFi network"},
   {"ssid2",                   "s2",    Pref::Str,              0, "",                               "SSID name for the second WiFi network"},
   {"ssid3",                   "s3",    Pref::Str,              0, "",                               "SSID name for the third WiFi network"},
@@ -90,10 +89,6 @@ Pref* get_pref(const char* name) {
 
 int get_int_pref(const char* name) {
   return get_pref(name)->int_value;
-}
-
-static void set_int_pref(const char* name, int val) {
-  get_pref(name)->int_value = val;
 }
 
 const char* get_string_pref(const char* name) {
@@ -208,6 +203,11 @@ void show_configuration(Stream* out) {
 //     mqtt-root-cert        // short name "aroot" - previously known as aws-iot-root-ca
 //     mqtt-device-cert      // short name "acert" - previously known as aws-iot-device-cert, the device cert for "x509" authentication
 //     mqtt-private-key      // short name "akey" - previously known as aws-iot-private-key, the private key for "x509" authentication
+//
+// Config version x.y
+//
+//   Removed all support for these settings, which were never used
+//     enabled               // short name "en"  - this was the device-enabled flag, now in-mmemory only
 
 #define MAJOR_VERSION 2
 #define MINOR_VERSION 0
@@ -341,15 +341,10 @@ String evaluate_configuration(List<String>& input, bool* was_saved, int* lineno,
 //
 // TODO: This is a bit of a mess; some are defined at the top and some are defined in-line.
 
-#define MINUTE(s) ((s)*60)
-#define HOUR(s) ((s)*60*60)
-
 # if defined(SNAPPY_DEVELOPMENT)
 static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
-static const unsigned long MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
 # else
 static const unsigned long SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
-static const unsigned long MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(30);
 # endif
 
 #ifdef SNAPPY_MQTT
@@ -455,14 +450,15 @@ unsigned long serial_server_poll_interval_ms() {
 
 // Preference accessors
 
-static unsigned long monitoring_capture_interval_for_upload_s = MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S;
+// The "enabled" flag used to be part of the preferences but it's now in-memory only, and can
+// only be set from the server.
 
 bool device_enabled() {
-  return get_int_pref("enabled");
+  return persistent_data.config.enabled;
 }
 
 void set_device_enabled(bool flag) {
-  set_int_pref("enabled", flag);
+  persistent_data.config.enabled = flag;
 }
 
 const char* access_point_ssid(int n) {
@@ -503,12 +499,12 @@ unsigned long capture_interval_for_upload_s() {
   if (slideshow_mode) {
     return SLIDESHOW_CAPTURE_INTERVAL_FOR_UPLOAD_S;
   } else {
-    return monitoring_capture_interval_for_upload_s;
+    return persistent_data.config.monitoring_capture_interval_for_upload_s;
   }
 }
 
 void set_capture_interval_for_upload_s(unsigned long interval) {
-  monitoring_capture_interval_for_upload_s = interval;
+  persistent_data.config.monitoring_capture_interval_for_upload_s = interval;
 }
 
 #ifdef SNAPPY_MQTT

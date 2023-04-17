@@ -25,9 +25,10 @@
  *  server.close() closes the server socket and stops listening
  */
 
-static int last_successful_access_point = 0;
-static int current_access_point = 0;
+// Replaced by persistent_state.network_wifi.last_successful_access_point
+//static int last_successful_access_point = 0;
 static int num_access_points_tried = 0;
+static int current_access_point = 0;
 
 static constexpr int MAX_TIMEOUTS = 10;
 static int num_timeouts = 0;
@@ -78,7 +79,7 @@ again:
     }
     case WiFiState::RETRYING: {
       if (WiFi.status() == WL_CONNECTED) {
-        last_successful_access_point = current_access_point;
+        persistent_data.network_wifi.last_successful_access_point = current_access_point;
         wifi_state = WiFiState::CONNECTED;
         put_main_event(EvCode::COMM_WIFI_CLIENT_UP);
         log("WiFi: Connected. Device IP address: %s\n", wifi_local_ip().c_str());
@@ -109,7 +110,7 @@ void wifi_init() {
 
 void wifi_enable_start() {
   num_access_points_tried = 0;
-  current_access_point = last_successful_access_point;
+  current_access_point = persistent_data.network_wifi.last_successful_access_point;
   wifi_state = WiFiState::STARTING;
   connect_to_wifi();
 }

@@ -10,6 +10,8 @@
 
 #include "sensor.h"
 
+static constexpr bool MQTT_INIT_STARTUP_MESSAGE_SENT = false;
+
 void mqtt_init();
 
 // Takes ownership of the data

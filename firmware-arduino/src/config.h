@@ -83,6 +83,17 @@ const char* mqtt_device_class();
 //
 // Sensors, monitoring, data capture
 
+#define MINUTE(s) ((s)*60)
+#define HOUR(s) ((s)*60*60)
+
+# if defined(SNAPPY_DEVELOPMENT)
+static constexpr unsigned long CONFIG_INIT_MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(1);
+# else
+static constexpr unsigned long CONFIG_INIT_MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S = MINUTE(30);
+# endif
+
+static constexpr bool CONFIG_INIT_ENABLED = true;
+
 // How long does it take for sensors to warm up at the beginning of the monitoring window?
 unsigned long sensor_warmup_time_s();
 
