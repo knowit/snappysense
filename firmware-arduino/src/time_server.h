@@ -7,6 +7,9 @@
 
 #ifdef SNAPPY_NTP
 
+static constexpr bool TIME_SERVER_INIT_TIME_CONFIGURED = false;
+static constexpr time_t TIME_SERVER_INIT_TIME_ADJUST = 0;
+
 // Call this before anything else.
 void ntp_init();
 

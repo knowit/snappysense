@@ -20,15 +20,6 @@ struct TimeServerState {
 static TimeServerState* timeserver_state;
 static TimerHandle_t timeserver_timer;
 
-// Set to true if we have received a time from the time server and have set the
-// system clock.
-static bool time_configured;
-
-// When time_configured is true, this is the number of seconds that was added to the
-// clock at the time when time was adjusted.  This can be used to adjust time readings
-// that were made before time was adjusted.
-static time_t time_adjust;
-
 static void put_delayed_retry() {
   xTimerStart(timeserver_timer, portMAX_DELAY);
 }
@@ -37,9 +28,9 @@ static void configure_clock(time_t t) {
   time_t now = time(nullptr);
   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
   settimeofday(&tv, nullptr);
-  time_adjust = t - now;
-  time_configured = true;
-  log("Time adjustment %u\n", (unsigned)time_adjust);
+  persistent_data.time_server.time_adjust = t - now;
+  persistent_data.time_server.time_configured = true;
+  log("Time adjustment %u\n", (unsigned)persistent_data.time_server.time_adjust);
 }
 
 static bool maybe_configure_time() {
@@ -66,8 +57,8 @@ static bool maybe_configure_time() {
 }
 
 time_t time_adjustment() {
-  if (time_configured) {
-    return time_adjust;
+  if (persistent_data.time_server.time_configured) {
+    return persistent_data.time_server.time_adjust;
   }
   return 0;
 }
@@ -79,7 +70,7 @@ void ntp_init() {
 }
 
 bool ntp_have_work() {
-  if (!time_configured) {
+  if (!persistent_data.time_server.time_configured) {
     return true;
   }
   if (timeserver_state != nullptr) {
@@ -89,7 +80,7 @@ bool ntp_have_work() {
 }
 
 void ntp_start() {
-  if (time_configured) {
+  if (persistent_data.time_server.time_configured) {
     return;
   }
   log("Attempting to configure time\n");
@@ -103,7 +94,7 @@ void ntp_start() {
 
 // Called from the main loop in response to COMM_NTP_WORK messages.
 void ntp_work() {
-  if (time_configured) {
+  if (persistent_data.time_server.time_configured) {
     return;
   }
   if (timeserver_state == nullptr) {

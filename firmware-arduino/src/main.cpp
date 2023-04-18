@@ -232,6 +232,10 @@ PersistentData persistent_data = {
     .enabled = CONFIG_INIT_ENABLED,
     .monitoring_capture_interval_for_upload_s = CONFIG_INIT_MONITORING_CAPTURE_INTERVAL_FOR_UPLOAD_S
   },
+  .time_server = {
+    .time_configured = TIME_SERVER_INIT_TIME_CONFIGURED,
+    .time_adjust = TIME_SERVER_INIT_TIME_ADJUST,
+  },
   .main = {
     .waking_from_deep_sleep = false,
     .first_time = true,
@@ -253,13 +257,6 @@ void setup() {
   if (persistent_data.main.waking_from_deep_sleep) {
     // Check for button press.
     explicitly_awoken = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO;
-
-    // FIXME: Cause time to be reinitialized - ie, the state of time should become reset - if we
-    // did not do this before shutting down.  For this we really can't reset the clock because
-    // we don't want to move it backward, but we can reset the time_server module's notion of
-    // the clock.
-    //
-    // But wait, that is already reset... so things should Just Work?
   }
 #endif
 
@@ -271,9 +268,21 @@ void setup() {
 
   // Load config from nonvolatile memory, if available, otherwise use default values.
   read_configuration();
+  if (persistent_data.main.waking_from_deep_sleep) {
+    log("Waking from deep sleep with these settings\n");
+    log("  (main) first_time = %d\n", persistent_data.main.first_time);
+    log("  (main) explicitly awoken = %d\n", explicitly_awoken);  // Computed above
+    log("  (wifi) last successful access point = %d\n", (int)persistent_data.network_wifi.last_successful_access_point);
+    log("  (mqtt) startup message sent = %d\n", persistent_data.mqtt.startup_message_sent);
+    log("  (cfg)  enabled = %d\n", persistent_data.config.enabled);
+    log("  (cfg)  monitoring_capture_interval_for_upload_s = %d\n", (int)persistent_data.config.monitoring_capture_interval_for_upload_s);
+    log("  (time) time_configured = %d\n", persistent_data.time_server.time_configured);
+    log("  (time) time_adjust = %d\n", (int)persistent_data.time_server.time_adjust);
+    log("  (time) time = %d\n", (int)time(nullptr));  // We assume it's in RTC memory, at least this has been observed
+  }
 
   // We sometimes need random numbers, try to seed the stream.
-  // TODO: Should this somehow be saved in the ULP data?
+  // TODO DEEP_SLEEP: Should this somehow be saved in the ULP data?
   randomSeed(entropy());
 
   log("SnappySense running!\n");
@@ -387,7 +396,7 @@ void loop() {
   put_main_event(EvCode::SLIDESHOW_START);
 
   // Start the main task.
-  // TODO: The thing with the comm window preceding monitoring on the first iteration is an
+  // TODO DEEP_SLEEP: The thing with the comm window preceding monitoring on the first iteration is an
   // artifact of a time when generating startup and observation messages were blocked on
   // the time server.  It may be that we could always start in POST_SLEEP now, because observations
   // are held until the time is available and the startup message is not generated until
@@ -582,15 +591,17 @@ void loop() {
             set_master_timeout(slideshow_mode_sleep_s() * 1000, EvCode::POST_SLEEP);
           } else {
 #ifdef SNAPPY_DEEP_SLEEP
-            // TODO: drain the queue?  basically we should worry about pending activities from the user such
+            // TODO DEEP_SLEEP: drain the queue?  basically we should worry about pending activities from the user such
             // as button presses, and logic activity.  It's not clear precisely how we want to handle this,
             // but possibly if there are messages in the queue we want to re-send SLEEP_START and
             // go back to processing what's in the queue.  Given the event logic and sensible timer periods,
             // the queue should eventually become quiescent.
 
             log("Nap time.  Sleep mode activated.\n");
+            log("  time = %d\n", (int)time(nullptr));
             persistent_data.main.waking_from_deep_sleep = true;
-
+            // TODO DEEP_SLEEP: The button is not actually responsive when in deep sleep, more code needed.
+            // TODO DEEP_SLEEP: Move this into the device code, it need not be here.
             gpio_wakeup_enable((gpio_num_t)25, GPIO_INTR_HIGH_LEVEL);
             esp_sleep_enable_gpio_wakeup();
             esp_sleep_enable_timer_wakeup(uint64_t(monitoring_mode_sleep_s()) * 1000000);

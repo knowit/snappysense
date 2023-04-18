@@ -42,7 +42,9 @@
 //#define SNAPPY_LORA
 
 // Set this to make config.cpp include development_config.h with compiled-in values
-// and short time intervals for many things (to speed up testing).
+// and short time intervals for many things (to speed up testing).  Note that short
+// intervals may lead to less accurate observations.
+//
 // Otherwise, we're in "production" mode and default values are mostly blank and
 // the device must be provisioned from interactive config mode.
 //#define SNAPPY_DEVELOPMENT
@@ -53,24 +55,10 @@
 #define SNAPPY_TIMESTAMPS
 
 // With SNAPPY_DEEP_SLEEP, the system enters deep sleep mode in the sleep window.  This essentially
-// means that it reboots completely when it comes out of sleep.  However, there are some
-// differences from normal boot, at least these:
-//  - no "startup" message should be sent, but info saved at sleep time should be used.
-//    however, if no startup message has been sent since true boot, we should send it.
-//    so there is a notion of whether "startup has succeeded"
-//  - there will be no data left in the comm queue because there was no memory to save
-//    it in, indeed the comm queue has very limited scope
-//  - consequently, the device should start up in the POST_SLEEP state, not in the START_CYCLE
-//    state, and should perform a measurement which it then displays and communicates
-//  - if a datum can't be sent because there's no wifi it will be discarded, unless we can
-//    save it to flash and send it later
-//
-// State saved in ULP
-//  - whether a startup message has been sent / the startup process is complete
-//  - if the startup process is complete, any settings received from the server during startup
-//  - (whether there are messages on Flash to send, + info about them)
-//  - probably the first_time flag
-//  - the mode flag is implicitly "monitoring"
+// means that it reboots completely when it comes out of sleep.  There are some differences from
+// normal boot, notably no "startup" message is sent, there is no data in the comm queue, data
+// will be discarded if it can't be sent in the comm window, and the state machine starts in a
+// different location.  Some data are saved in persistent memory, see PersistentData below.
 #define SNAPPY_DEEP_SLEEP
 
 /////
@@ -307,6 +295,10 @@ struct WebRequest {
 //
 // These are the canonical locations for these values - in particular, they are not copies of variables
 // that exist elsewhere that have to be synced to the persistent storage.
+//
+// In truth, these could simply be kept in their respective modules with the RTC_DATA_ATTR attribute,
+// but it seemed useful to group them here for visibility.  There is a fairly small limit on how much
+// data can be kept in the ULP's memory.
 
 struct PersistentData {
   struct {
@@ -332,6 +324,18 @@ struct PersistentData {
   } config;
 
   struct {
+    // Set to true once the time has been configured.  Based on simple experiments, the clock advances
+    // correctly while the system is in deep sleep, so time should not be configured again when
+    // the device restarts.
+    bool time_configured;
+
+    // When time_configured is true, this is the number of seconds that was added to the clock at the
+    // time when time was adjusted.  This can be used to adjust time readings that were made before time
+    // was adjusted.
+    time_t time_adjust;
+  } time_server;
+
+  struct {
     // Set to true before going into deep sleep
     bool waking_from_deep_sleep;
 
@@ -341,7 +345,7 @@ struct PersistentData {
     bool first_time;
   } main;
 
-  // TODO: What about early_times in the mqtt code?  (This is like first_time, it is logic that presupposes
+  // TODO DEEP_SLEEP: What about early_times in the mqtt code?  (This is like first_time, it is logic that presupposes
   // some persistent state.)  This is a hack that makes us do mqtt work more often.  It is possible that the
   // right behavior here is that *while there is mqtt work to do* we should not enter deep sleep.  There is
   // mqtt work to do only if comms are possible, I think (certainly this ought to be the case).

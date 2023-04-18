@@ -25,8 +25,6 @@
  *  server.close() closes the server socket and stops listening
  */
 
-// Replaced by persistent_state.network_wifi.last_successful_access_point
-//static int last_successful_access_point = 0;
 static int num_access_points_tried = 0;
 static int current_access_point = 0;
 
