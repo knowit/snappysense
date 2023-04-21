@@ -24,25 +24,17 @@ in your shell, then
 ```
 etc.
 
-## Thoughts
-
-For the FreeRTOS-based firmware I'm being more careful about how the device operates and more
-constrained in how the firmware is constructed.  The Arduino firmware uses a fairly loose tasking
-system for everything; the FreeRTOS firmware instead has a single main task that runs a state
-machine that loops through a sleep-monitor-communicate-sleep-... cycle.  There are a couple of
-helper tasks but these are not strictly necessary.
-
-Also, the FreeRTOS-based firmware is more careful about what it reports, and much more careful about
-handling errors to avoid corrupted or meaningless data.
-
-Finally, I want the FreeRTOS-based firmware to be non-polling and power-usage-friendly.  This
-includes input coming from the serial line, the network, buttons, the motion sensor, and other
-infrequent "peripherals".
+## Notes
 
 There are relatively few and light dependencies on ESP32-IDF so far.  I expect that it would be
 straightforward to move much of the code to an STM32 system, with HAL easily taking the place of
 ESP32-IDF in many places.  Of course for higher-level services (HTTP, TCP, etc) there might be more
 differences.
+
+For the network stack, IDF provides a Berkeley sockets API via LwIP.  This is a blocking API.  In
+practice we'd end up using that one a separate FreeRTOS task, possibly.  Supposedly there's also
+HTTP client and server implementations, and an SNTP implementation.  Maybe they take care of the
+blocking details for us.
 
 ## TODO
 
