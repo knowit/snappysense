@@ -80,4 +80,10 @@ Since deep sleep entails shutting the device down there's not any trickiness wit
 "right" parts and then reinitializing them "correctly" on powerup; memory contents are lost, and we
 reboot as we would after lost power or a reset keypress.
 
-Deep sleep is not implemented in either firmware at this time.
+Deep sleep is implemented in a prototype state on `arduino_deep_sleep`.  This does not react properly
+to the button to wake up but it does go into deep sleep and come out of it in response to a timer.
+Power consumption in deep sleep is about 5.4 mA, which is about as good as we can hope for.
+
+For much lower power consumption we want something other than the HUZZAH32 module, for example, the
+FireBeetle.  See https://diyi0t.com/reduce-the-esp32-power-consumption/ for more.
+
